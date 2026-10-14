@@ -1,6 +1,6 @@
 # Dr Neha Mehta — Phase 1 Supabase Setup & Deployment Guide
 
-This guide details the complete configuration required to connect, configure, and host the **Dr Neha Mehta Assessment System** (`/admin` and `/app`) with Supabase and Vercel.
+This guide details the complete configuration required to connect, configure, and host the **Dr Neha Mehta Assessment System** (`/admin` and `/clients`) with Supabase and Vercel.
 
 ---
 
@@ -79,7 +79,7 @@ Send a POST request to `http://localhost:3000/api/bootstrap-admin` (or your depl
 - Ensure Email provider is enabled.
 - For internal staff, coordinators are created programmatically by the Super Admin using `supabase.auth.admin.createUser({ email_confirm: true })`, so confirmation emails are not required for staff login.
 
-### B. Phone Provider & SMS Integration (for Clients in `/app`)
+### B. Phone Provider & SMS Integration (for Clients in `/clients`)
 - Go to **Authentication → Providers → Phone**.
 - Enable **Phone** provider.
 - Configure SMS provider:
@@ -108,7 +108,7 @@ Both applications have `.env.example` templates ready.
 | `NEXT_PUBLIC_SITE_URL` | `https://admin.drnehamehta.com` |
 | `NEXT_PUBLIC_CLIENT_PORTAL_URL` | `https://app.drnehamehta.com` |
 
-### Client-Facing Application (`/app`)
+### Client-Facing Application (`/clients`)
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL (`https://<project-ref>.supabase.co`) |
@@ -121,7 +121,7 @@ Both applications have `.env.example` templates ready.
 
 ## 6. Deploying to Vercel
 
-Since the repository contains two separate Next.js applications (`/admin` and `/app`), create two distinct Vercel projects:
+Since the repository contains two separate Next.js applications (`/admin` and `/clients`), create two distinct Vercel projects:
 
 ### Project 1: Staff Admin (`admin.drnehamehta.com`)
 1. In Vercel, select **Import Git Repository**.
@@ -132,7 +132,7 @@ Since the repository contains two separate Next.js applications (`/admin` and `/
 
 ### Project 2: Client App (`app.drnehamehta.com`)
 1. In Vercel, select **Import Git Repository** again.
-2. Set **Root Directory** to `app`.
+2. Set **Root Directory** to `clients`.
 3. Add the environment variables listed in Section 5 for Client App.
 4. Add custom domain: `app.drnehamehta.com`.
 5. Deploy.

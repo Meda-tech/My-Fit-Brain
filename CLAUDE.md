@@ -175,6 +175,14 @@ real file names; never guess a path.
 - Use SVG on the web, PDF in generated PDFs, PNG only where SVG is not supported (email).
 - Always `alt="My Fit Brain"`. The endorsed version's alt: "My Fit Brain, founded by Dr. Neha Mehta".
 
+**Logo files.** Each version has its own folder: `brand/01_Logo/SVG/<Folder>/MFB_<Name>_<Treatment>.svg`.
+Folders/names: `Horizontal`, `Horizontal_Tagline`, `Stacked`, `Stacked_Tagline`, `Icon`,
+`Endorsed_FoundedBy`, `Founder_Seal`. Treatments: `FullColour`, `Reverse`, `MonoTeal`, `Black`, `White`
+(e.g. `Horizontal/MFB_Horizontal_FullColour.svg`). `Service_Lines/` holds other MFB service-line lockups;
+do not use them here. In the apps, render logos only through `components/brand/Logo.tsx`, which maps
+variant × tone to these names. Apps keep a flat copy in `public/brand/logo/` of only the files they render,
+so copy the master file there before using a new combination.
+
 ### Components
 
 - Buttons: pill. Primary = Coral Deep, white text, one per screen. Secondary = 2px teal outline.
@@ -260,7 +268,8 @@ existing migrations, `.env*` files.
 - Phase 1 done: phone OTP via Renflair Auth hook, clients and staff tables with RLS, admin client
   management, coordinator provisioning, bilingual EN/HI UI.
 - Done: folder rename `app/` → `clients/`; brand kit and docs added to the repo.
-- Next: `docs/tasks/01-ui-rebrand.md` (UI theme for both apps).
-- Then: migration (gender, relationship status, counsellor role, Vault SMS key), registration fixes,
+- Done: task 01 UI rebrand (MFB tokens, Poppins/DM Sans, brand primitives in `components/brand/`,
+  both apps restyled). See `docs/rebrand-audit.md` for details and follow-ups.
+- Next: migration (gender, relationship status, counsellor role, Vault SMS key), registration fixes,
   domain switch to myfitbrain.app, then Phase 2 (question-bank import, engine, flow, report, payments,
   safety ops, progress tests).

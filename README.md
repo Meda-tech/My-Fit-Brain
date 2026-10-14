@@ -1,66 +1,64 @@
-# Dr Neha Mehta — Relationship & Intimacy Assessment Platform
+# My Fit Brain — MFB Assessments
 
-> “Science with a human touch.”
+> Space to speak.
 
-This repository houses the two dedicated Next.js web applications for Dr Neha Mehta's assessment system, built according to `DR_NEHA_MEHTA_ANTIGRAVITY_DESIGN_SYSTEM.md`, `tokens.css`, and Supabase best practices.
+My Fit Brain (MFB) is a unit of MeDa Partners Pvt Ltd. This repository holds the two Next.js apps for the
+MFB Assessments platform. The assessments are designed by Dr. Neha Mehta.
+
+Project rules, brand, copy and safety requirements live in [`CLAUDE.md`](./CLAUDE.md). Brand master files
+live in [`brand/`](./brand).
 
 ## Applications
 
-1. **Internal Staff Portal (`/admin`)**
-   - **Domain:** `admin.drnehamehta.com`
-   - **Features:**
-     - Super Admin email/password authentication
-     - Coordinator email/password authentication
-     - Super Admin creation and management of coordinator accounts
-     - Client record creation by both Super Admin and coordinators
-     - Searchable client directory and detailed client inspection
-     - Role-based server-side authorization boundaries
-2. **Client-Facing Application (`/app`)**
-   - **Domain:** `app.drnehamehta.com`
-   - **Features:**
-     - Mobile phone number OTP login (Supabase Auth SMS)
-     - Bilingual English & Hindi (`EN | हिं`) support conforming to design tokens
-     - Normalization to E.164 (`+91XXXXXXXXXX`)
-     - Privacy-preserving check for pre-created client records
-     - Secure registration flow for new numbers (collecting Full Name, Gender, Age, Marital Status, Location, Email)
-     - Automatic secure linkage between staff pre-created records and verified phone identities
-     - Minimal authenticated placeholder homepage for Phase 1
+1. **Staff portal (`/admin`)** — dev port 3001
+   - Super Admin and coordinator email/password sign-in
+   - Super Admin creation and management of coordinator accounts
+   - Client record creation by Super Admin and coordinators
+   - Searchable client directory and client detail
+   - Role-based server-side authorisation
+2. **Client app (`/clients`)** — dev port 3000
+   - Mobile phone OTP sign-in (Supabase Auth SMS)
+   - English and Hindi (`EN | हिं`)
+   - Normalisation to E.164 (`+91XXXXXXXXXX`)
+   - Privacy-preserving check for pre-created client records
+   - Registration for new numbers, and automatic linking to staff-created records
+   - Authenticated home screen for Phase 1
+
+Domains are listed in `CLAUDE.md` ("Apps and domains").
 
 ---
 
-## Local Development
+## Local development
 
-### 1. Configure Environment Variables
+### 1. Configure environment variables
 Copy `.env.example` to `.env.local` in both folders and fill in your Supabase credentials:
 
 ```bash
-# In /admin
 cd admin
 cp .env.example .env.local
 
-# In /app
-cd ../app
+cd ../clients
 cp .env.example .env.local
 ```
 
-### 2. Running the Admin Portal
+### 2. Run the staff portal
 ```bash
 cd admin
 npm run dev
-# Running on http://localhost:3000
+# http://localhost:3001
 ```
 
-### 3. Running the Client Application
+### 3. Run the client app
 ```bash
-cd app
-npm run dev -- -p 3001
-# Running on http://localhost:3001
+cd clients
+npm run dev
+# http://localhost:3000
 ```
 
 ---
 
-## Database & Security
+## Database and security
 
-- Database migration: `supabase/migrations/20261013000000_phase1_init.sql`
-- Seed & bootstrap template: `supabase/seed.sql`
-- Setup & Vercel deployment documentation: `SUPABASE_SETUP_GUIDE.md`
+- Database migrations: `supabase/migrations/`
+- Seed and bootstrap template: `supabase/seed.sql`
+- Setup and Vercel deployment: `SUPABASE_SETUP_GUIDE.md`
