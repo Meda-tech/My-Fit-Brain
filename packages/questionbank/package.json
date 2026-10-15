@@ -1,0 +1,28 @@
+{
+  "name": "@mfb/questionbank",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Question bank as versioned data: types, condition schema, Excel parser, seed rules, loader",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./parse": "./src/parse-excel.ts",
+    "./import": "./src/import.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "qb:import": "tsx scripts/import.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "exceljs": "^4.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
+  }
+}

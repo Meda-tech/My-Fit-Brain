@@ -1,8 +1,18 @@
 {
   "name": "mfb-assessments",
   "private": true,
-  "description": "Repo-level tooling for MFB Assessments (apps live in admin/ and clients/)",
-  "devDependencies": {
-    "xlsx": "^0.18.5"
+  "description": "MFB Assessments monorepo: clients/ and admin/ Next.js apps plus shared packages/",
+  "workspaces": [
+    "clients",
+    "admin",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:clients": "npm run dev -w clients",
+    "dev:admin": "npm run dev -w admin",
+    "build": "npm run build -w clients && npm run build -w admin",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "qb:import": "npm run qb:import -w @mfb/questionbank --"
   }
 }
