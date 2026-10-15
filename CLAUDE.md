@@ -18,8 +18,8 @@ nehamehta/
 ├─ README.md · SUPABASE_SETUP_GUIDE.md · skills-lock.json
 ├─ package.json               npm workspaces root: clients, admin, packages/* (ONE lockfile, here)
 ├─ .agents/                   points to CLAUDE.md only
-├─ admin/                     Next.js app — staff portal (own git repo, nested)
-├─ clients/                   Next.js app — client portal (own git repo, nested)
+├─ admin/                     Next.js app — staff portal
+├─ clients/                   Next.js app — client portal
 ├─ packages/
 │  └─ questionbank/           @mfb/questionbank — types, condition schema, Excel parser, seed rules,
 │                             loader, qb:import CLI (TypeScript source, no build step; Vitest)

@@ -1,14 +1,15 @@
-# Deploying to Vercel (npm workspaces monorepo)
+# Deploying to Vercel (single repository, npm workspaces)
 
-The repo is an npm workspaces monorepo: `clients/`, `admin/` and `packages/*` (today
-`packages/questionbank`, imported by both apps as TypeScript source). There is one lockfile, at the
-repo root. Each app is its own Vercel project.
+One git repository holds everything: `clients/`, `admin/` and `packages/*` (today
+`packages/questionbank`, imported by both apps as TypeScript source). There is one lockfile, at the repo
+root. Each app is its own Vercel project, both connected to the same repository.
 
 ## Projects
 
 | Setting | Client portal | Staff portal |
 |---|---|---|
 | Project | `mfb-clients` | `mfb-admin` |
+| Git repository | this repository | this repository |
 | Root Directory | `clients` | `admin` |
 | Include files outside the root directory in the Build Step | **ON** | **ON** |
 | Framework preset | Next.js | Next.js |
@@ -18,10 +19,13 @@ repo root. Each app is its own Vercel project.
 | Domain | `app.myfitbrain.app` | `admin.myfitbrain.app` |
 | Node.js | 20.x or later | 20.x or later |
 
-"Include files outside the root directory" lets the build read `packages/questionbank` and the root
-`package-lock.json`. Installing from the repo root (`cd .. && npm ci`) installs every workspace and
-links `@mfb/questionbank` into `node_modules`. `next.config.ts` sets `turbopack.root` to the repo root
-and lists `@mfb/questionbank` in `transpilePackages`.
+- "Include files outside the root directory" lets the build read `packages/` and the root
+  `package-lock.json`.
+- Installing from the repo root (`cd .. && npm ci`) installs every workspace and links
+  `@mfb/questionbank` into `node_modules`. `next.config.ts` sets `turbopack.root` to the repo root and lists
+  the package in `transpilePackages`.
+- To build only when relevant files change, set each project's **Ignored Build Step** to
+  `git diff --quiet HEAD^ HEAD -- . ../packages ../package-lock.json` (run from the Root Directory).
 
 ## Environment variables (per project)
 
@@ -36,28 +40,27 @@ Both projects:
 | `NEXT_PUBLIC_ADMIN_URL` | `https://admin.myfitbrain.app` |
 
 Set them for Production and Preview. Preview deployments use their own `*.vercel.app` hosts; the URL
-variables only matter where an app builds a full link (payments, notifications), from Phase 2.
+variables matter where an app builds a full link (payments, notifications), from Phase 2.
 
 ## Local commands
 
 ```bash
-npm install                 # once, at the repo root
+npm install                 # once, at the repo root (never inside an app)
 npm run dev:clients         # http://localhost:3000
 npm run dev:admin           # http://localhost:3001
 npm run build               # both apps
 npm run lint                # every workspace
-npm test                    # every workspace with tests (today: @mfb/questionbank)
+npm test                    # every workspace with tests
 ```
 
-## Before the first deploy: nested git repositories
+A fresh clone was checked on 2026-10-15: `git clone` → `npm install` → `npm run build`, `npm run lint`
+and `npm test` all pass. On Windows, keep the clone in a short path (e.g. `D:\meda\…`): deep
+`node_modules` paths under a long folder such as `C:\Users\…\AppData\Local\Temp\…` exceed the 260-character
+path limit and the Next.js build fails while prerendering. Vercel (Linux) is not affected.
 
-Today `admin/` and `clients/` are separate git repositories inside the root repository, recorded only
-as gitlinks (there is no `.gitmodules`). A fresh clone of the root repo — which is what Vercel does —
-gets empty `admin/` and `clients/` folders, and a clone of an app repo has no `packages/` or root
-lockfile. Neither builds on its own.
+## History of the apps
 
-Pick one before connecting Vercel:
-1. **One repository (recommended):** fold `admin/` and `clients/` into the root repo (keeping their
-   history with `git subtree add` or a `git filter-repo` merge), then point both Vercel projects at it.
-2. **Submodules:** register both apps as real submodules (`.gitmodules`) and enable submodule checkout
-   on Vercel. The root repo then pins exact app commits.
+Until 2026-10-15, `admin/` and `clients/` were separate git repositories nested in this one. They were
+merged into this repository as plain folders (commit `chore: merge apps into a single repository`); their
+earlier commits are kept in `../git-backups/admin.git` and `../git-backups/clients.git`
+(`git --git-dir=../git-backups/admin.git log` to read them).
