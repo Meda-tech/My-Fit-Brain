@@ -15,7 +15,8 @@ live (58 questions, 227 options, 51 texts, 42 item texts, 4 tiers, 6 point rules
 rule, 2 option rules, 8 flags, 2 format rules, 5 test cases). If an import has a validation error the whole
 step fails and nothing is saved.
 
-**Testing databases only.** Steps 2–3 publish without a review. On a production project, import through the
+**Testing databases only.** Steps 2–3 publish without a review. (They predate Task 04: today publishing needs
+passing test runs, and the CLI below uses `--submit` instead of `--publish`.) On a production project, import through the
 admin app (Question bank → Import Excel), review the draft, then submit and publish it there.
 
 ## Same thing from the command line
@@ -26,13 +27,13 @@ The CLI uses the same parser, rules and validation as the admin import screen.
 # Check a workbook (no database)
 npm run qb:import -- docs/questionbank/MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx
 
-# Regenerate the SQL files (add --publish "<note>" to also submit and publish)
+# Regenerate the SQL files (add --submit to also submit the draft for review)
 npm run qb:import -- docs/questionbank/MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx \
-  --sql supabase/seed/question-bank/IA-1.1.load-and-publish.sql --publish "Initial import (testing)"
+  --sql supabase/seed/question-bank/IA-1.1.load.sql --submit
 
 # Import straight into the database with the service role (testing only)
 npm run qb:import -- docs/questionbank/MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx \
-  --env admin/.env.local --apply --publish "Initial import (testing)"
+  --env admin/.env.local --apply --submit
 ```
 
 ## After loading

@@ -23,6 +23,9 @@ IA 1.1 / MA 1.0 only; from IA 1.2 / MA 1.1 onward the database is the source of 
   `qb_return_to_draft(id)`, `qb_publish(id, change_note)` (previous live → retired) and
   `qb_delete_draft(id)`. A trigger blocks direct status updates.
 - `qb_validate_version(id)` returns `{severity, code, message, ref}`; submit and publish require zero errors.
+- **Publishing also needs test runs** (Task 04): every test case of the version needs a passing run on the
+  current engine version (`qb_test_runs`, recorded from the admin's Test cases tab) made after the version's
+  last content change (`qb_versions.content_changed_at`). `qb_publish(id, change_note, engine_version)`.
 - Permissions: `profiles.can_edit_content` (import, copy, edit, submit, delete drafts) and
   `profiles.can_approve_content` (publish). Active super admins have both. Only a super admin can grant them.
 - Every assessment stores the version id it used, so results can always be re-read with the exact rules.
@@ -139,7 +142,8 @@ the next one; each operation names its decision (`D1`–`D20`, see `decisions.md
 (whole list), `set_scoring` / `set_report_rules` (`merge` into or replace one field), `add_test_case`,
 `set_test_case` (`merge_answers`, notes, expected).
 
-`npm run qb:patch -- <patch.json> --sql <out.sql> [--publish "<note>"]` first applies the patch offline to
-the base version (seed workbook or earlier patches) and validates it, then writes one SQL transaction:
+`npm run qb:patch -- <patch.json> --sql <out.sql> [--submit]` first applies the patch offline to the base
+version (seed workbook or earlier patches) and validates it, then writes one SQL transaction:
 `qb_start_new_version` → every operation (each must hit exactly one row) → `qb_raise_if_invalid` → with
-`--publish`, `qb_submit_for_review` + `qb_publish`. The Task 05 editor will offer the same operations.
+`--submit`, `qb_submit_for_review`. Publishing is done in the admin after running the test cases (the IA 1.2 /
+MA 1.1 SQL predates this and published directly). The Task 05 editor will offer the same operations.

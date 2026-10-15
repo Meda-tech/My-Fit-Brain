@@ -30,6 +30,9 @@ applied through the admin (Task 05), with review before publishing.
 
 ## Regenerating the SQL
 
+> Since Task 04, publishing needs passing test runs, so the CLI no longer publishes: use `--submit`, then
+> run the test cases and publish in the admin. The commands below are kept as they were run for 1.2 / 1.1.
+
 ```bash
 npm run qb:patch -- packages/questionbank/patches/IA-1.2.patch.json \
   --sql supabase/seed/question-bank/IA-1.2.patch-and-publish.sql \

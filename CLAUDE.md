@@ -21,8 +21,10 @@ nehamehta/
 ├─ admin/                     Next.js app — staff portal
 ├─ clients/                   Next.js app — client portal
 ├─ packages/
-│  └─ questionbank/           @mfb/questionbank — types, condition schema, Excel parser, seed rules,
-│                             version patches, loader, qb:import / qb:patch CLIs (TS source; Vitest)
+│  ├─ questionbank/           @mfb/questionbank — types, condition schema, Excel parser, seed rules,
+│  │                          version patches, loader, qb:import / qb:patch CLIs (TS source; Vitest)
+│  └─ engine/                 @mfb/engine — pure, config-driven assessment engine (flow, scoring, flags,
+│                             report keys, test-case runner); server helpers in @mfb/engine/server
 ├─ brand/                     MFB Brand Kit v1 — MASTER files, never served directly
 │  ├─ 01_Logo/
 │  │  ├─ SVG/                 web use (first choice)
@@ -40,7 +42,8 @@ nehamehta/
 │  │  ├─ MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx
 │  │  └─ MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx
 │  │  └─ rules-reference.md   condition format and rule tables (read before touching rules)
-│  ├─ deploy/vercel.md        two Vercel projects from the monorepo
+│  ├─ deploy/vercel.md        two Vercel projects from the single repository
+│  ├─ engine/README.md        engine inputs, outputs, flow order, rules, test cases, ENGINE_VERSION
 │  ├─ tasks/                  task briefs, findings, mappings and verify SQL per task
 │  └─ rebrand-audit.md        produced by task 01
 └─ supabase/                  shared migrations, seed/question-bank/ load SQL (testing)
@@ -133,6 +136,16 @@ report text. If something is not covered, stop and ask rather than guess.
   only if a source rule truly cannot be expressed, and document it there.
 - Clients may read only live tests, versions, modules, questions and options — never rules, flags, texts,
   test cases or the audit log.
+
+## Engine
+
+- `@mfb/engine` is pure and config-driven: no database, network, clock or randomness in its logic, and no
+  question ids, thresholds, scores or report sentences in code (a test fails the build if it finds any).
+  Everything comes from the `VersionConfig`. Reference: `docs/engine/README.md`.
+- Scoring runs only on the server (`@mfb/engine/server`); the browser submits option codes.
+- Every result stores `engineVersion`; bump `ENGINE_VERSION` whenever a result could change.
+- Publishing a version requires, for every test case, a passing run on the current engine version made
+  after the version's last change (admin → version → Test cases → Run all). The CLIs only submit.
 
 ## Client flow
 
@@ -328,4 +341,7 @@ existing migrations, `.env*` files.
 - Done: task 03b rule decisions — `docs/questionbank/decisions.md` (D1–D20), migration
   `20261016100000_qb_rule_decisions.sql` (exclusive options, test Hindi/progress names, validation), version
   patches IA 1.1 → 1.2 and MA 1.0 → 1.1 with 8 new test cases. Run order: `docs/tasks/03b-apply.md`.
-- Next: Task 04 from Step 1 — generic engine (`docs/tasks/04-engine.md`, including the Task 03b additions).
+- Done: task 04 engine — `@mfb/engine` (ENGINE_VERSION 1.0.0); all 11 Worked Examples and the 8 Task 03b
+  cases pass offline; migration `20261017000000_qb_test_runs.sql` (test runs, `content_changed_at`, publish
+  gate; paste-ready in `docs/tasks/04-apply.sql`); admin Test cases tab runs and records test cases.
+- Next: Task 05 — admin editor, rule builder, preview, review/publish UI.
