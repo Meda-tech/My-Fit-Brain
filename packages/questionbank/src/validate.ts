@@ -111,6 +111,13 @@ export function validatePayload(p: ImportPayload, basedOn?: ImportPayload | null
   }
   checkModule(s.core_module.default.module, 'Core module default');
   checkQid(s.gate.qid, 'Gate');
+  // Gate option codes are module codes (choosing option C chooses module C).
+  for (const o of p.options.filter((x) => x.qid === s.gate.qid)) {
+    const m = p.modules.find((x) => x.code === o.option_code);
+    if (!m || (m.kind !== 'couple' && m.kind !== 'individual')) {
+      error('gate_option_module', `Gate option ${o.option_code} is not a couple or individual module.`, o.option_code);
+    }
+  }
   for (const q of [...s.progress.items.qids, ...s.progress.reuse_qids]) checkQid(q, 'Progress');
   for (const k of Object.values(s.progress.texts)) checkText(k, 'Progress');
   checkQid(reg.age_band_qid, 'Registration');

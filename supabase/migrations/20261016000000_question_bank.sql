@@ -841,6 +841,17 @@ BEGIN
     FROM trefs t
     WHERE NOT EXISTS (SELECT 1 FROM public.qb_texts x WHERE x.version_id = p_version_id AND x.key = t.key);
 
+  -- Gate option codes are module codes (choosing option C chooses module C).
+  RETURN QUERY
+    SELECT 'error', 'gate_option_module', format('Gate option %s is not a couple or individual module.', o.option_code), o.option_code
+    FROM public.qb_scoring s
+    JOIN public.qb_options o ON o.version_id = s.version_id AND o.qid = s.gate ->> 'qid'
+    WHERE s.version_id = p_version_id
+      AND NOT EXISTS (
+        SELECT 1 FROM public.qb_modules m
+        WHERE m.version_id = p_version_id AND m.code = o.option_code AND m.kind IN ('couple', 'individual')
+      );
+
   RETURN QUERY
     SELECT 'error', 'missing_strength_text', format('Strengths priority lists %s, which has no STRENGTH text.', x), x
     FROM public.qb_report_rules r, jsonb_array_elements_text(r.strengths -> 'priority') x
