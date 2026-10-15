@@ -33,8 +33,8 @@ nehamehta/
 ├─ docs/
 │  ├─ spec/                   MFB Assessments Developer Spec v1.1 (.docx)
 │  ├─ questionbank/
-│  │  ├─ MFB_Intimacy_Assessment_QuestionBank_v1_1_1.xlsx
-│  │  └─ MFB_Mind_Assessment_QuestionBank_v1_0_1.xlsx
+│  │  ├─ MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx
+│  │  └─ MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx
 │  ├─ tasks/                  task briefs (01-ui-rebrand.md, …)
 │  └─ rebrand-audit.md        produced by task 01
 └─ supabase/                  shared migrations and config
@@ -61,8 +61,8 @@ Never edit a copy so it differs from the master. If a master changes, update bot
 | File | Wins on |
 |---|---|
 | `docs/spec/` Developer Spec v1.1 | Product, flow, safety, report layout |
-| `docs/questionbank/MFB_Intimacy_Assessment_QuestionBank_v1_1_1.xlsx` | Every Intimacy item, routing rule, score rule and text |
-| `docs/questionbank/MFB_Mind_Assessment_QuestionBank_v1_0_1.xlsx` | Every Mind item, routing rule, score rule and text |
+| `docs/questionbank/MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx` | Every Intimacy item, routing rule, score rule and text |
+| `docs/questionbank/MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx` | Every Mind item, routing rule, score rule and text |
 | `brand/MFB_Brand_Guidelines_v1.pdf` | Logo use, colour, type, voice, photography |
 | `brand/MFB_Assessment_Report_Template_A4.pdf` | Report PDF layout |
 
@@ -243,10 +243,16 @@ so copy the master file there before using a new combination.
 - Nothing in UI, reports, metadata or code comments may contain a diagnosis name, medical claim, cure or
   guarantee word, price (outside payment), or an unapproved credential.
 - DPDP (India) / GDPR: consent before health information; no marketing opt-in on the consent screen.
+- Testing phase only: the Renflair API key sits in `20261013000001_renflair_sms_hook.sql`. The owner
+  removes it before any push. Do not modify or flag it.
 
 ## Database rules
 
 - Never edit an applied migration. Add a new timestamped file in `supabase/migrations/`.
+- The owner runs SQL in the Supabase dashboard SQL Editor. Write migrations paste-ready (one
+  `BEGIN … COMMIT`), plus a separate verification SQL file. Do not apply them or start a local database.
+- Gender, relationship status, staff roles and age limits come only from `lib/options.ts` in each app
+  (stored values = English strings; labels via i18n).
 - Every new table gets RLS in the same migration.
 - Roles: `super_admin`, `coordinator`, `counsellor`. Counsellor-only fields (raw answers, flags,
   readiness, COPING_TAG) live in tables or views clients cannot read.
@@ -270,6 +276,8 @@ existing migrations, `.env*` files.
 - Done: folder rename `app/` → `clients/`; brand kit and docs added to the repo.
 - Done: task 01 UI rebrand (MFB tokens, Poppins/DM Sans, brand primitives in `components/brand/`,
   both apps restyled). See `docs/rebrand-audit.md` for details and follow-ups.
-- Next: migration (gender, relationship status, counsellor role, Vault SMS key), registration fixes,
-  domain switch to myfitbrain.app, then Phase 2 (question-bank import, engine, flow, report, payments,
-  safety ops, progress tests).
+- Done: task 02 foundation fixes — migration `20261015000000_mfb_foundation.sql` (gender and
+  relationship status per I2/I3, `counsellor` role, `is_counsellor()`), shared `lib/options.ts`,
+  registration AGE_STOP, Team page with counsellors, env-driven URLs (`lib/site.ts`,
+  `NEXT_PUBLIC_CLIENTS_URL` / `NEXT_PUBLIC_ADMIN_URL`). See `docs/tasks/02-findings.md`.
+- Next: Task 03 — question bank as data (shared `packages/`, tables, Excel importer).
