@@ -22,7 +22,7 @@ nehamehta/
 ├─ clients/                   Next.js app — client portal
 ├─ packages/
 │  └─ questionbank/           @mfb/questionbank — types, condition schema, Excel parser, seed rules,
-│                             loader, qb:import CLI (TypeScript source, no build step; Vitest)
+│                             version patches, loader, qb:import / qb:patch CLIs (TS source; Vitest)
 ├─ brand/                     MFB Brand Kit v1 — MASTER files, never served directly
 │  ├─ 01_Logo/
 │  │  ├─ SVG/                 web use (first choice)
@@ -67,13 +67,17 @@ Never edit a copy so it differs from the master. If a master changes, update bot
 | File | Wins on |
 |---|---|
 | `docs/spec/` Developer Spec v1.1 | Product, flow, safety, report layout |
-| `docs/questionbank/MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx` | Every Intimacy item, routing rule, score rule and text |
-| `docs/questionbank/MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx` | Every Mind item, routing rule, score rule and text |
+| Question bank in the database (`qb_*`, live version) | Every item, routing rule, score rule and text, from IA 1.2 / MA 1.1 onward |
+| `docs/questionbank/decisions.md` | Why IA 1.2 / MA 1.1 differ from the Excel files (owner decisions D1–D20) |
+| `docs/questionbank/MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx` | Source of IA 1.1 only |
+| `docs/questionbank/MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx` | Source of MA 1.0 only |
 | `brand/MFB_Brand_Guidelines_v1.pdf` | Logo use, colour, type, voice, photography |
 | `brand/MFB_Assessment_Report_Template_A4.pdf` | Report PDF layout |
 
-If the spec and an Excel file differ, the Excel file wins. Never invent questions, scoring rules or report
-text. If something is not covered, stop and ask rather than guess.
+The Excel files are the v1.1 / v1.0 source; the database is the source of truth from IA 1.2 / MA 1.1
+onward, and every change since is recorded in `docs/questionbank/decisions.md` and made as a new version.
+If the spec and the question bank differ, the question bank wins. Never invent questions, scoring rules or
+report text. If something is not covered, stop and ask rather than guess.
 
 ---
 
@@ -119,9 +123,12 @@ text. If something is not covered, stop and ask rather than guess.
 - Status changes only through `qb_start_new_version`, `qb_import_version`, `qb_submit_for_review`,
   `qb_return_to_draft`, `qb_publish` (needs a change note), `qb_delete_draft`. Submit and publish require
   `qb_validate_version` to return no errors. Rights: `profiles.can_edit_content` / `can_approve_content`.
-- Rules are data: seed files `packages/questionbank/seeds/<TEST>-<VERSION>.rules.json` convert the Excel
-  prose once; later versions copy rules from the previous version. Mapping and open questions:
-  `docs/tasks/03-rules-mapping.md`.
+- Rules are data: seed files `packages/questionbank/seeds/<TEST>-<VERSION>.rules.json` converted the Excel
+  prose once (IA 1.1, MA 1.0; mapping in `docs/tasks/03-rules-mapping.md`). Later versions are copies of the
+  live version changed by patches (`packages/questionbank/patches/*.patch.json`, `npm run qb:patch`) or,
+  from Task 05, the admin editor. Every change cites a decision in `docs/questionbank/decisions.md`.
+- Never import an Excel file older than or equal to the latest version: it would undo later decisions
+  (the import blocks it; the CLI needs `--force`).
 - Condition format (one JSON shape for every rule): `docs/questionbank/rules-reference.md`. Add a fact
   only if a source rule truly cannot be expressed, and document it there.
 - Clients may read only live tests, versions, modules, questions and options — never rules, flags, texts,
@@ -242,11 +249,14 @@ so copy the master file there before using a new combination.
 - No fake urgency, countdowns, streaks, confetti, marketing opt-ins, upsells, fake reviews or
   unverified outcome numbers.
 - The assessment is "a structured assessment designed by Dr. Neha Mehta". Never "clinically validated".
-- "Founded by Dr. Neha Mehta" / "Designed by Dr. Neha Mehta" only. Never claim she personally reviews or
+- "Founded by Dr. Neha Mehta" / "Designed by Dr. Neha Mehta" only, plus exactly "Dr. Neha Mehta, Consultant
+  Psychologist" (the brand guidelines use this line, e.g. DESIGNED_BY in the report). Every other
+  credential still needs approval. Never claim she personally reviews or
   treats every case.
 - Discretion: SMS, WhatsApp, email subjects, payment-gateway descriptor and all notifications say only
   "MFB Assessment". Never "Intimacy". Browser tab titles and page metadata stay generic ("My Fit Brain").
-- Report text comes only from the Excel Report Text and Strengths & Stuck tabs. Never generate free text.
+- Report text comes only from the version's question-bank texts (`qb_texts`, `qb_item_texts`; originally the
+  Excel Report Text, Flags & Safety and Strengths & Stuck tabs). Never generate free text.
 
 ## Safety (never weaken)
 
@@ -294,7 +304,7 @@ existing migrations, `.env*` files.
 - Windows + PowerShell. Stop dev servers before renaming or moving folders.
 - Work on a branch per task; commit in small logical chunks with conventional messages.
 - Install from the repo root (`npm install`); never add a lockfile inside an app. Root scripts:
-  `dev:clients`, `dev:admin`, `build`, `lint`, `test`, `qb:import`.
+  `dev:clients`, `dev:admin`, `build`, `lint`, `test`, `qb:import`, `qb:patch`.
 - Before finishing any task: `npm run lint` and `npm run build` pass in every app you touched, and
   `npm test` passes when a package changed.
 
@@ -313,4 +323,9 @@ existing migrations, `.env*` files.
   `20261016000000_question_bank.sql`, seed rules and worked-example test cases for IA 1.1 / MA 1.0, admin
   Question bank screens (overview, import, read-only version tabs, status actions). See
   `docs/tasks/03-findings.md`, `03-rules-mapping.md`, `03-load-banks.md`.
-- Next: Task 04 — generic engine (scoring, routing, flags from `VersionConfig`; verify the test cases).
+- Done: task 04 Step 0 — single repository (apps no longer nested git repos; old histories in
+  `../git-backups/`).
+- Done: task 03b rule decisions — `docs/questionbank/decisions.md` (D1–D20), migration
+  `20261016100000_qb_rule_decisions.sql` (exclusive options, test Hindi/progress names, validation), version
+  patches IA 1.1 → 1.2 and MA 1.0 → 1.1 with 8 new test cases. Run order: `docs/tasks/03b-apply.md`.
+- Next: Task 04 from Step 1 — generic engine (`docs/tasks/04-engine.md`, including the Task 03b additions).

@@ -213,3 +213,30 @@ These must only run on the server (mark with `import 'server-only'` in the helpe
 3. Commit in chunks (repo merge, engine core, tests, test-runs migration, admin test-case tab, docs).
 4. Print a short summary: repo merge result, test results (11 Worked Examples + edge cases), any engine
    warnings on the real banks (e.g. `NO_FORMAT_RULE`, missing texts), findings needing a decision.
+
+---
+
+## Additional requirements from Task 03b
+
+Task 03b (owner decisions, `docs/questionbank/decisions.md`) published IA 1.2 and MA 1.1. The engine must
+also:
+
+1. **Exclusive options.** Reject answers that combine an `exclusive` option (`qb_options.exclusive`, e.g.
+   R1 / MR1 `none_of_these`) with any other option: a validation error in `getFlow` / `score` (the UI will
+   also prevent it).
+2. **Gate size.** Enforce `qb_scoring.gate.min_choices` and `max_choices` (both tests now require at least 1).
+3. **Interpretation fallback** per `qb_report_rules.interpretation.fallback`: with `core`, a module that has
+   no interpretation text for its band (e.g. `INTERP_B_LOW` does not exist) uses the core module's text for
+   the core's band (`INTERP_CORE_*`, `INTERP_SOLO_*`, `INTERP_MCORE_*`). The same key is not printed twice
+   (test cases expect `interpretation_keys` without repeats). With `none`, nothing is printed for it.
+4. **Forced format.** Flags with `force_format` are applied in flag `sort` order; the first one wins, before
+   any format rule.
+5. **Unprinted flags.** Flags with `printed: false` never appear in the client report; they appear in
+   `counsellor.tags`.
+6. **Notify.** `notify` recipients (`coordinator`, `counsellor`) are passed through in the result for Task 08.
+7. **Test cases.** The new IA 1.2 / MA 1.1 test cases must pass along with the 11 Worked Examples:
+   IA `T7_RARELY`, `T8_NEVER`, `R2_PNS_ONSET`, `C11_OFTEN`, `LOW_MODULE_FALLBACK`, `SAFETY_BEATS_COUPLE`;
+   MA `LOW_MODULE_FALLBACK`, `CRISIS_NOTIFY`. Expected results may include `interpretation_keys` and
+   `notify`. In IA 1.2, "Worked example D" answers T7 = Sometimes (was Rarely in 1.1) so it keeps Couple.
+8. Build the test configs from the 1.1 / 1.0 workbooks plus `packages/questionbank/patches/*.patch.json`
+   (`applyPatch`), so offline tests match the live 1.2 / 1.1 versions.
