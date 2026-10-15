@@ -1,16 +1,21 @@
 'use client';
 
-import { CheckCircle2, User, Hourglass, Lock } from 'lucide-react';
+import Link from 'next/link';
+import { CheckCircle2, ChevronRight, ClipboardList, Lock, User } from 'lucide-react';
 import { ClientRecord } from '../lib/types';
 import { isGender, isRelationshipStatus } from '../lib/options';
 import { translations } from '../lib/i18n';
 import { useLanguage } from '../components/LanguageProvider';
 import { ClientHeader } from '../components/ClientHeader';
 import { formatDisplayPhone } from '../lib/phone';
-import { Card, Footer, Pill } from '../components/brand';
+import { ButtonLink, Card, Footer, Pill } from '../components/brand';
+import type { AttemptSummary, TestCard } from '../lib/assessment/server';
+import type { LocalPair } from '../lib/assessment/types';
 
 interface ClientHomeViewProps {
   client: ClientRecord;
+  tests: TestCard[];
+  attempts: AttemptSummary[];
 }
 
 type Copy = (typeof translations)['en'];
@@ -25,9 +30,10 @@ function relationshipLabel(t: Copy, status: string): string {
   return isRelationshipStatus(status) ? t.options.relationship[status] : status;
 }
 
-export function ClientHomeView({ client }: ClientHomeViewProps) {
+export function ClientHomeView({ client, tests, attempts }: ClientHomeViewProps) {
   const { lang, setLang } = useLanguage();
   const t = translations[lang];
+  const local = (p: LocalPair | null) => (p ? (lang === 'hi' ? p.hi ?? p.en : p.en ?? p.hi) : null);
   const location = [client.city, client.state].filter(Boolean).join(', ');
 
   const details = [
@@ -37,6 +43,13 @@ export function ClientHomeView({ client }: ClientHomeViewProps) {
     { label: t.home.relationship, value: relationshipLabel(t, client.marital_status) },
     { label: t.home.location, value: location || '—' },
   ];
+
+  const statusLabel: Record<AttemptSummary['status'], string> = {
+    paid: t.assess.statusReady,
+    in_progress: t.assess.statusInProgress,
+    completed: t.assess.statusCompleted,
+    stopped: t.assess.statusStopped,
+  };
 
   return (
     <div lang={lang} className="flex min-h-screen flex-col bg-cream">
@@ -52,31 +65,70 @@ export function ClientHomeView({ client }: ClientHomeViewProps) {
           <h1 className="mt-4 break-words text-[30px] font-semibold leading-[1.2] text-teal sm:text-[40px]">
             {t.home.welcome} {client.full_name}
           </h1>
-          <p className="mt-2 max-w-[560px] text-[17px] leading-[26px] text-ink-soft">
-            {t.home.phase1Notice}
-          </p>
         </div>
 
         <div className="grid items-start gap-4 sm:gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          {/* What happens next */}
-          <Card className="p-6 sm:p-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card bg-mist text-teal">
-                <Hourglass size={24} strokeWidth={2} aria-hidden />
+          <div className="space-y-4 sm:space-y-6">
+            {/* Start an assessment */}
+            <section>
+              <h2 className="mb-3 text-[22px] font-semibold leading-[1.3] text-teal">{t.assess.startTitle}</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {tests.map((test) => (
+                  <Card key={test.code} className="flex flex-col p-5">
+                    <h3 className="text-[19px] font-semibold leading-[1.3] text-ink">{local(test.name)}</h3>
+                    <p lang="en" className="mt-1 text-[13px] text-ink-muted">
+                      {t.brand.endorsement}
+                    </p>
+                    {test.subtitle && <p className="mt-3 flex-1 text-[15px] leading-[23px] text-ink-soft">{local(test.subtitle)}</p>}
+                    <ButtonLink href={`/payment/${test.code}`} variant="secondary" className="mt-4 self-start">
+                      {t.assess.start}
+                    </ButtonLink>
+                  </Card>
+                ))}
               </div>
-              <div className="min-w-0">
-                <h2 className="text-[22px] font-semibold leading-[1.3] text-teal sm:text-[24px]">
-                  {t.home.nextPhaseTitle}
-                </h2>
-                <p className="mt-2 text-[16px] leading-[26px] text-ink-soft">{t.home.nextPhaseNote}</p>
-              </div>
-            </div>
+            </section>
 
-            <p className="mt-6 flex items-start gap-2 rounded-input bg-mist px-4 py-3 text-[14px] leading-[22px] text-ink-soft">
-              <Lock size={16} strokeWidth={2} className="mt-[3px] shrink-0 text-teal" aria-hidden />
-              <span>{t.home.counsellingAssurance}</span>
-            </p>
-          </Card>
+            {/* Your assessments */}
+            <Card className="p-6 sm:p-8">
+              <h2 className="flex items-center gap-2 text-[20px] font-semibold leading-[1.3] text-teal">
+                <ClipboardList size={20} strokeWidth={2} aria-hidden />
+                <span>{t.assess.yourAssessments}</span>
+              </h2>
+              {attempts.length === 0 ? (
+                <p className="mt-3 text-[15px] text-ink-muted">{t.assess.none}</p>
+              ) : (
+                <ul className="mt-3 divide-y divide-sand">
+                  {attempts.map((a) => {
+                    const href = a.status === 'completed' ? `/report/${a.id}` : `/assessment/${a.id}`;
+                    const action = a.status === 'completed' ? t.assess.viewReport : a.status === 'stopped' ? null : t.assess.continue;
+                    return (
+                      <li key={a.id}>
+                        <Link href={href} className="flex min-h-[64px] items-center gap-3 py-3 transition-colors hover:bg-mist/50">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-ink">{local(a.name)}</p>
+                            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+                              <Pill tone={a.status === 'completed' ? 'mist' : 'quiet'}>{statusLabel[a.status]}</Pill>
+                              {a.reportId && <span className="font-mono">{a.reportId}</span>}
+                            </p>
+                          </div>
+                          {action && (
+                            <span className="flex shrink-0 items-center gap-1 text-[14px] font-semibold text-teal">
+                              {action}
+                              <ChevronRight size={16} strokeWidth={2} aria-hidden />
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <p className="mt-4 flex items-start gap-2 rounded-input bg-mist px-4 py-3 text-[14px] leading-[22px] text-ink-soft">
+                <Lock size={16} strokeWidth={2} className="mt-[3px] shrink-0 text-teal" aria-hidden />
+                <span>{t.home.counsellingAssurance}</span>
+              </p>
+            </Card>
+          </div>
 
           {/* Your details */}
           <Card className="p-6 sm:p-8">
