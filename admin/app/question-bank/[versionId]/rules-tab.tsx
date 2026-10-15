@@ -66,8 +66,8 @@ export function RulesTab({ config }: { config: VersionConfig }) {
             </span>
           </RuleCard>
           <RuleCard title={key('Gate and primary module')} json={{ gate: s.gate, primary: s.primary }}>
-            {s.gate.qid}: choose up to {s.gate.max_choices}. Primary = the chosen module with the highest band (tie → first
-            chosen); if none is chosen, the core.
+            {s.gate.qid}: choose {s.gate.min_choices !== undefined ? `${s.gate.min_choices} to ${s.gate.max_choices}` : `up to ${s.gate.max_choices}`}.
+            Primary = the chosen module with the highest band (tie → first chosen); if none is chosen, the core.
           </RuleCard>
           <RuleCard title={key('Tiers and pace')} json={{ tier_thresholds: s.tier_thresholds, pace: s.pace }}>
             {tierLines(config).join(' · ')}.
@@ -167,7 +167,12 @@ export function RulesTab({ config }: { config: VersionConfig }) {
             {r.tone.ready_key} when {describeCondition(r.tone.condition, l)}; otherwise {r.tone.gentle_key}.
           </RuleCard>
           <RuleCard title={key('Interpretation')} json={r.interpretation}>
-            Interpretation lines for {r.interpretation.order.join(', ')} (second only when at least {r.interpretation.second_min_band}).
+            Interpretation lines for {r.interpretation.order.join(', ')} (second only when at least {r.interpretation.second_min_band}).{' '}
+            {r.interpretation.fallback === 'core'
+              ? 'When a module has no text for its band, the core’s text for the core’s band is used (printed once).'
+              : r.interpretation.fallback === 'none'
+                ? 'When a module has no text for its band, nothing is printed for it.'
+                : 'No fallback set.'}
           </RuleCard>
           <RuleCard title={key('Crisis layout')} json={r.layouts}>
             {r.layouts.crisis.top_block} first; hide {r.layouts.crisis.hide.join(', ')}; next step {r.layouts.crisis.next_key}.

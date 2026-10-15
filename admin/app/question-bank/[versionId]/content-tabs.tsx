@@ -47,7 +47,14 @@ export function QuestionsTab({ config }: { config: VersionConfig }) {
                     <tbody className="divide-y divide-sand">
                       {q.options.map((o) => (
                         <tr key={o.option_code}>
-                          <td className="break-all py-1.5 pr-2 font-mono text-ink-muted">{o.option_code}</td>
+                          <td className="break-all py-1.5 pr-2 font-mono text-ink-muted">
+                            {o.option_code}
+                            {o.exclusive && (
+                              <span className="ml-1.5 whitespace-nowrap font-body text-[11px] font-semibold uppercase tracking-[0.06em] text-teal">
+                                exclusive
+                              </span>
+                            )}
+                          </td>
                           <td className="py-1.5 pr-2 text-ink">{o.label_en}</td>
                           <td lang="hi" className="py-1.5 pr-2 text-ink-soft">{o.label_hi}</td>
                           <td className="py-1.5 text-right font-mono tabular-nums text-ink">{o.value ?? '—'}</td>

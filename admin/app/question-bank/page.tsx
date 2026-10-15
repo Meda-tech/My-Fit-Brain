@@ -65,6 +65,12 @@ export default async function QuestionBankPage() {
                   ) : (
                     <p className="mt-0.5 text-[13px] text-ink-muted">Hindi name not set yet</p>
                   )}
+                  {t.test.progress_name_en && (
+                    <p className="mt-1 text-[13px] text-ink-muted">
+                      Progress re-test: {t.test.progress_name_en}
+                      {t.test.progress_name_hi && <span lang="hi"> · {t.test.progress_name_hi}</span>}
+                    </p>
+                  )}
                 </div>
               </div>
 

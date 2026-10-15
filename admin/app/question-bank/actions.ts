@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { loadLatestRules, type RulesSource, type ValidationIssue } from '@mfb/questionbank';
+import { loadLatestRules, loadLatestVersionLabel, type RulesSource, type ValidationIssue } from '@mfb/questionbank';
 import { prepareImport, type ImportPreview } from '@mfb/questionbank/import';
 import { requireStaff } from '../../lib/auth';
 import { contentRights, loadOpenVersion, STATUS_LABELS } from '../../lib/question-bank/data';
@@ -112,6 +112,8 @@ async function prepare(file: File, changeNote: string | null) {
     fileName: file.name,
     tests: tests ?? [],
     loadLatest: (code) => loadLatestRules(supabase, code),
+    // Blocks a workbook whose version is not newer than the latest one (it would undo later decisions).
+    latestLabel: (code) => loadLatestVersionLabel(supabase, code),
     changeNote,
   });
 }
