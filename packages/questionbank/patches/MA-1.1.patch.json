@@ -1,0 +1,213 @@
+{
+  "test_code": "MA",
+  "base_version_label": "1.0",
+  "version_label": "1.1",
+  "change_note": "Owner decisions D2, D12, D13, D19 (docs/questionbank/decisions.md)",
+  "operations": [
+    {
+      "op": "set_option",
+      "decision": "D2",
+      "qid": "MR1",
+      "option_code": "none_of_these",
+      "set": {
+        "exclusive": true
+      }
+    },
+    {
+      "op": "set_flag",
+      "decision": "D19",
+      "key": "CRISIS",
+      "merge_effects": {
+        "notify": [
+          "coordinator",
+          "counsellor"
+        ]
+      }
+    },
+    {
+      "op": "set_flag",
+      "decision": "D19",
+      "key": "SAFETY",
+      "merge_effects": {
+        "notify": [
+          "coordinator",
+          "counsellor"
+        ]
+      }
+    },
+    {
+      "op": "set_scoring",
+      "decision": "D12",
+      "field": "gate",
+      "merge": {
+        "min_choices": 1
+      }
+    },
+    {
+      "op": "set_report_rules",
+      "decision": "D13",
+      "field": "interpretation",
+      "merge": {
+        "fallback": "core"
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D13",
+      "test_case": {
+        "name": "LOW_MODULE_FALLBACK",
+        "source": "manual",
+        "context": {
+          "sex": "female",
+          "age": 30,
+          "path": null
+        },
+        "answers": {
+          "MI1": "25_34",
+          "MI2": "female",
+          "MI3": "working_job",
+          "MI4": "india",
+          "MI5": "english",
+          "MG1": [
+            "W"
+          ],
+          "MC7": "sometimes",
+          "MC1": "rarely",
+          "MC2": "rarely",
+          "MC3": "sometimes",
+          "MC4": "sometimes",
+          "MC5": "sometimes",
+          "MC6": "rarely",
+          "MC8": "sometimes",
+          "MC9": "rarely",
+          "MC10": "sometimes",
+          "W1": "rarely",
+          "W2": "rarely",
+          "W3": "rarely",
+          "W4": "rarely",
+          "W5": "never",
+          "W6": "never",
+          "W7": "never",
+          "W8": "often",
+          "MD1": "3_12_months",
+          "MD2": "a_little",
+          "MD3": "nothing_yet",
+          "MD4": "yes",
+          "MR1": [
+            "none_of_these"
+          ],
+          "MR2": "no",
+          "MR4": "never",
+          "MR5": "no",
+          "MR6": "no"
+        },
+        "expected": {
+          "bands": {
+            "MCORE": "Moderate",
+            "W": "Low"
+          },
+          "primary": "W",
+          "points": {
+            "SEVERITY": 0,
+            "DURATION": 1,
+            "IMPACT": 1,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "ISOLATION": 0,
+            "TOTAL": 2
+          },
+          "tier": 4,
+          "format": "individual",
+          "flags": [],
+          "layout": "standard",
+          "interpretation_keys": [
+            "INTERP_MCORE_MODERATE"
+          ]
+        },
+        "verified": false,
+        "notes": "Female 30, working, chose W, W band Low, MCORE Moderate (D13). Intended module %: MCORE 17/27 = 63% (Moderate) · W 4/24 = 17% (Low). Points SEVERITY 0 + DURATION 1 + IMPACT 1 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + ISOLATION 0 = 2. There is no INTERP_W_LOW, so the primary line falls back to INTERP_MCORE_MODERATE; printed once."
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D19",
+      "test_case": {
+        "name": "CRISIS_NOTIFY",
+        "source": "manual",
+        "context": {
+          "sex": "male",
+          "age": 27,
+          "path": null
+        },
+        "answers": {
+          "MI1": "25_34",
+          "MI2": "male",
+          "MI3": "working_job",
+          "MI4": "india",
+          "MI5": "english",
+          "MG1": [
+            "H"
+          ],
+          "MC7": "sometimes",
+          "MC1": "rarely",
+          "MC2": "sometimes",
+          "MC3": "rarely",
+          "MC4": "rarely",
+          "MC5": "rarely",
+          "MC6": "sometimes",
+          "MC8": "rarely",
+          "MC9": "sometimes",
+          "MC10": "sometimes",
+          "H1": "sometimes",
+          "H2": "sometimes",
+          "H3": "sometimes",
+          "H4": "sometimes",
+          "H5": "sometimes",
+          "H6": "sometimes",
+          "H7": "sometimes",
+          "H8": "sometimes",
+          "MD1": "3_12_months",
+          "MD2": "quite_a_lot",
+          "MD3": "nothing_yet",
+          "MD4": "somewhat",
+          "MR1": [
+            "none_of_these"
+          ],
+          "MR2": "no",
+          "MR4": "never",
+          "MR5": "yes",
+          "MR6": "no",
+          "MR3": "no"
+        },
+        "expected": {
+          "bands": {
+            "MCORE": "Mild",
+            "H": "Moderate"
+          },
+          "primary": "H",
+          "points": {
+            "SEVERITY": 2,
+            "DURATION": 1,
+            "IMPACT": 2,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "ISOLATION": 0,
+            "TOTAL": 5
+          },
+          "tier": 6,
+          "format": "individual",
+          "flags": [
+            "CRISIS"
+          ],
+          "layout": "crisis",
+          "notify": [
+            "coordinator",
+            "counsellor"
+          ]
+        },
+        "verified": false,
+        "notes": "Male 27, working, chose H, MR5 = Yes (D19). Intended module %: MCORE 10/27 = 37% (Mild) · H 16/24 = 67% (Moderate). Points SEVERITY 2 + DURATION 1 + IMPACT 2 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + ISOLATION 0 = 5. Crisis layout: the plan is hidden in the report; the tier (6) is still calculated and stored."
+      }
+    }
+  ]
+}

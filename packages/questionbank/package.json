@@ -7,12 +7,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./parse": "./src/parse-excel.ts",
-    "./import": "./src/import.ts"
+    "./import": "./src/import.ts",
+    "./patch": "./src/patch.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p .",
-    "qb:import": "tsx scripts/import.ts"
+    "qb:import": "tsx scripts/import.ts",
+    "qb:patch": "tsx scripts/patch.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

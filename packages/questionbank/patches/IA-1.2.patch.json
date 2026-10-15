@@ -1,0 +1,836 @@
+{
+  "test_code": "IA",
+  "base_version_label": "1.1",
+  "version_label": "1.2",
+  "change_note": "Owner decisions D2, D4, D5, D6, D8, D12, D13, D16, D19 (docs/questionbank/decisions.md)",
+  "operations": [
+    {
+      "op": "set_option",
+      "decision": "D2",
+      "qid": "R1",
+      "option_code": "none_of_these",
+      "set": {
+        "exclusive": true
+      }
+    },
+    {
+      "op": "set_question",
+      "decision": "D16",
+      "qid": "R2",
+      "set": {
+        "scored": "no"
+      }
+    },
+    {
+      "op": "set_question",
+      "decision": "D16",
+      "qid": "R3",
+      "set": {
+        "scored": "no"
+      }
+    },
+    {
+      "op": "set_question",
+      "decision": "D16",
+      "qid": "R4",
+      "set": {
+        "scored": "no"
+      }
+    },
+    {
+      "op": "set_question",
+      "decision": "D16",
+      "qid": "R5",
+      "set": {
+        "scored": "no"
+      }
+    },
+    {
+      "op": "set_question",
+      "decision": "D16",
+      "qid": "R6",
+      "set": {
+        "scored": "no"
+      }
+    },
+    {
+      "op": "add_text",
+      "decision": "D8",
+      "key": "MED_ONSET",
+      "copy_from": {
+        "test_code": "MA",
+        "key": "MED_ONSET"
+      }
+    },
+    {
+      "op": "add_flag",
+      "decision": "D8",
+      "after": "MED_FEMALE",
+      "flag": {
+        "key": "MED_ONSET",
+        "condition": {
+          "all": [
+            {
+              "fact": "answer",
+              "q": "R2",
+              "op": "eq",
+              "value": "yes"
+            },
+            {
+              "not": {
+                "fact": "flag",
+                "key": "MED_MALE"
+              }
+            },
+            {
+              "not": {
+                "fact": "flag",
+                "key": "MED_FEMALE"
+              }
+            }
+          ]
+        },
+        "effects": {
+          "report_block": "MED_ONSET",
+          "dashboard_tag": "MED_ONSET"
+        },
+        "is_protected": false
+      }
+    },
+    {
+      "op": "add_flag",
+      "decision": "D4",
+      "flag": {
+        "key": "SEPARATION_THOUGHTS",
+        "condition": {
+          "fact": "answer",
+          "q": "C11",
+          "op": "eq",
+          "value": "often"
+        },
+        "effects": {
+          "dashboard_tag": "SEPARATION_THOUGHTS",
+          "printed": false
+        },
+        "is_protected": false
+      }
+    },
+    {
+      "op": "add_flag",
+      "decision": "D5",
+      "flag": {
+        "key": "RELATIONSHIP_SAFETY_CHECK",
+        "condition": {
+          "fact": "answer",
+          "q": "T7",
+          "op": "in",
+          "value": [
+            "never",
+            "rarely"
+          ]
+        },
+        "effects": {
+          "force_format": "individual",
+          "dashboard_tag": "RELATIONSHIP_SAFETY_CHECK",
+          "printed": false
+        },
+        "is_protected": false
+      }
+    },
+    {
+      "op": "add_flag",
+      "decision": "D6",
+      "flag": {
+        "key": "LOW_REPAIR_MOTIVATION",
+        "condition": {
+          "fact": "answer",
+          "q": "T8",
+          "op": "in",
+          "value": [
+            "never",
+            "rarely"
+          ]
+        },
+        "effects": {
+          "force_format": "individual",
+          "dashboard_tag": "LOW_REPAIR_MOTIVATION",
+          "printed": false
+        },
+        "is_protected": false
+      }
+    },
+    {
+      "op": "set_flag",
+      "decision": "D19",
+      "key": "CRISIS",
+      "merge_effects": {
+        "notify": [
+          "coordinator",
+          "counsellor"
+        ]
+      }
+    },
+    {
+      "op": "set_flag",
+      "decision": "D19",
+      "key": "SAFETY",
+      "merge_effects": {
+        "notify": [
+          "coordinator",
+          "counsellor"
+        ]
+      }
+    },
+    {
+      "op": "set_scoring",
+      "decision": "D12",
+      "field": "gate",
+      "merge": {
+        "min_choices": 1
+      }
+    },
+    {
+      "op": "set_format_rules",
+      "decision": "D12",
+      "rules": [
+        {
+          "key": "SAFETY_INDIVIDUAL",
+          "condition": {
+            "fact": "flag",
+            "key": "SAFETY"
+          },
+          "format": "individual",
+          "split": null,
+          "add_text_key": null,
+          "sort": 1
+        },
+        {
+          "key": "SOLO_INDIVIDUAL",
+          "condition": {
+            "fact": "path",
+            "op": "eq",
+            "value": "solo"
+          },
+          "format": "individual",
+          "split": null,
+          "add_text_key": null,
+          "sort": 2
+        },
+        {
+          "key": "PARTNER_NOT_WILLING",
+          "condition": {
+            "not": {
+              "fact": "answer",
+              "q": "I6",
+              "op": "eq",
+              "value": "yes_and_they_are_willing_to_join_sessions"
+            }
+          },
+          "format": "individual",
+          "split": null,
+          "add_text_key": null,
+          "sort": 3
+        },
+        {
+          "key": "COUPLE_ONLY",
+          "condition": {
+            "fact": "chosen_kinds",
+            "op": "only",
+            "value": [
+              "couple"
+            ]
+          },
+          "format": "couple",
+          "split": null,
+          "add_text_key": null,
+          "sort": 4
+        },
+        {
+          "key": "INDIVIDUAL_ONLY",
+          "condition": {
+            "fact": "chosen_kinds",
+            "op": "only",
+            "value": [
+              "individual"
+            ]
+          },
+          "format": "individual_partner_joins",
+          "split": null,
+          "add_text_key": null,
+          "sort": 5
+        },
+        {
+          "key": "MIXED",
+          "condition": {
+            "fact": "chosen_kinds",
+            "op": "includes",
+            "value": [
+              "couple",
+              "individual"
+            ]
+          },
+          "format": "mixed",
+          "split": {
+            "4": [
+              3,
+              1
+            ],
+            "6": [
+              4,
+              2
+            ],
+            "8": [
+              5,
+              3
+            ],
+            "12": [
+              7,
+              5
+            ]
+          },
+          "add_text_key": null,
+          "sort": 6
+        },
+        {
+          "key": "DEFAULT_INDIVIDUAL",
+          "condition": {
+            "all": []
+          },
+          "format": "individual",
+          "split": null,
+          "add_text_key": null,
+          "sort": 7
+        }
+      ]
+    },
+    {
+      "op": "set_report_rules",
+      "decision": "D13",
+      "field": "interpretation",
+      "merge": {
+        "fallback": "core"
+      }
+    },
+    {
+      "op": "set_test_case",
+      "decision": "D5",
+      "name": "Worked example D",
+      "merge_answers": {
+        "T7": "sometimes"
+      },
+      "set": {
+        "notes": "Female 34, married 9 yrs, chose G + A; partner willing. Intended module %: CORE 28/33 = 85% (High) · G 15/18 = 83% (High) · A 16/24 = 67% (Moderate). Points SEVERITY 3 + DURATION 3 + IMPACT 3 + MULTI_AREA 2 + PRIOR_ATTEMPTS 1 + TRUST_WOUND 1 = 13. IA 1.2: T7 changed from Rarely to Sometimes so RELATIONSHIP_SAFETY_CHECK (D5) does not fire; expected tier 12 and format Couple are unchanged from the workbook."
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D5",
+      "test_case": {
+        "name": "T7_RARELY",
+        "source": "manual",
+        "context": {
+          "sex": "female",
+          "age": 30,
+          "path": "partner"
+        },
+        "answers": {
+          "I1": "25_34",
+          "I2": "female",
+          "I3": "married",
+          "I4": "3_10_years",
+          "I5": "india",
+          "I6": "yes_and_they_are_willing_to_join_sessions",
+          "I7": "no_children",
+          "I8": "english",
+          "G1": [
+            "G",
+            "A"
+          ],
+          "C1": "rarely",
+          "C2": "rarely",
+          "C3": "sometimes",
+          "C4": "rarely",
+          "C5": "rarely",
+          "C6": "sometimes",
+          "C7": "sometimes",
+          "C8": "rarely",
+          "C9": "sometimes",
+          "C10": "rarely",
+          "C11": "rarely",
+          "C12": "sometimes",
+          "T7": "rarely",
+          "T2": "sometimes",
+          "T3": "sometimes",
+          "T4": "sometimes",
+          "T5": "sometimes",
+          "T6": "sometimes",
+          "T1": "yes",
+          "T8": "often",
+          "A1": "sometimes",
+          "A2": "sometimes",
+          "A3": "rarely",
+          "A4": "rarely",
+          "A5": "rarely",
+          "A6": "rarely",
+          "A7": "sometimes",
+          "A8": "sometimes",
+          "D1": "3_12_months",
+          "D2": "a_little",
+          "D3": "nothing_yet",
+          "D4": "yes",
+          "R1": [
+            "none_of_these"
+          ],
+          "R2": "no",
+          "R5": "no",
+          "R6": "no",
+          "R3": "no"
+        },
+        "expected": {
+          "bands": {
+            "CORE": "Mild",
+            "G": "Moderate",
+            "A": "Mild"
+          },
+          "primary": "G",
+          "points": {
+            "SEVERITY": 2,
+            "DURATION": 1,
+            "IMPACT": 1,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "TRUST_WOUND": 1,
+            "TOTAL": 5
+          },
+          "tier": 6,
+          "format": "individual",
+          "flags": [
+            "RELATIONSHIP_SAFETY_CHECK"
+          ],
+          "layout": "standard"
+        },
+        "verified": false,
+        "notes": "Female 30, partner willing, chose G + A, T7 = Rarely (D5). Intended module %: CORE 13/33 = 39% (Mild) · G 12/18 = 67% (Moderate) · A 10/24 = 42% (Mild). Points SEVERITY 2 + DURATION 1 + IMPACT 1 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + TRUST_WOUND 1 = 5. Couple modules with a willing partner would be Couple; RELATIONSHIP_SAFETY_CHECK forces individual. No SAFETY flag or block."
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D6",
+      "test_case": {
+        "name": "T8_NEVER",
+        "source": "manual",
+        "context": {
+          "sex": "female",
+          "age": 33,
+          "path": "partner"
+        },
+        "answers": {
+          "I1": "25_34",
+          "I2": "female",
+          "I3": "married",
+          "I4": "3_10_years",
+          "I5": "india",
+          "I6": "yes_and_they_are_willing_to_join_sessions",
+          "I7": "no_children",
+          "I8": "english",
+          "G1": [
+            "G"
+          ],
+          "C1": "rarely",
+          "C2": "rarely",
+          "C3": "sometimes",
+          "C4": "rarely",
+          "C5": "rarely",
+          "C6": "sometimes",
+          "C7": "sometimes",
+          "C8": "rarely",
+          "C9": "sometimes",
+          "C10": "rarely",
+          "C11": "rarely",
+          "C12": "sometimes",
+          "T7": "often",
+          "T2": "often",
+          "T3": "often",
+          "T4": "sometimes",
+          "T5": "sometimes",
+          "T6": "sometimes",
+          "T1": "yes",
+          "T8": "never",
+          "D1": "1_3_years",
+          "D2": "quite_a_lot",
+          "D3": "nothing_yet",
+          "D4": "yes",
+          "R1": [
+            "none_of_these"
+          ],
+          "R2": "no",
+          "R5": "no",
+          "R6": "no",
+          "R3": "no"
+        },
+        "expected": {
+          "bands": {
+            "CORE": "Mild",
+            "G": "Moderate"
+          },
+          "primary": "G",
+          "points": {
+            "SEVERITY": 2,
+            "DURATION": 2,
+            "IMPACT": 2,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "TRUST_WOUND": 1,
+            "TOTAL": 7
+          },
+          "tier": 8,
+          "format": "individual",
+          "flags": [
+            "LOW_REPAIR_MOTIVATION"
+          ],
+          "layout": "standard"
+        },
+        "verified": false,
+        "notes": "Female 33, partner willing, chose G only, T8 = Never (D6). Intended module %: CORE 13/33 = 39% (Mild) · G 12/18 = 67% (Moderate). Points SEVERITY 2 + DURATION 2 + IMPACT 2 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + TRUST_WOUND 1 = 7. G only with a willing partner would be Couple; LOW_REPAIR_MOTIVATION forces individual. T7 = Often so RELATIONSHIP_SAFETY_CHECK does not fire."
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D8",
+      "test_case": {
+        "name": "R2_PNS_ONSET",
+        "source": "manual",
+        "context": {
+          "sex": "prefer_not_to_say",
+          "age": 28,
+          "path": "partner"
+        },
+        "answers": {
+          "I1": "25_34",
+          "I2": "prefer_not_to_say",
+          "I3": "married",
+          "I4": "3_10_years",
+          "I5": "india",
+          "I6": "yes_and_they_are_willing_to_join_sessions",
+          "I7": "no_children",
+          "I8": "english",
+          "G1": [
+            "A"
+          ],
+          "C1": "rarely",
+          "C2": "rarely",
+          "C3": "sometimes",
+          "C4": "rarely",
+          "C5": "rarely",
+          "C6": "sometimes",
+          "C7": "sometimes",
+          "C8": "rarely",
+          "C9": "sometimes",
+          "C10": "rarely",
+          "C11": "rarely",
+          "C12": "sometimes",
+          "A1": "sometimes",
+          "A2": "sometimes",
+          "A3": "sometimes",
+          "A4": "sometimes",
+          "A5": "sometimes",
+          "A6": "sometimes",
+          "A7": "rarely",
+          "A8": "rarely",
+          "D1": "3_12_months",
+          "D2": "a_little",
+          "D3": "nothing_yet",
+          "D4": "yes",
+          "R1": [
+            "none_of_these"
+          ],
+          "R2": "yes",
+          "R5": "no",
+          "R6": "no"
+        },
+        "expected": {
+          "bands": {
+            "CORE": "Mild",
+            "A": "Moderate"
+          },
+          "primary": "A",
+          "points": {
+            "SEVERITY": 2,
+            "DURATION": 1,
+            "IMPACT": 1,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "TRUST_WOUND": 0,
+            "TOTAL": 4
+          },
+          "tier": 4,
+          "format": "couple",
+          "flags": [
+            "MED_ONSET"
+          ],
+          "layout": "standard"
+        },
+        "verified": false,
+        "notes": "Prefer not to say 28, partner willing, chose A only, R2 = Yes (D8). Intended module %: CORE 13/33 = 39% (Mild) · A 16/24 = 67% (Moderate). Points SEVERITY 2 + DURATION 1 + IMPACT 1 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + TRUST_WOUND 0 = 4. R3 and R4 are not shown (not Female/Male, neither C nor D chosen), so MED_MALE and MED_FEMALE cannot fire; MED_ONSET prints its block."
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D4",
+      "test_case": {
+        "name": "C11_OFTEN",
+        "source": "manual",
+        "context": {
+          "sex": "female",
+          "age": 35,
+          "path": "partner"
+        },
+        "answers": {
+          "I1": "35_44",
+          "I2": "female",
+          "I3": "married",
+          "I4": "3_10_years",
+          "I5": "india",
+          "I6": "yes_and_they_are_willing_to_join_sessions",
+          "I7": "no_children",
+          "I8": "english",
+          "G1": [
+            "B"
+          ],
+          "C11": "often",
+          "C1": "sometimes",
+          "C2": "sometimes",
+          "C3": "sometimes",
+          "C4": "rarely",
+          "C5": "rarely",
+          "C6": "sometimes",
+          "C7": "sometimes",
+          "C8": "rarely",
+          "C9": "sometimes",
+          "C10": "rarely",
+          "C12": "sometimes",
+          "B4": "no",
+          "B1": "sometimes",
+          "B2": "sometimes",
+          "B3": "sometimes",
+          "B5": "sometimes",
+          "B6": "rarely",
+          "B7": "rarely",
+          "B8": "rarely",
+          "D1": "3_12_months",
+          "D2": "a_little",
+          "D3": "nothing_yet",
+          "D4": "yes",
+          "R1": [
+            "none_of_these"
+          ],
+          "R2": "no",
+          "R5": "no",
+          "R6": "no",
+          "R3": "no"
+        },
+        "expected": {
+          "bands": {
+            "CORE": "Mild",
+            "B": "Mild"
+          },
+          "primary": "B",
+          "points": {
+            "SEVERITY": 1,
+            "DURATION": 1,
+            "IMPACT": 1,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "TRUST_WOUND": 0,
+            "TOTAL": 3
+          },
+          "tier": 4,
+          "format": "couple",
+          "flags": [
+            "SEPARATION_THOUGHTS"
+          ],
+          "layout": "standard"
+        },
+        "verified": false,
+        "notes": "Female 35, partner willing, chose B only, C11 = Often (D4). Intended module %: CORE 13/33 = 39% (Mild) · B 10/24 = 42% (Mild). Points SEVERITY 1 + DURATION 1 + IMPACT 1 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + TRUST_WOUND 0 = 3. Same answers with C11 = Sometimes: CORE 12/33 = 36% (Mild), same points (3) and tier (4); only the SEPARATION_THOUGHTS tag differs. The tag adds no points and is not printed."
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D13",
+      "test_case": {
+        "name": "LOW_MODULE_FALLBACK",
+        "source": "manual",
+        "context": {
+          "sex": "female",
+          "age": 26,
+          "path": "partner"
+        },
+        "answers": {
+          "I1": "25_34",
+          "I2": "female",
+          "I3": "married",
+          "I4": "3_10_years",
+          "I5": "india",
+          "I6": "yes_and_they_are_willing_to_join_sessions",
+          "I7": "no_children",
+          "I8": "english",
+          "G1": [
+            "B"
+          ],
+          "C1": "rarely",
+          "C2": "rarely",
+          "C3": "sometimes",
+          "C4": "rarely",
+          "C5": "rarely",
+          "C6": "sometimes",
+          "C7": "sometimes",
+          "C8": "rarely",
+          "C9": "sometimes",
+          "C10": "rarely",
+          "C11": "rarely",
+          "C12": "sometimes",
+          "B4": "no",
+          "B1": "rarely",
+          "B2": "rarely",
+          "B3": "rarely",
+          "B5": "sometimes",
+          "B6": "never",
+          "B7": "never",
+          "B8": "never",
+          "D1": "less_than_3_months",
+          "D2": "a_little",
+          "D3": "nothing_yet",
+          "D4": "yes",
+          "R1": [
+            "none_of_these"
+          ],
+          "R2": "no",
+          "R5": "no",
+          "R6": "no",
+          "R3": "no"
+        },
+        "expected": {
+          "bands": {
+            "CORE": "Mild",
+            "B": "Low"
+          },
+          "primary": "B",
+          "points": {
+            "SEVERITY": 0,
+            "DURATION": 0,
+            "IMPACT": 1,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "TRUST_WOUND": 0,
+            "TOTAL": 1
+          },
+          "tier": 4,
+          "format": "couple",
+          "flags": [],
+          "layout": "standard",
+          "interpretation_keys": [
+            "INTERP_CORE_MILD"
+          ]
+        },
+        "verified": false,
+        "notes": "Female 26, partner willing, chose B, B band Low, core Mild (D13). Intended module %: CORE 13/33 = 39% (Mild) · B 4/24 = 17% (Low). Points SEVERITY 0 + DURATION 0 + IMPACT 1 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + TRUST_WOUND 0 = 1. There is no INTERP_B_LOW, so the primary line falls back to the core text for the core band (INTERP_CORE_MILD); it is printed once, not repeated for the core line."
+      }
+    },
+    {
+      "op": "add_test_case",
+      "decision": "D19",
+      "test_case": {
+        "name": "SAFETY_BEATS_COUPLE",
+        "source": "manual",
+        "context": {
+          "sex": "female",
+          "age": 40,
+          "path": "partner"
+        },
+        "answers": {
+          "I1": "35_44",
+          "I2": "female",
+          "I3": "married",
+          "I4": "3_10_years",
+          "I5": "india",
+          "I6": "yes_and_they_are_willing_to_join_sessions",
+          "I7": "no_children",
+          "I8": "english",
+          "G1": [
+            "A",
+            "B"
+          ],
+          "C1": "rarely",
+          "C2": "rarely",
+          "C3": "sometimes",
+          "C4": "rarely",
+          "C5": "rarely",
+          "C6": "sometimes",
+          "C7": "sometimes",
+          "C8": "rarely",
+          "C9": "sometimes",
+          "C10": "rarely",
+          "C11": "rarely",
+          "C12": "sometimes",
+          "A1": "sometimes",
+          "A2": "sometimes",
+          "A3": "sometimes",
+          "A4": "sometimes",
+          "A5": "sometimes",
+          "A6": "sometimes",
+          "A7": "rarely",
+          "A8": "rarely",
+          "B4": "no",
+          "B1": "sometimes",
+          "B2": "sometimes",
+          "B3": "sometimes",
+          "B5": "sometimes",
+          "B6": "rarely",
+          "B7": "rarely",
+          "B8": "rarely",
+          "D1": "3_12_months",
+          "D2": "quite_a_lot",
+          "D3": "nothing_yet",
+          "D4": "yes",
+          "R1": [
+            "none_of_these"
+          ],
+          "R2": "no",
+          "R5": "no",
+          "R6": "yes",
+          "R3": "no"
+        },
+        "expected": {
+          "bands": {
+            "CORE": "Mild",
+            "A": "Moderate",
+            "B": "Mild"
+          },
+          "primary": "A",
+          "points": {
+            "SEVERITY": 2,
+            "DURATION": 1,
+            "IMPACT": 2,
+            "MULTI_AREA": 0,
+            "PRIOR_ATTEMPTS": 0,
+            "TRUST_WOUND": 0,
+            "TOTAL": 5
+          },
+          "tier": 6,
+          "format": "individual",
+          "flags": [
+            "SAFETY"
+          ],
+          "layout": "standard",
+          "notify": [
+            "coordinator",
+            "counsellor"
+          ]
+        },
+        "verified": false,
+        "notes": "Female 40, partner willing, chose A + B (couple only), R6 = Yes. Intended module %: CORE 13/33 = 39% (Mild) · A 16/24 = 67% (Moderate) · B 10/24 = 42% (Mild). Points SEVERITY 2 + DURATION 1 + IMPACT 2 + MULTI_AREA 0 + PRIOR_ATTEMPTS 0 + TRUST_WOUND 0 = 5. Couple modules only with a willing partner would be Couple; SAFETY forces individual and prints the SAFETY block."
+      }
+    }
+  ]
+}

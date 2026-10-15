@@ -17,6 +17,12 @@ export const SEED_TEST_CASES: Record<string, unknown> = {
   'MA-1.0': maCases,
 };
 
+/** Workbook behind each seed, relative to the repo root (for offline checks of patches). */
+export const SEED_WORKBOOKS: Record<string, string> = {
+  'IA-1.1': 'docs/questionbank/MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx',
+  'MA-1.0': 'docs/questionbank/MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx',
+};
+
 /** The two tests as seeded by the migration (used when no database is at hand, e.g. tests and SQL export). */
 export const SEED_TESTS: { code: string; name_en: string; name_hi: string | null; report_id_prefix: string; sort: number }[] =
   tests;

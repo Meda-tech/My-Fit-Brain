@@ -13,6 +13,7 @@
     "build": "npm run build -w clients && npm run build -w admin",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
-    "qb:import": "npm run qb:import -w @mfb/questionbank --"
+    "qb:import": "npm run qb:import -w @mfb/questionbank --",
+    "qb:patch": "npm run qb:patch -w @mfb/questionbank --"
   }
 }
