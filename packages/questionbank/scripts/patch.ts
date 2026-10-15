@@ -1,7 +1,10 @@
 // Turn a version patch into SQL for the Supabase SQL Editor (copy live → draft, apply, validate,
 // optionally submit + publish), after checking it offline against the base version.
 //
-//   npm run qb:patch -- packages/questionbank/patches/IA-1.2.patch.json --sql out.sql [--publish "<note>"]
+//   npm run qb:patch -- packages/questionbank/patches/IA-1.2.patch.json --sql out.sql [--submit]
+//
+// Publishing is done in the admin (Question bank → version → Test cases → Run all, then Publish): it
+// needs passing test runs on the current engine version.
 //
 // Paths are relative to where the command is typed (the repo root for the root script).
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -23,7 +26,11 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const patchesDir = resolve(dirname(fileURLToPath(import.meta.url)), '../patches');
 const file = args.find((a, i) => !a.startsWith('--') && !['--sql', '--publish'].includes(args[i - 1] ?? ''));
 if (!file) {
-  console.error('Usage: npm run qb:patch -- <patch.json> --sql <out.sql> [--publish "<note>"]');
+  console.error('Usage: npm run qb:patch -- <patch.json> --sql <out.sql> [--submit]');
+  process.exit(1);
+}
+if (args.includes('--publish')) {
+  console.error('--publish is no longer supported: publishing needs passing test runs. Use --submit, then run the test cases and publish in the admin.');
   process.exit(1);
 }
 
@@ -86,6 +93,6 @@ console.log(
 
 const out = flag('--sql');
 if (out) {
-  writeFileSync(resolve(cwd, out), patchToSql(patch, { publishNote: flag('--publish') }));
+  writeFileSync(resolve(cwd, out), patchToSql(patch, { submit: args.includes('--submit') }));
   console.log(`Wrote ${out}.`);
 }

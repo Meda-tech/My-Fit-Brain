@@ -4,7 +4,8 @@
 //   npm run qb:import -- <file.xlsx> --sql <out.sql>     # write SQL for the Supabase SQL Editor
 //   npm run qb:import -- <file.xlsx> --env admin/.env.local --apply
 //                                                         # call qb_import_version with the service role
-//   add --publish "<change note>" to also submit and publish (testing databases only, never production)
+//   add --submit to also submit the draft for review; publish it in the admin after running its test
+//   cases (publishing needs passing test runs on the current engine version)
 //   add --force to import a version label ≤ the latest existing one (replaces later decisions; avoid)
 //
 // Paths are relative to the repo root when run through the root `npm run qb:import`.
@@ -39,7 +40,11 @@ if (envPath) {
 }
 
 const apply = has('--apply');
-const publishNote = flag('--publish');
+if (has('--publish')) {
+  console.error('--publish is no longer supported: publishing needs passing test runs. Use --submit, then run the test cases and publish in the admin.');
+  process.exit(1);
+}
+const submit = has('--submit');
 const supabase =
   apply && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -86,8 +91,7 @@ const payload = prepared.payload;
 const sqlOut = flag('--sql');
 if (sqlOut) {
   let sql = toImportSql(payload);
-  if (publishNote) {
-    const note = publishNote.replace(/'/g, "''");
+  if (submit) {
     sql = sql.replace(
       /^select public\.qb_import_version\((.*)\) as version_id;$/m,
       [
@@ -96,13 +100,12 @@ if (sqlOut) {
         'begin',
         '  v := public.qb_import_version($1);',
         '  perform public.qb_submit_for_review(v);',
-        `  perform public.qb_publish(v, '${note}');`,
-        "  raise notice 'Published % as live', v;",
+        "  raise notice 'Imported % and submitted it for review; run its test cases and publish in the admin.', v;",
         'end',
         '$qbdo$;',
       ].join('\n')
     );
-    sql = sql.replace('as a new draft.', 'and publish it (testing databases only).');
+    sql = sql.replace('as a new draft.', 'as a new draft and submit it for review.');
   }
   writeFileSync(resolve(cwd, sqlOut), sql);
   console.log(`\nWrote ${sqlOut} (${(sql.length / 1024).toFixed(0)} KB).`);
@@ -118,17 +121,12 @@ if (supabase) {
   const { data: issues } = await supabase.rpc('qb_validate_version', { p_version_id: id });
   console.log(`qb_validate_version: ${(issues ?? []).length} issue(s).`);
   for (const i of issues ?? []) console.log(`  ${i.severity}: [${i.code}] ${i.message}`);
-  if (publishNote) {
-    for (const [fn, params] of [
-      ['qb_submit_for_review', { p_version_id: id }],
-      ['qb_publish', { p_version_id: id, p_change_note: publishNote }],
-    ] as const) {
-      const { error: e } = await supabase.rpc(fn, params);
-      if (e) {
-        console.error(`${fn} failed: ${e.message}`);
-        process.exit(1);
-      }
+  if (submit) {
+    const { error: e } = await supabase.rpc('qb_submit_for_review', { p_version_id: id });
+    if (e) {
+      console.error(`qb_submit_for_review failed: ${e.message}`);
+      process.exit(1);
     }
-    console.log('Submitted and published (live).');
+    console.log('Submitted for review. Run its test cases and publish in the admin.');
   }
 }

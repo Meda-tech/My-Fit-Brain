@@ -102,13 +102,14 @@ describe('version patches (offline)', async () => {
     expect(() => applyPatch(iaBase, bad, ctx)).toThrow(/Operation 1 \(set_question, D16\): question NOPE not found/);
   });
 
-  it('generates one DO block that copies, patches, validates and optionally publishes', () => {
-    const sql = patchToSql(iaPatch, { publishNote: 'note' });
+  it('generates one DO block that copies, patches, validates and optionally submits (never publishes)', () => {
+    const sql = patchToSql(iaPatch, { submit: true });
     expect(sql).toContain("v := public.qb_start_new_version('IA', '1.2');");
     expect(sql).toContain('PERFORM public.qb_raise_if_invalid(v);');
-    expect(sql).toContain("PERFORM public.qb_publish(v, 'note');");
+    expect(sql).toContain('PERFORM public.qb_submit_for_review(v);');
+    expect(sql).not.toContain('qb_publish');
     expect(sql.match(/-- \d+\. D\d+:/g)).toHaveLength(iaPatch.operations.length);
-    expect(patchToSql(maPatch)).not.toContain('qb_publish');
+    expect(patchToSql(maPatch)).not.toContain('qb_submit_for_review');
   });
 });
 
