@@ -44,3 +44,16 @@ Notes:
 | Protected flags (CRISIS, SAFETY) | Validation now lets a new version **add** to a protected flag's effects (e.g. a `notify` recipient) but never remove or change an effect or the condition. | D19 adds `counsellor` to `notify`; protection is against weakening safety rules |
 | "Every printed flag has a text" (validation) | A printed flag needs the text named by its `report_block`, or a text with the flag's own key when it shows a screen (`stop` / `interrupt`). | `NRI` prints `NRI_LINE` (D9) and has no text keyed `NRI`; adding one would invent text |
 | IA 1.2 test case "Worked example D" | T7 changed from Rarely to **Sometimes**; G stays High (15/18 = 83%), tier 12 and format Couple unchanged. | Under D5, T7 = Rarely would raise RELATIONSHIP_SAFETY_CHECK and force individual, contradicting the workbook's expected Couple |
+
+## Copy pending review (Task 06, client flow)
+
+App copy written during Task 06 that is not in the question-bank workbooks. It is UI wording, not report
+or question text. Nothing here changes scoring or routing.
+
+| Item | Text used | Why / source | Review |
+|---|---|---|---|
+| Consent line | "Your answers are private and used only to prepare your report and your sessions." | The spec describes a one-line consent but gives no wording; the Task 06 brief's fallback line is used. Button: "I agree, start". | **clinical + legal (DPDP)** |
+| Hindi UI copy | All Hindi strings in `clients/lib/i18n.ts` → `assess` (test choice, payment, consent, question screen, crisis buttons, finish, stop) | Written by the developer, not supplied | **Hindi review** |
+| Plan line `{PACE}` | Tier pace text with its leading "N sessions, " removed (e.g. "weekly, about 6 weeks") | `PLAN_LINE` already prints `{SESSIONS}`; the tier pace starts with the same count | yes |
+| Plan line `{MIX}` | Mixed format prints the split as "i + c" (e.g. "4 + 2") inside the format text | The workbook gives `{MIX}` without a pattern | yes |
+| Crisis screen buttons | "Call 14416", "Call 1-800-891-4416", "Continue the assessment" | Numbers from CLAUDE.md; support text itself comes from the version's CRISIS text | yes |

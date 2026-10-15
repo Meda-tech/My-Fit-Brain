@@ -159,6 +159,25 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
 - Answers save as they are given so the client can resume. Changing a routing answer clears answers
   from paths that are no longer visible.
 
+### Attempts (Task 06)
+
+- One `attempts` row per paid assessment; `report_id` from `next_report_id()` on payment success.
+  Tables: `attempts`, `attempt_answers`, `attempt_results`, `attempt_events` (migration
+  `20261018000000_attempts.sql`). Clients read their own rows; active staff read all; all writes go
+  through the server (service role) in `clients/lib/assessment/`.
+- Each attempt is **pinned** to the version that was live when it was paid (`version_id`). Answers,
+  scoring and the report always use that version, even after a newer version goes live.
+- Answers from registration are stored with `source = profile` and never asked again. Completed and
+  stopped attempts are frozen by triggers.
+- Payments: until the live gateway task, `PAYMENTS_MODE=stub` (local / preview only) shows a
+  "Mark as paid (testing)" button. The stub is always off when `VERCEL_ENV=production`. Never set it in
+  production.
+- The report is built once at submit from the engine result and stored in `attempt_results.report`.
+  The web report (`@mfb/report` `ReportView`, same in both apps) renders only that stored document;
+  never re-score or rebuild it for display.
+- Crisis / safety / age-stop flags write one `attempt_events` row each (unique per flag) for staff.
+- URLs and titles carry no test name: `/payment/<code>`, `/assessment/<uuid>`, `/report/<uuid>`.
+
 ---
 
 ## Brand — MFB Brand Kit v1
@@ -344,4 +363,9 @@ existing migrations, `.env*` files.
 - Done: task 04 engine — `@mfb/engine` (ENGINE_VERSION 1.0.0); all 11 Worked Examples and the 8 Task 03b
   cases pass offline; migration `20261017000000_qb_test_runs.sql` (test runs, `content_changed_at`, publish
   gate; paste-ready in `docs/tasks/04-apply.sql`); admin Test cases tab runs and records test cases.
-- Next: Task 05 — admin editor, rule builder, preview, review/publish UI.
+- Done: task 06 client assessment flow — migration `20261018000000_attempts.sql` (paste-ready in
+  `docs/tasks/06-apply.sql`), server layer `clients/lib/assessment/`, test choice, stub payment, language,
+  consent, question runner, crisis support screen, web report (`@mfb/report`), admin read-only attempt
+  views and dashboard counts. Manual check: `docs/tasks/06-manual-check.md`.
+- Next: Task 07 — report PDF and polish. Task 05 (admin editor, rule builder, preview, review/publish UI)
+  is still open.
