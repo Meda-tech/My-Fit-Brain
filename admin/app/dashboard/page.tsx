@@ -8,6 +8,8 @@ import {
   ChevronRight,
   ArrowRight,
   SearchX,
+  ClipboardCheck,
+  ClipboardList,
 } from 'lucide-react';
 import { requireStaff } from '../../lib/auth';
 import { AdminShell } from '../../components/AdminShell';
@@ -15,6 +17,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { ClientStatusPill } from '../../components/ClientStatusPill';
 import { listClients } from '../../lib/services/clients';
 import { listTeam } from '../../lib/services/team';
+import { attemptCounts } from '../../lib/services/attempts';
 import { ROLE_LABELS } from '../../lib/roles';
 import { formatDisplayPhone } from '../../lib/phone';
 import { ButtonLink, Card } from '../../components/brand';
@@ -54,6 +57,7 @@ export default async function DashboardPage() {
 
   const clients = await listClients();
   const team = isSuperAdmin ? await listTeam() : [];
+  const assessments = await attemptCounts();
 
   const myClientsCount = clients.filter(
     (c) => c.created_by_profile_id === profile.id
@@ -92,6 +96,17 @@ export default async function DashboardPage() {
           label="Created by you"
           value={myClientsCount}
           icon={<FileText size={24} strokeWidth={2} aria-hidden />}
+        />
+        <MetricCard
+          label="Assessments completed"
+          value={assessments.completed}
+          icon={<ClipboardCheck size={24} strokeWidth={2} aria-hidden />}
+        />
+        <MetricCard
+          label="In progress"
+          value={assessments.inProgress}
+          detail="Paid, not yet finished"
+          icon={<ClipboardList size={24} strokeWidth={2} aria-hidden />}
         />
         {isSuperAdmin ? (
           <MetricCard

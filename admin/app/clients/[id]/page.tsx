@@ -5,6 +5,8 @@ import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
 import { ClientStatusPill } from '../../../components/ClientStatusPill';
 import { getClientById } from '../../../lib/services/clients';
+import { listClientAttempts } from '../../../lib/services/attempts';
+import { AttemptsList } from '../../../components/attempts/AttemptsList';
 import { formatDisplayPhone } from '../../../lib/phone';
 import { ButtonLink, Card, Pill } from '../../../components/brand';
 
@@ -31,6 +33,7 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
   }
 
   const isLinked = !!client.auth_user_id;
+  const attempts = await listClientAttempts(client.id);
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
@@ -136,6 +139,8 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
             </dl>
           </Card>
         </div>
+
+        <AttemptsList attempts={attempts} />
     </AdminShell>
   );
 }
