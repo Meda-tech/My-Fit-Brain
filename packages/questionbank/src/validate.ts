@@ -66,6 +66,14 @@ export function validatePayload(p: ImportPayload, basedOn?: ImportPayload | null
   for (const o of p.options) {
     if (!questions.has(o.qid)) error('unknown_qid', `Option ${o.option_code} belongs to unknown question ${o.qid}.`, o.qid);
   }
+  // Exclusive options ("None of these"): multi-select questions only, at most one per question.
+  for (const q of p.questions) {
+    const exclusive = p.options.filter((o) => o.qid === q.qid && o.exclusive);
+    if (exclusive.length > 0 && q.type !== 'multi') {
+      error('exclusive_not_multi', `${q.qid} is ${q.type}; only multi-select questions can have an exclusive option.`, q.qid);
+    }
+    if (exclusive.length > 1) error('exclusive_many', `${q.qid} has more than one exclusive option.`, q.qid);
+  }
   for (const t of p.texts) {
     if (t.module_code && !modules.has(t.module_code)) {
       error('unknown_module', `Text ${t.key} uses unknown module ${t.module_code}.`, t.key);
@@ -111,6 +119,11 @@ export function validatePayload(p: ImportPayload, basedOn?: ImportPayload | null
   }
   checkModule(s.core_module.default.module, 'Core module default');
   checkQid(s.gate.qid, 'Gate');
+  if (s.gate.min_choices === undefined) {
+    error('gate_min_choices', 'The gate has no min_choices (at least 1 choice is required).', s.gate.qid);
+  } else if (s.gate.min_choices < 1 || s.gate.min_choices > s.gate.max_choices) {
+    error('gate_min_choices', `Gate min_choices must be between 1 and max_choices (${s.gate.max_choices}).`, s.gate.qid);
+  }
   // Gate option codes are module codes (choosing option C chooses module C).
   for (const o of p.options.filter((x) => x.qid === s.gate.qid)) {
     const m = p.modules.find((x) => x.code === o.option_code);
@@ -151,10 +164,21 @@ export function validatePayload(p: ImportPayload, basedOn?: ImportPayload | null
     if ((f.effects.stop || f.effects.interrupt) && !textKeys.has(f.key)) {
       error('unknown_text', `Flag ${f.key} shows a screen but has no text with key ${f.key}.`, f.key);
     }
+    // A printed flag needs its text: the report_block text, or a text keyed by the flag itself.
+    if (f.effects.printed !== false) {
+      const block = f.effects.report_block;
+      if (!(block && textKeys.has(block)) && !textKeys.has(f.key)) {
+        error('flag_text_missing', `Flag ${f.key} is printed but has no text (add a text or set printed: false).`, f.key);
+      }
+    }
   }
   for (const r of p.format_rules) {
     checkCondition(r.condition, `Format rule ${r.key}`);
     checkText(r.add_text_key, `Format rule ${r.key}`);
+  }
+  const lastFormat = [...p.format_rules].sort((a, b) => a.sort - b.sort).at(-1);
+  if (!lastFormat || !('all' in lastFormat.condition) || lastFormat.condition.all.length > 0) {
+    warn('format_no_catch_all', 'The last format rule is not a catch-all ({ all: [] }); some clients may get no format.', lastFormat?.key ?? null);
   }
   const rr = p.report_rules;
   for (const q of rr.strengths.priority) {
@@ -166,6 +190,9 @@ export function validatePayload(p: ImportPayload, basedOn?: ImportPayload | null
   checkCondition(rr.tone.condition, 'Tone');
   checkText(rr.tone.ready_key, 'Tone');
   checkText(rr.tone.gentle_key, 'Tone');
+  if (!rr.interpretation.fallback) {
+    error('interpretation_fallback', 'Report rules: interpretation.fallback must be "core" or "none".', null);
+  }
   checkText(rr.layouts.crisis.top_block, 'Crisis layout');
   checkText(rr.layouts.crisis.next_key, 'Crisis layout');
   for (const k of rr.layouts.crisis.hide) checkText(k, 'Crisis layout');
@@ -195,7 +222,8 @@ export function validatePayload(p: ImportPayload, basedOn?: ImportPayload | null
     for (const old of basedOn.flags.filter((f) => f.is_protected)) {
       const now = p.flags.find((f) => f.key === old.key);
       if (!now) continue; // reported above for the fixed safety flags
-      if (JSON.stringify(now.condition) !== JSON.stringify(old.condition) || JSON.stringify(now.effects) !== JSON.stringify(old.effects)) {
+      // Effects may be added to (e.g. a notify recipient) but never removed or changed.
+      if (JSON.stringify(now.condition) !== JSON.stringify(old.condition) || !effectsKept(old.effects, now.effects) || !now.is_protected) {
         error('protected_changed', `Protected flag ${old.key} changed.`, old.key);
       }
     }
@@ -218,6 +246,15 @@ export function validatePayload(p: ImportPayload, basedOn?: ImportPayload | null
   }
 
   return issues;
+}
+
+/** Every effect of `before` is still present in `after`; arrays may only grow. */
+export function effectsKept(before: Record<string, unknown>, after: Record<string, unknown>): boolean {
+  return Object.entries(before).every(([k, v]) => {
+    const now = after[k];
+    if (Array.isArray(v)) return Array.isArray(now) && v.every((x) => now.includes(x));
+    return JSON.stringify(now) === JSON.stringify(v);
+  });
 }
 
 export function hasErrors(issues: ValidationIssue[]): boolean {

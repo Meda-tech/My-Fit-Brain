@@ -1,4 +1,5 @@
 import { attachRules, type LatestVersionRules } from './attach-rules';
+import { compareVersionLabels } from './version-label';
 import { parseWorkbook, type KnownTest } from './parse-excel';
 import type { ImportPayload, RulesSource, ValidationIssue } from './types';
 import { hasErrors, validatePayload } from './validate';
@@ -30,6 +31,10 @@ export async function prepareImport(
     fileName: string;
     tests: KnownTest[];
     loadLatest?: (testCode: string) => Promise<LatestVersionRules | null>;
+    /** Highest existing version label of the test, for the "older or equal version" guard. */
+    latestLabel?: (testCode: string) => Promise<string | null>;
+    /** Allow importing a version label ≤ the latest (CLI --force only). */
+    force?: boolean;
     changeNote?: string | null;
   }
 ): Promise<PreparedImport> {
@@ -53,8 +58,21 @@ export async function prepareImport(
     },
   };
 
+  // Guard: an Excel import must be newer than every existing version, or it would silently replace
+  // decisions made in later versions (e.g. IA 1.2 decisions are not in the 1.1 workbook).
+  const latest = options.latestLabel ? await options.latestLabel(content.test_code) : null;
+  const guardMessage =
+    latest && compareVersionLabels(content.version_label, latest) <= 0
+      ? `This workbook is version ${content.version_label}, but ${content.test_code} already has version ${latest}. ` +
+        'This would replace decisions made in later versions; start a new version instead.'
+      : null;
+  if (guardMessage && !options.force) {
+    return { payload: null, preview, source: null, errors: [guardMessage], warnings: parsed.warnings, issues: [], ok: false };
+  }
+
   const attached = await attachRules(content, { loadLatest: options.loadLatest, changeNote: options.changeNote });
   const warnings = [...parsed.warnings, ...attached.warnings];
+  if (guardMessage) warnings.push(`Forced: ${guardMessage}`);
   if (!attached.payload) {
     return { payload: null, preview, source: attached.source, errors: attached.errors, warnings, issues: [], ok: false };
   }
@@ -72,6 +90,7 @@ export async function prepareImport(
   const issues = validatePayload(payload);
   return { payload, preview, source: attached.source, errors: [], warnings, issues, ok: !hasErrors(issues) };
 }
+
 
 /** SQL that imports a payload as a new draft (for running in the Supabase SQL Editor). */
 export function toImportSql(payload: ImportPayload): string {

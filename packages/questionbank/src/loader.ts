@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { compareVersionLabels } from './version-label';
 import type { LatestVersionRules } from './attach-rules';
 import type {
   Flag,
@@ -64,7 +65,7 @@ export async function getVersionConfig(supabase: Client, versionId: string): Pro
       'qb_questions'
     ),
     rows<QbOption>(
-      supabase.from('qb_options').select('qid, option_code, label_en, label_hi, value, sort').eq('version_id', versionId).order('sort'),
+      supabase.from('qb_options').select('qid, option_code, label_en, label_hi, value, sort, exclusive').eq('version_id', versionId).order('sort'),
       'qb_options'
     ),
     rows<QbText>(supabase.from('qb_texts').select('key, module_code, band, text_en, text_hi').eq('version_id', versionId), 'qb_texts'),
@@ -94,6 +95,15 @@ export async function getVersionConfig(supabase: Client, versionId: string): Pro
   if (v.status === 'live' || v.status === 'retired') cache.set(versionId, config);
   return config;
 }
+
+/** Highest version label of a test (any status), or null when it has none. */
+export async function loadLatestVersionLabel(supabase: Client, testCode: string): Promise<string | null> {
+  const { data, error } = await supabase.from('qb_versions').select('version_label').eq('test_code', testCode);
+  if (error) throw new Error(`Could not read ${testCode} versions: ${error.message}`);
+  const labels = (data ?? []).map((r: { version_label: string }) => r.version_label);
+  return labels.reduce<string | null>((max, l) => (max === null || compareVersionLabels(l, max) > 0 ? l : max), null);
+}
+
 
 /** Rules, module kinds, protected questions and test cases of the latest version of a test. */
 export async function loadLatestRules(supabase: Client, testCode: string): Promise<LatestVersionRules | null> {

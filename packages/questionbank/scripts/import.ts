@@ -5,6 +5,7 @@
 //   npm run qb:import -- <file.xlsx> --env admin/.env.local --apply
 //                                                         # call qb_import_version with the service role
 //   add --publish "<change note>" to also submit and publish (testing databases only, never production)
+//   add --force to import a version label ≤ the latest existing one (replaces later decisions; avoid)
 //
 // Paths are relative to the repo root when run through the root `npm run qb:import`.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,7 +13,7 @@ import { basename, resolve } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import { SEED_TESTS } from '../seeds/index';
 import { prepareImport, toImportSql } from '../src/import';
-import { loadLatestRules } from '../src/loader';
+import { loadLatestRules, loadLatestVersionLabel } from '../src/loader';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => {
@@ -59,7 +60,12 @@ const prepared = await prepareImport(readFileSync(path), {
   fileName: basename(path),
   tests,
   loadLatest: supabase ? (code) => loadLatestRules(supabase, code) : undefined,
+  latestLabel: supabase ? (code) => loadLatestVersionLabel(supabase, code) : undefined,
+  force: has('--force'),
 });
+if (!supabase) {
+  console.warn('note: no database connection, so the "older or equal version" guard was not checked.');
+}
 
 for (const w of prepared.warnings) console.warn(`warning: ${w}`);
 for (const e of prepared.errors) console.error(`error: ${e}`);

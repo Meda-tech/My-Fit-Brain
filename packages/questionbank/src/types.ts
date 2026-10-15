@@ -26,6 +26,9 @@ export interface QbTest {
   name_hi: string | null;
   report_id_prefix: string;
   sort: number;
+  /** Test-level names of the progress re-test (not versioned). */
+  progress_name_en?: string | null;
+  progress_name_hi?: string | null;
 }
 
 export interface QbVersion {
@@ -77,6 +80,8 @@ export interface QbOption {
   label_hi: string;
   value: number | null;
   sort: number;
+  /** Multi-select only: this option cannot be combined with others (e.g. "None of these"). */
+  exclusive: boolean;
 }
 
 export interface QbText {

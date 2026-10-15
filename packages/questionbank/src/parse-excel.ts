@@ -282,7 +282,8 @@ export function parseOptions(qid: string, raw: string, at: string, errors: strin
     if (!code) errors.push(`${at}: option "${labelEn}" gives an empty option code.`);
     if (result.some((o) => o.option_code === code)) errors.push(`${at}: duplicate option code "${code}".`);
 
-    result.push({ qid, option_code: code, label_en: labelEn, label_hi: labelHi, value, sort: i + 1 });
+    // Excel has no exclusive column; exclusivity is set in later versions (decisions D2).
+    result.push({ qid, option_code: code, label_en: labelEn, label_hi: labelHi, value, sort: i + 1, exclusive: false });
   });
   return result;
 }

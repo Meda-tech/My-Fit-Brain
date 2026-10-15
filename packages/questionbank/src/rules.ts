@@ -9,6 +9,8 @@ const qid = z.string().min(1);
 const textKey = z.string().regex(/^[A-Z][A-Z0-9_]*$/);
 const band = z.enum(BAND_NAMES);
 
+export const NOTIFY_RECIPIENTS = ['coordinator', 'counsellor'] as const;
+
 export const MODULE_KINDS = [
   'intake', 'gate', 'core', 'solo_core', 'couple', 'individual', 'dose', 'flag',
 ] as const;
@@ -49,7 +51,8 @@ export const scoringSchema = z.strictObject({
       path: z.enum(['partner', 'solo']).nullable(),
     }),
   }),
-  gate: z.strictObject({ qid, max_choices: z.number().int().min(1) }),
+  /** min_choices is required from IA 1.2 / MA 1.1 (decision D12); validation reports it when missing. */
+  gate: z.strictObject({ qid, min_choices: z.number().int().min(0).optional(), max_choices: z.number().int().min(1) }),
   primary: z.strictObject({ tie: z.literal('first_chosen'), fallback: z.literal('core') }),
   tier_thresholds: z
     .array(z.strictObject({ max_points: z.number().int().nullable(), sessions: z.number().int() }))
@@ -133,7 +136,7 @@ export const flagEffectsSchema = z.strictObject({
   layout: z.literal('crisis').optional(),
   interrupt: z.literal(true).optional(),
   stop: z.literal(true).optional(),
-  notify: z.array(z.literal('coordinator')).min(1).optional(),
+  notify: z.array(z.enum(NOTIFY_RECIPIENTS)).min(1).optional(),
   printed: z.literal(false).optional(),
 });
 
@@ -181,6 +184,8 @@ export const reportRulesSchema = z.strictObject({
   interpretation: z.strictObject({
     order: z.array(z.enum(['primary', 'second', 'core'])).min(1),
     second_min_band: band,
+    /** No text for a module's band → use the core's text for the core's band (D13). Required from IA 1.2 / MA 1.1. */
+    fallback: z.enum(['core', 'none']).optional(),
   }),
   layouts: z.strictObject({
     crisis: z.strictObject({
@@ -231,6 +236,9 @@ export const testCaseSchema = z.strictObject({
     flags: z.array(z.string()),
     layout: z.enum(['standard', 'crisis']),
     extra_text_keys: z.array(textKey).optional(),
+    /** Interpretation text keys in print order (after fallback, without repeats). */
+    interpretation_keys: z.array(textKey).optional(),
+    notify: z.array(z.enum(NOTIFY_RECIPIENTS)).optional(),
   }),
   verified: z.boolean(),
   notes: z.string(),

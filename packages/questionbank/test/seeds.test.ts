@@ -22,14 +22,15 @@ describe('full import payload (workbook + seed rules + test cases)', async () =>
   const ma = await prepareBank('MA');
 
   it.each([
-    ['IA', ia],
-    ['MA', ma],
-  ])('%s: rules attach from the seed and every reference resolves', (_test, prepared) => {
+    ['IA', ia, ['gate_min_choices', 'interpretation_fallback', 'format_no_catch_all']],
+    ['MA', ma, ['gate_min_choices', 'interpretation_fallback']],
+  ])('%s: rules attach from the seed and every reference resolves', (_test, prepared, preDecisionCodes) => {
     expect(prepared.errors).toEqual([]);
     expect(prepared.source?.kind).toBe('seed');
-    // Validation covers every qid, option code, module, flag and text key used by the rules.
-    expect(prepared.issues).toEqual([]);
-    expect(prepared.ok).toBe(true);
+    // Validation covers every qid, option code, module, flag and text key used by the rules. IA 1.1 and
+    // MA 1.0 predate the Task 03b decisions, so they lack only what those decisions require (min_choices,
+    // interpretation fallback, the IA catch-all format rule). The 1.2 / 1.1 patches add them.
+    expect(prepared.issues.map((i) => i.code).sort()).toEqual([...preDecisionCodes].sort());
   });
 
   it('module kinds come from the seed', () => {
