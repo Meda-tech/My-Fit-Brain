@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AlertCircle, Lock } from 'lucide-react';
+import { ENGINE_VERSION } from '@mfb/engine';
 import { requireStaff } from '../../../lib/auth';
 import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
@@ -9,7 +10,9 @@ import {
   contentRights,
   formatDateTime,
   loadHistory,
+  loadLatestRuns,
   loadTestCases,
+  publishBlockReason,
   loadValidation,
   loadVersion,
   loadVersionConfig,
@@ -53,10 +56,13 @@ export default async function VersionPage({ params, searchParams }: PageProps) {
   const version = await loadVersion(versionId);
   if (!version) notFound();
 
-  const [config, issues] = await Promise.all([
+  const [config, issues, cases, runs] = await Promise.all([
     loadVersionConfig(versionId).catch((err: Error) => err),
     loadValidation(versionId),
+    loadTestCases(versionId),
+    loadLatestRuns(version),
   ]);
+  const publishBlocked = publishBlockReason(cases, runs);
   const errorCount = issues.filter((i) => i.severity === 'error').length;
   const frozen = version.status === 'live' || version.status === 'retired';
 
@@ -97,6 +103,7 @@ export default async function VersionPage({ params, searchParams }: PageProps) {
         canEdit={rights.canEdit}
         canApprove={rights.canApprove}
         errorCount={errorCount}
+        publishBlocked={publishBlocked}
       />
 
       <nav aria-label="Version sections" className="-mx-4 mb-6 overflow-x-auto px-4 sm:mx-0 sm:px-0">
@@ -128,7 +135,15 @@ export default async function VersionPage({ params, searchParams }: PageProps) {
           This version could not be loaded: {config.message}
         </Notice>
       ) : (
-        <TabContent tab={tab} versionId={version.id} config={config} issues={issues} />
+        <TabContent
+          tab={tab}
+          versionId={version.id}
+          config={config}
+          issues={issues}
+          cases={cases}
+          runs={runs}
+          canRun={rights.canEdit || rights.canApprove}
+        />
       )}
     </AdminShell>
   );
@@ -139,18 +154,26 @@ async function TabContent({
   versionId,
   config,
   issues,
+  cases,
+  runs,
+  canRun,
 }: {
   tab: TabId;
   versionId: string;
   config: Awaited<ReturnType<typeof loadVersionConfig>> | Error;
   issues: Awaited<ReturnType<typeof loadValidation>>;
+  cases: Awaited<ReturnType<typeof loadTestCases>>;
+  runs: Awaited<ReturnType<typeof loadLatestRuns>>;
+  canRun: boolean;
 }) {
   if (tab === 'validation') return <ValidationTab issues={issues} />;
   if (tab === 'history') {
     const history = await loadHistory(versionId);
     return <HistoryTab rows={history.rows} total={history.total} />;
   }
-  if (tab === 'tests') return <TestCasesTab cases={await loadTestCases(versionId)} />;
+  if (tab === 'tests') {
+    return <TestCasesTab cases={cases} runs={runs} versionId={versionId} canRun={canRun} engineVersion={ENGINE_VERSION} />;
+  }
   if (config instanceof Error) return null;
   if (tab === 'texts') return <TextsTab config={config} />;
   if (tab === 'items') return <ItemTextsTab config={config} />;

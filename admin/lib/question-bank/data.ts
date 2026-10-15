@@ -1,3 +1,4 @@
+import { ENGINE_VERSION, type TestCaseDiff, type TraceStep } from '@mfb/engine';
 import { getVersionConfig, type QbTest, type ValidationIssue, type VersionStatus } from '@mfb/questionbank';
 import { createClient } from '../supabase/server';
 import type { Profile } from '../types';
@@ -27,6 +28,8 @@ export interface VersionRow {
   approved_at: string | null;
   published_at: string | null;
   retired_at: string | null;
+  /** Last content change (Task 04 migration); test runs before it are stale. */
+  content_changed_at: string | null;
   creator: string | null;
   submitter: string | null;
   approver: string | null;
@@ -50,7 +53,7 @@ export type Overview = { ready: false } | { ready: true; tests: TestOverview[] }
 
 const VERSION_COLUMNS =
   'id, test_code, version_label, status, based_on_version_id, change_note, source_file_name, created_at, ' +
-  'updated_at, submitted_at, approved_at, published_at, retired_at, ' +
+  'updated_at, submitted_at, approved_at, published_at, retired_at, content_changed_at, ' +
   'creator:created_by(full_name), submitter:submitted_by(full_name), approver:approved_by(full_name)';
 
 type Named = { full_name?: string | null } | null;
@@ -155,6 +158,66 @@ export async function loadTestCases(versionId: string): Promise<TestCaseRow[]> {
     .order('name');
   if (error) throw new Error(`Could not read test cases: ${error.message}`);
   return (data ?? []) as TestCaseRow[];
+}
+
+export interface TestRunRow {
+  id: string;
+  test_case_id: string;
+  engine_version: string;
+  passed: boolean;
+  diffs: TestCaseDiff[];
+  error: string | null;
+  run_at: string;
+  runner: string | null;
+  trace: TraceStep[];
+  /** Same engine version and newer than the last content change. */
+  current: boolean;
+}
+
+/** The latest run of each test case, or null when runs are not set up yet (Task 04 migration). */
+export async function loadLatestRuns(version: VersionRow): Promise<Map<string, TestRunRow> | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('qb_test_runs')
+    .select('id, test_case_id, engine_version, passed, diffs, error, run_at, actual, runner:run_by(full_name)')
+    .eq('version_id', version.id)
+    .order('run_at', { ascending: false });
+  if (isMissingTable(error)) return null;
+  if (error) throw new Error(`Could not read test runs: ${error.message}`);
+  const latest = new Map<string, TestRunRow>();
+  for (const raw of (data ?? []) as unknown as (Omit<TestRunRow, 'runner' | 'trace' | 'current'> & {
+    runner: Named;
+    actual: { trace?: TraceStep[] } | null;
+  })[]) {
+    if (latest.has(raw.test_case_id)) continue;
+    latest.set(raw.test_case_id, {
+      id: raw.id,
+      test_case_id: raw.test_case_id,
+      engine_version: raw.engine_version,
+      passed: raw.passed,
+      diffs: raw.diffs ?? [],
+      error: raw.error,
+      run_at: raw.run_at,
+      runner: raw.runner?.full_name ?? null,
+      trace: raw.actual?.trace ?? [],
+      current:
+        raw.engine_version === ENGINE_VERSION &&
+        (!version.content_changed_at || new Date(raw.run_at) > new Date(version.content_changed_at)),
+    });
+  }
+  return latest;
+}
+
+/** Why publishing is blocked by test runs, or null when every case has a current passing run. */
+export function publishBlockReason(cases: TestCaseRow[], runs: Map<string, TestRunRow> | null): string | null {
+  if (runs === null) return 'Test runs are not set up yet (run the Task 04 migration).';
+  if (cases.length === 0) return 'This version has no test cases.';
+  const notOk = cases.filter((c) => {
+    const r = runs.get(c.id);
+    return !r || !r.passed || !r.current;
+  });
+  if (notOk.length === 0) return null;
+  return `${notOk.length} of ${cases.length} test case${cases.length === 1 ? '' : 's'} not passing on engine ${ENGINE_VERSION} since the last change. Run all test cases first.`;
 }
 
 export async function loadValidation(versionId: string): Promise<ValidationIssue[]> {

@@ -2,10 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { loadLatestRules, loadLatestVersionLabel, type RulesSource, type ValidationIssue } from '@mfb/questionbank';
+import { ENGINE_VERSION, runTestCase } from '@mfb/engine';
+import { getVersionConfig, loadLatestRules, loadLatestVersionLabel, testCaseSchema, type RulesSource, type ValidationIssue } from '@mfb/questionbank';
 import { prepareImport, type ImportPreview } from '@mfb/questionbank/import';
 import { requireStaff } from '../../lib/auth';
-import { contentRights, loadOpenVersion, STATUS_LABELS } from '../../lib/question-bank/data';
+import { contentRights, loadOpenVersion, loadTestCases, STATUS_LABELS } from '../../lib/question-bank/data';
 import { createClient } from '../../lib/supabase/server';
 
 // Question bank actions. Every change goes through a qb_* database function, which checks the
@@ -66,7 +67,8 @@ export async function versionStatusAction(_prev: QbActionState | null, formData:
       if (!rights.canApprove) return { ok: false, error: 'You do not have permission to publish versions.' };
       const note = String(formData.get('changeNote') ?? '').trim();
       if (!note) return { ok: false, error: 'Add a change note before publishing.' };
-      result = await supabase.rpc('qb_publish', { p_version_id: versionId, p_change_note: note });
+      // The database refuses unless every test case has a current passing run on this engine version.
+      result = await supabase.rpc('qb_publish', { p_version_id: versionId, p_change_note: note, p_engine_version: ENGINE_VERSION });
       break;
     }
     case 'delete':
@@ -82,6 +84,53 @@ export async function versionStatusAction(_prev: QbActionState | null, formData:
   if (action === 'delete') redirect('/question-bank');
   revalidatePath(`/question-bank/${versionId}`);
   return { ok: true };
+}
+
+export interface RunTestCasesState {
+  ok: boolean;
+  error?: string;
+  passed?: number;
+  failed?: number;
+}
+
+/** Runs the engine on every test case of a version and records the results (qb_test_runs). */
+export async function runTestCasesAction(_prev: RunTestCasesState | null, formData: FormData): Promise<RunTestCasesState> {
+  const staff = await requireStaff();
+  const rights = contentRights(staff.profile);
+  if (!rights.canEdit && !rights.canApprove) return { ok: false, error: 'You do not have permission to run test cases.' };
+  const versionId = String(formData.get('versionId') ?? '');
+
+  try {
+    const supabase = await createClient();
+    const config = await getVersionConfig(supabase, versionId);
+    const cases = await loadTestCases(versionId);
+    if (cases.length === 0) return { ok: false, error: 'This version has no test cases.' };
+
+    const storedShape = testCaseSchema.pick({ context: true, answers: true, expected: true });
+    const runs = cases.map((tc) => {
+      const parsed = storedShape.safeParse(tc);
+      const run = parsed.success
+        ? runTestCase(config, parsed.data)
+        : { passed: false, actual: null, diffs: [], error: `Stored test case is malformed: ${parsed.error.issues[0]?.message}` };
+      return {
+        test_case_id: tc.id,
+        engine_version: ENGINE_VERSION,
+        passed: run.passed,
+        actual: run.actual,
+        diffs: run.diffs,
+        error: run.error,
+      };
+    });
+    const { error } = await supabase.rpc('qb_record_test_runs', { p_version_id: versionId, p_runs: runs });
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath(`/question-bank/${versionId}`);
+    const passed = runs.filter((r) => r.passed).length;
+    return { ok: true, passed, failed: runs.length - passed };
+  } catch (err) {
+    console.error('Running test cases failed:', err);
+    return { ok: false, error: err instanceof Error ? err.message : 'The test cases could not be run.' };
+  }
 }
 
 export interface ImportCheckState {

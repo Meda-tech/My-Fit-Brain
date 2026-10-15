@@ -1,26 +1,60 @@
 import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import type { ValidationIssue } from '@mfb/questionbank';
 import { Card, Notice, Pill } from '../../../components/brand';
-import { describeChange, formatDateTime, type AuditRow, type TestCaseRow } from '../../../lib/question-bank/data';
+import { describeChange, formatDateTime, type AuditRow, type TestCaseRow, type TestRunRow } from '../../../lib/question-bank/data';
+import { RunTestCasesButton } from './RunTestCasesButton';
 import { JsonDetails, Section } from './parts';
 
 // Test cases, Validation and History tabs.
 
-export function TestCasesTab({ cases }: { cases: TestCaseRow[] }) {
+export function TestCasesTab({
+  cases,
+  runs,
+  versionId,
+  canRun,
+  engineVersion,
+}: {
+  cases: TestCaseRow[];
+  runs: Map<string, TestRunRow> | null;
+  versionId: string;
+  canRun: boolean;
+  engineVersion: string;
+}) {
+  const status = (tc: TestCaseRow) => {
+    const r = runs?.get(tc.id);
+    if (!r) return { label: 'Not run', tone: 'quiet' as const };
+    if (!r.passed) return { label: 'Failed', tone: 'quiet' as const };
+    if (!r.current) return { label: 'Passed (out of date)', tone: 'quiet' as const };
+    return { label: 'Passed', tone: 'mist' as const };
+  };
   return (
     <Section title="Test cases" count={cases.length}>
       <p className="-mt-1 mb-3 text-[13px] text-ink-muted">
-        Worked examples from the workbook. The scoring engine checks each one and marks it verified.
+        Each case is scored by the engine and compared with its expected result. Publishing needs every case passing
+        on the current engine version, run after the last change to this version.
       </p>
+      {runs === null && (
+        <Notice variant="info" className="mb-4" icon={<Info size={18} strokeWidth={2} />}>
+          Test runs are not set up yet. Run the Task 04 migration (docs/tasks/04-apply.sql) in the Supabase SQL Editor.
+        </Notice>
+      )}
+      {canRun && runs !== null && <RunTestCasesButton versionId={versionId} engineVersion={engineVersion} />}
       <div className="space-y-3">
         {cases.map((tc) => {
           const expected = tc.expected as { bands?: Record<string, string>; tier?: number; format?: string; primary?: string; flags?: string[]; layout?: string };
+          const run = runs?.get(tc.id);
+          const st = status(tc);
           return (
             <Card key={tc.id} shadow={false} className="p-4">
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
                 <span className="mr-1 font-semibold text-ink">{tc.name}</span>
                 <Pill tone="quiet">{tc.source.replace('_', ' ')}</Pill>
-                <Pill tone={tc.verified ? 'mist' : 'quiet'}>{tc.verified ? 'Verified' : 'Not verified yet'}</Pill>
+                <Pill tone={st.tone}>{st.label}</Pill>
+                {run && (
+                  <span className="text-[12px] text-ink-muted">
+                    engine {run.engine_version} · {formatDateTime(run.run_at)}{run.runner ? ` · ${run.runner}` : ''}
+                  </span>
+                )}
               </div>
               <p className="text-[14px] text-ink-soft">
                 Expected: {expected.tier} sessions · {expected.format?.replace(/_/g, ' ')} · primary {expected.primary} ·{' '}
@@ -28,7 +62,40 @@ export function TestCasesTab({ cases }: { cases: TestCaseRow[] }) {
                 {expected.flags?.length ? ` · flags ${expected.flags.join(', ')}` : ''}
                 {expected.layout === 'crisis' ? ' · crisis layout' : ''}
               </p>
+              {run?.error && <p className="mt-2 text-[14px] text-coral-deep">Error: {run.error}</p>}
+              {run && run.diffs.length > 0 && (
+                <table className="mt-2 w-full text-left text-[13px]">
+                  <thead className="text-[11px] uppercase tracking-[0.06em] text-ink-muted">
+                    <tr>
+                      <th className="py-1 pr-2 font-semibold">Field</th>
+                      <th className="py-1 pr-2 font-semibold">Expected</th>
+                      <th className="py-1 font-semibold">Actual</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand font-mono">
+                    {run.diffs.map((d) => (
+                      <tr key={d.field}>
+                        <td className="py-1 pr-2 text-ink">{d.field}</td>
+                        <td className="break-all py-1 pr-2 text-ink-soft">{JSON.stringify(d.expected)}</td>
+                        <td className="break-all py-1 text-coral-deep">{JSON.stringify(d.actual)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
               {tc.notes && <p className="mt-1 text-[13px] text-ink-muted">{tc.notes}</p>}
+              {run && run.trace.length > 0 && (
+                <details className="mt-2 text-[13px]">
+                  <summary className="inline-flex min-h-[32px] cursor-pointer items-center text-teal hover:underline">How the engine decided</summary>
+                  <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-ink-soft">
+                    {run.trace.map((t, i) => (
+                      <li key={i}>
+                        <span className="font-mono text-[12px] text-ink-muted">{t.step}</span> {t.detail}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
               <JsonDetails value={{ context: tc.context, answers: tc.answers, expected: tc.expected }} label="Answers and expected result" />
             </Card>
           );

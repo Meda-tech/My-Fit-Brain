@@ -12,9 +12,11 @@ interface VersionActionsProps {
   canEdit: boolean;
   canApprove: boolean;
   errorCount: number;
+  /** Why publishing is not possible yet (test runs missing, failing or out of date), or null. */
+  publishBlocked: string | null;
 }
 
-export function VersionActions({ versionId, status, canEdit, canApprove, errorCount }: VersionActionsProps) {
+export function VersionActions({ versionId, status, canEdit, canApprove, errorCount, publishBlocked }: VersionActionsProps) {
   const [state, formAction, isPending] = useActionState<QbActionState | null, FormData>(versionStatusAction, null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -76,7 +78,7 @@ export function VersionActions({ versionId, status, canEdit, canApprove, errorCo
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setPublishing(true)} disabled={errorCount > 0}>
+              <Button onClick={() => setPublishing(true)} disabled={errorCount > 0 || !!publishBlocked}>
                 <Upload size={16} strokeWidth={2} aria-hidden />
                 <span>Publish…</span>
               </Button>
@@ -106,7 +108,9 @@ export function VersionActions({ versionId, status, canEdit, canApprove, errorCo
             ))}
         </div>
         {status === 'in_review' && canPublish && (
-          <p className="text-[13px] text-ink-muted">Publishing makes this version live and retires the current live version.</p>
+          <p className="text-[13px] text-ink-muted">
+            {publishBlocked ?? 'Publishing makes this version live and retires the current live version.'}
+          </p>
         )}
       </form>
     </Card>
