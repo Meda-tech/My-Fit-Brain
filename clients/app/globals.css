@@ -1,0 +1,86 @@
+/* Hindi: Noto Serif / Sans Devanagari (kept from the previous loader) */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
+@import "tailwindcss";
+@import "../styles/mfb-tokens.css";
+
+/* Installed PWA (home-screen app) only */
+@custom-variant standalone (@media (display-mode: standalone));
+
+@theme {
+  /* only brand colours exist as utilities */
+  --color-*: initial;
+  --color-white: #FFFFFF;
+
+  --color-teal: #145A5A;        --color-night: #0E4242;     --color-mist: #E8F2F0;
+  --color-coral: #E8745A;       --color-coral-deep: #B9502F; --color-coral-hover: #9E4227;
+  --color-coral-light: #F2A58E;
+  --color-cream: #FBF7F2;       --color-sand: #E6DED3;
+  --color-ink: #1A2A2A;         --color-ink-soft: #3D5050;  --color-ink-muted: #5E7474;
+
+  /* report bands — PROPOSED, pending clinical/brand sign-off; calm, never red */
+  --color-band-low: #E8F2F0;      --color-band-low-text: #145A5A;
+  --color-band-mild: #145A5A;     --color-band-mild-text: #FFFFFF;
+  --color-band-moderate: #F2A58E; --color-band-moderate-text: #1A2A2A;
+  --color-band-high: #B9502F;     --color-band-high-text: #FFFFFF;
+
+  --font-heading: var(--font-poppins), Arial, sans-serif;
+  --font-body: var(--font-dm-sans), Arial, sans-serif;
+  --font-heading-hi: 'Noto Serif Devanagari', var(--font-poppins), Arial, serif;
+  --font-body-hi: 'Noto Sans Devanagari', var(--font-dm-sans), Arial, sans-serif;
+
+  --radius-input: 8px; --radius-card: 14px; --radius-hero: 24px;
+  --shadow-card: 0 6px 24px rgba(20, 90, 90, 0.08);
+}
+
+@layer base {
+  html {
+    background: var(--color-cream);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* App-like taps: no double-tap zoom delay on controls */
+  a, button, [role="button"], label, select, summary {
+    touch-action: manipulation;
+  }
+  body {
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-heading); }
+  h1, h2 { color: var(--color-teal); font-weight: 600; }
+  h3 { color: var(--color-ink); font-weight: 500; }
+
+  :focus-visible {
+    outline: 2px solid var(--color-coral);
+    outline-offset: 2px;
+  }
+  ::selection { background: var(--color-mist); color: var(--color-ink); }
+
+  input.no-inner-outline:focus,
+  input.no-inner-outline:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+}
+
+/* Hindi: switch family and add 1.15x line-height. Unlayered so it wins over utilities. */
+:lang(hi) { font-family: var(--font-body-hi); line-height: calc(1.5 * 1.15); }
+h1:lang(hi), h2:lang(hi), h3:lang(hi) { font-family: var(--font-heading-hi); line-height: calc(1.25 * 1.15); }
+
+@keyframes mfb-loading {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+/* Installed app: no rubber-band / pull-to-refresh on the page itself */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
