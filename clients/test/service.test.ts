@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { compareResult, type AssessmentResult } from '@mfb/engine';
 import type { TestCase, VersionConfig } from '@mfb/questionbank';
 import { loadOfflineBanks, type OfflineBank } from '@mfb/questionbank/offline';
-import type { ReportDocument } from '../lib/assessment/report-document';
+import type { ReportDocument } from '@mfb/report';
 import {
   getStep,
   giveConsent,

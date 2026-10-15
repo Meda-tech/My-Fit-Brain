@@ -1,5 +1,6 @@
 import type { AssessmentResult } from '@mfb/engine';
 import type { VersionConfig } from '@mfb/questionbank';
+import type { Lang, ReportArea, ReportDocument, ReportSection } from '@mfb/report';
 import type { ReportLanguageChoice } from './types';
 
 // Builds the stored report (attempt_results.report) from the engine result: every sentence comes from the
@@ -27,46 +28,7 @@ const SLOTS = {
 /** Medical flags are named MED_* in every question bank (Flags & Safety tab). */
 const MEDICAL_FLAG_PREFIX = 'MED_';
 
-export type Lang = 'en' | 'hi';
-
-export interface ReportArea {
-  module: string;
-  name: string | null;
-  percent: number | null;
-  band: string | null;
-  bandName: string | null;
-}
-
-export interface ReportSection {
-  crisis: string | null;
-  title: string | null;
-  subtitle: string | null;
-  designedBy: string | null;
-  snapshot: { heading: string | null; note: string | null; areas: ReportArea[] };
-  strengths: { heading: string | null; items: string[] };
-  stuck: { heading: string | null; items: string[] };
-  means: { heading: string | null; items: string[] };
-  plan: { heading: string | null; line: string | null; extra: string[] } | null;
-  focus: { heading: string | null; items: string[] } | null;
-  medicalHeading: string | null;
-  /** Medical and safety blocks in flag order. */
-  blocks: { kind: 'medical' | 'other'; text: string }[];
-  next: { heading: string | null; text: string | null };
-  nri: string | null;
-  disclaimer: string | null;
-}
-
-export interface ReportDocument {
-  schema: 1;
-  reportId: string | null;
-  testCode: string;
-  versionId: string;
-  completedAt: string;
-  layout: 'standard' | 'crisis';
-  languages: Lang[];
-  sections: Partial<Record<Lang, ReportSection>>;
-  warnings: string[];
-}
+export type { Lang, ReportArea, ReportDocument, ReportSection } from '@mfb/report';
 
 export function languagesFor(choice: ReportLanguageChoice): Lang[] {
   return choice === 'both' ? ['en', 'hi'] : [choice];
@@ -167,7 +129,7 @@ function section(config: VersionConfig, result: AssessmentResult, lang: Lang, wa
     plan: r.plan
       ? {
           heading: text(SLOTS.planHeading),
-          line: planLine(config, result, lang, text, pick, warnings),
+          line: planLine(config, result, text, pick, warnings),
           extra: r.plan.addTextKeys.map(text).filter((x): x is string => !!x),
         }
       : null,
@@ -188,7 +150,6 @@ function section(config: VersionConfig, result: AssessmentResult, lang: Lang, wa
 function planLine(
   config: VersionConfig,
   result: AssessmentResult,
-  lang: Lang,
   text: (key: string | null | undefined) => string | null,
   pick: (en: string | null | undefined, hi: string | null | undefined, what: string) => string | null,
   warnings: string[]

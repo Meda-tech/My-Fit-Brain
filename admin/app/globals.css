@@ -2,6 +2,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&display=swap');
 @import "tailwindcss";
 @import "../styles/mfb-tokens.css";
+/* Shared report view (workspace package, outside this app): include its classes. */
+@source "../../packages/report/src";
 
 @theme {
   /* only brand colours exist as utilities */
