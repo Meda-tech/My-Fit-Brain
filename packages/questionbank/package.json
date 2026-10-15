@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./parse": "./src/parse-excel.ts",
     "./import": "./src/import.ts",
-    "./patch": "./src/patch.ts"
+    "./patch": "./src/patch.ts",
+    "./offline": "./src/offline.ts"
   },
   "scripts": {
     "test": "vitest run",

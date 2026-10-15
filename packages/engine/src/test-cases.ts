@@ -19,7 +19,16 @@ export function runTestCase(config: VersionConfig, testCase: Pick<TestCase, 'con
     return { passed: false, actual: null, diffs: [], error: err instanceof Error ? err.message : String(err) };
   }
 
-  const e = testCase.expected;
+  const diffs = compareResult(actual, testCase.expected, testCase.context.path);
+  return { passed: diffs.length === 0, actual, diffs, error: null };
+}
+
+/** Differences between a result and a test case's expectations (empty = matches). */
+export function compareResult(
+  actual: AssessmentResult,
+  e: TestCase['expected'],
+  expectedPath?: 'partner' | 'solo' | null
+): TestCaseDiff[] {
   const diffs: TestCaseDiff[] = [];
   const check = (field: string, expected: unknown, got: unknown) => {
     if (JSON.stringify(expected) !== JSON.stringify(got)) diffs.push({ field, expected, actual: got });
@@ -40,9 +49,9 @@ export function runTestCase(config: VersionConfig, testCase: Pick<TestCase, 'con
   if (e.extra_text_keys) check('extra_text_keys', e.extra_text_keys, actual.format?.addTextKeys ?? []);
   if (e.interpretation_keys) check('interpretation_keys', e.interpretation_keys, actual.report.interpretation);
   if (e.notify) check('notify', [...e.notify].sort(), [...new Set(actual.notify.flatMap((n) => n.recipients))].sort());
-  if (testCase.context.path) check('path', testCase.context.path, actual.path);
+  if (expectedPath) check('path', expectedPath, actual.path);
 
-  return { passed: diffs.length === 0, actual, diffs, error: null };
+  return diffs;
 }
 
 function sortKeys(o: Record<string, unknown>): Record<string, unknown> {
