@@ -4,7 +4,7 @@ import { APP_HOSTS } from "./lib/site";
 
 const nextConfig: NextConfig = {
   // Shared workspace packages (TypeScript source, no build step).
-  transpilePackages: ["@mfb/questionbank"],
+  transpilePackages: ["@mfb/questionbank", "@mfb/engine"],
   allowedDevOrigins: [
     "192.168.29.64",
     "192.168.29.*",

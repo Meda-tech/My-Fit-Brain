@@ -4,7 +4,7 @@ import { APP_HOSTS } from "./lib/site";
 
 const nextConfig: NextConfig = {
   // Shared workspace packages (TypeScript source, no build step).
-  transpilePackages: ["@mfb/questionbank"],
+  transpilePackages: ["@mfb/questionbank", "@mfb/engine"],
   // The Excel parser runs only on the server; keep exceljs out of the bundle.
   serverExternalPackages: ["exceljs"],
   allowedDevOrigins: [

@@ -8,5 +8,7 @@ export * from './rules';
 export * from './validate';
 export * from './loader';
 export * from './version-label';
+export * from './config';
+export * from './patch';
 export { attachRules, type AttachResult, type LatestVersionRules } from './attach-rules';
 export { SEED_TESTS } from '../seeds/index';
