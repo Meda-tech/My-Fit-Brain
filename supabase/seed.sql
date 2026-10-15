@@ -1,13 +1,13 @@
 -- ==============================================================================
--- Dr Neha Mehta — Phase 1 Seed Script / Super Admin Initialization
+-- MFB Assessments — First super admin (template)
 -- ==============================================================================
 
--- Instructions:
--- 1. Create a user in Supabase Auth (via Supabase Studio -> Authentication -> Users -> Add user)
---    e.g. Email: superadmin@drnehamehta.com, Password: <secure-password>
--- 2. Obtain their Auth UUID from Supabase Studio.
--- 3. Replace the placeholder '00000000-0000-0000-0000-000000000000' below with that Auth UUID,
---    or execute this snippet in Supabase SQL Editor:
+-- There is no bootstrap page or API. The owner creates the first super admin:
+-- 1. Supabase Studio -> Authentication -> Users -> Add user (email + strong password,
+--    tick Auto Confirm User).
+-- 2. Copy the new user's UID.
+-- 3. Replace the placeholders below and run this in the SQL Editor.
+-- Coordinators and counsellors are then added from the Team page in the staff portal.
 
 /*
 INSERT INTO public.profiles (
@@ -18,14 +18,10 @@ INSERT INTO public.profiles (
   is_active
 ) VALUES (
   'REPLACE_WITH_SUPABASE_AUTH_UID',
-  'superadmin@drnehamehta.com',
-  'Dr Neha Mehta (Super Admin)',
+  'REPLACE_WITH_SUPER_ADMIN_EMAIL',
+  'REPLACE_WITH_FULL_NAME',
   'super_admin',
   true
 ) ON CONFLICT (email) DO UPDATE
 SET role = 'super_admin', is_active = true, auth_user_id = EXCLUDED.auth_user_id;
 */
-
--- Alternatively, the system includes a self-healing bootstrap API endpoint
--- (/api/bootstrap-admin) in the /admin application that allows the owner with the
--- server-side SUPABASE_SERVICE_ROLE_KEY to initialize the first Super Admin safely!
