@@ -1,0 +1,8 @@
+{
+  "name": "mfb-assessments",
+  "private": true,
+  "description": "Repo-level tooling for MFB Assessments (apps live in admin/ and clients/)",
+  "devDependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
