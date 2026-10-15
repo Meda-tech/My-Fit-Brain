@@ -1,0 +1,427 @@
+{
+  "test_code": "IA",
+  "version_label": "1.1",
+  "module_kinds": {
+    "INTAKE": "intake",
+    "GATE": "gate",
+    "CORE": "core",
+    "SOLO_CORE": "solo_core",
+    "A": "couple",
+    "B": "couple",
+    "C": "individual",
+    "D": "individual",
+    "E": "individual",
+    "F": "individual",
+    "G": "couple",
+    "DOSE": "dose",
+    "FLAG": "flag"
+  },
+  "protected": {
+    "questions": ["I1", "G1", "R5", "R6"],
+    "flags": ["AGE_STOP", "CRISIS", "SAFETY"]
+  },
+  "scoring": {
+    "scale": {
+      "likert": { "never": 0, "rarely": 1, "sometimes": 2, "often": 3 },
+      "yn": { "no": 0, "yes": 3 },
+      "reverse_max": 3
+    },
+    "bands": [
+      { "code": "Low", "min": 0, "max": 25, "name_en": "Low", "name_hi": "कम", "severity_points": 0 },
+      { "code": "Mild", "min": 26, "max": 50, "name_en": "Mild", "name_hi": "हल्का", "severity_points": 1 },
+      { "code": "Moderate", "min": 51, "max": 75, "name_en": "Moderate", "name_hi": "मध्यम", "severity_points": 2 },
+      { "code": "High", "min": 76, "max": 100, "name_en": "High", "name_hi": "ज़्यादा", "severity_points": 3 }
+    ],
+    "rounding": "half_up",
+    "core_module": {
+      "rules": [
+        {
+          "when": { "fact": "answer", "q": "I6", "op": "eq", "value": "i_do_not_have_a_partner_right_now" },
+          "module": "SOLO_CORE",
+          "path": "solo"
+        }
+      ],
+      "default": { "module": "CORE", "path": "partner" }
+    },
+    "gate": { "qid": "G1", "max_choices": 2 },
+    "primary": { "tie": "first_chosen", "fallback": "core" },
+    "tier_thresholds": [
+      { "max_points": 4, "sessions": 4 },
+      { "max_points": 6, "sessions": 6 },
+      { "max_points": 8, "sessions": 8 },
+      { "max_points": null, "sessions": 12 }
+    ],
+    "pace": {
+      "4": [{ "sessions": 4, "every": "week" }],
+      "6": [{ "sessions": 6, "every": "week" }],
+      "8": [{ "sessions": 8, "every": "week" }],
+      "12": [
+        { "sessions": 8, "every": "week" },
+        { "sessions": 4, "every": "fortnight" }
+      ]
+    },
+    "progress": {
+      "better_at": -10,
+      "worse_at": 10,
+      "schedule": [
+        { "after_session": 4 },
+        { "after_session": 8 },
+        { "after_session": 12, "plan_sessions": 12 }
+      ],
+      "items": { "core": true, "chosen_modules": true, "qids": ["D2", "R5", "R6"] },
+      "reuse_qids": ["I1", "I2", "I3", "I4", "I5", "I6", "I7", "I8", "G1", "D1", "D3", "D4", "R1", "R2", "R3", "R4"],
+      "texts": {
+        "heading": "H_PROGRESS",
+        "line": "PROGRESS_LINE",
+        "better": "PROGRESS_BETTER",
+        "same": "PROGRESS_SAME",
+        "worse": "PROGRESS_WORSE"
+      },
+      "id_suffix": "-P"
+    },
+    "registration": {
+      "age_band_qid": "I1",
+      "sex_qid": "I2",
+      "sex_options": { "Male": "male", "Female": "female", "Prefer not to say": "prefer_not_to_say" },
+      "age_bands": [
+        { "option_code": "under_18", "min": null, "max": 17 },
+        { "option_code": "18_24", "min": 18, "max": 24 },
+        { "option_code": "25_34", "min": 25, "max": 34 },
+        { "option_code": "35_44", "min": 35, "max": 44 },
+        { "option_code": "45_54", "min": 45, "max": 54 },
+        { "option_code": "55_plus", "min": 55, "max": null }
+      ]
+    }
+  },
+  "point_rules": [
+    { "key": "SEVERITY", "label": "Severity points: primary band (Low 0 · Mild 1 · Moderate 2 · High 3)", "source": "primary_band_severity", "qid": null, "points": null, "condition": null, "sort": 1 },
+    { "key": "DURATION", "label": "Duration points: D1 answer value (0–3)", "source": "answer_value", "qid": "D1", "points": null, "condition": null, "sort": 2 },
+    { "key": "IMPACT", "label": "Impact points: D2 answer value (0–3)", "source": "answer_value", "qid": "D2", "points": null, "condition": null, "sort": 3 },
+    {
+      "key": "MULTI_AREA",
+      "label": "Multi-area points: two chosen modules Moderate+, or one chosen module and the core Moderate+",
+      "source": "fixed",
+      "qid": null,
+      "points": 2,
+      "condition": {
+        "any": [
+          { "fact": "count_bands", "scope": "chosen", "op": "gte", "value": "Moderate", "count": 2 },
+          {
+            "all": [
+              { "fact": "count_bands", "scope": "chosen", "op": "gte", "value": "Moderate", "count": 1 },
+              { "fact": "band", "module": "core", "op": "gte", "value": "Moderate" }
+            ]
+          }
+        ]
+      },
+      "sort": 4
+    },
+    {
+      "key": "PRIOR_ATTEMPTS",
+      "label": "Prior-attempts points: +1 if D3 ≥ 2",
+      "source": "fixed",
+      "qid": null,
+      "points": 1,
+      "condition": { "fact": "answer_value", "q": "D3", "op": "gte", "value": 2 },
+      "sort": 5
+    },
+    {
+      "key": "TRUST_WOUND",
+      "label": "Trust-wound points: +1 if module G chosen and G band is Moderate or High",
+      "source": "fixed",
+      "qid": null,
+      "points": 1,
+      "condition": {
+        "all": [
+          { "fact": "module_chosen", "value": "G" },
+          { "fact": "band", "module": "G", "op": "gte", "value": "Moderate" }
+        ]
+      },
+      "sort": 6
+    }
+  ],
+  "overrides": [
+    {
+      "key": "ALL_MILD",
+      "label": "All mild: every band (core + chosen) Low or Mild → tier = min(tier, 6)",
+      "condition": { "fact": "all_bands", "scope": "core_and_chosen", "op": "lte", "value": "Mild" },
+      "action": "cap",
+      "sessions": 6,
+      "sort": 1
+    },
+    {
+      "key": "SEVERE_LONG",
+      "label": "Severe + long: primary band High and D1 ≥ 2 → tier = max(tier, 8)",
+      "condition": {
+        "all": [
+          { "fact": "band", "module": "primary", "op": "eq", "value": "High" },
+          { "fact": "answer_value", "q": "D1", "op": "gte", "value": 2 }
+        ]
+      },
+      "action": "floor",
+      "sessions": 8,
+      "sort": 2
+    },
+    {
+      "key": "TRUST_WOUND_HIGH",
+      "label": "Trust wound: G band High → tier = max(tier, 8)",
+      "condition": { "fact": "band", "module": "G", "op": "eq", "value": "High" },
+      "action": "floor",
+      "sessions": 8,
+      "sort": 3
+    }
+  ],
+  "visibility_rules": [
+    {
+      "qid": "R3",
+      "condition": {
+        "any": [
+          { "fact": "answer", "q": "I2", "op": "eq", "value": "female" },
+          { "fact": "module_chosen", "value": "D" }
+        ]
+      }
+    },
+    {
+      "qid": "R4",
+      "condition": {
+        "any": [
+          { "fact": "answer", "q": "I2", "op": "eq", "value": "male" },
+          { "fact": "module_chosen", "value": "C" }
+        ]
+      }
+    }
+  ],
+  "option_rules": [
+    { "qid": "G1", "option_code": "A", "kind": "hide", "condition": { "fact": "path", "op": "eq", "value": "solo" }, "sort": 1 },
+    { "qid": "G1", "option_code": "B", "kind": "hide", "condition": { "fact": "path", "op": "eq", "value": "solo" }, "sort": 2 },
+    { "qid": "G1", "option_code": "C", "kind": "hide", "condition": { "fact": "answer", "q": "I2", "op": "eq", "value": "female" }, "sort": 3 },
+    { "qid": "G1", "option_code": "D", "kind": "hide", "condition": { "fact": "answer", "q": "I2", "op": "eq", "value": "male" }, "sort": 4 }
+  ],
+  "flags": [
+    {
+      "key": "AGE_STOP",
+      "condition": { "fact": "answer", "q": "I1", "op": "eq", "value": "under_18" },
+      "effects": { "stop": true },
+      "is_protected": true,
+      "sort": 1
+    },
+    {
+      "key": "CRISIS",
+      "condition": { "fact": "answer", "q": "R5", "op": "eq", "value": "yes" },
+      "effects": { "interrupt": true, "layout": "crisis", "report_block": "CRISIS", "notify": ["coordinator"] },
+      "is_protected": true,
+      "sort": 2
+    },
+    {
+      "key": "SAFETY",
+      "condition": { "fact": "answer", "q": "R6", "op": "eq", "value": "yes" },
+      "effects": { "force_format": "individual", "report_block": "SAFETY", "notify": ["coordinator"] },
+      "is_protected": true,
+      "sort": 3
+    },
+    {
+      "key": "MED_MALE",
+      "condition": {
+        "all": [
+          {
+            "any": [
+              { "fact": "sex", "op": "eq", "value": "male" },
+              { "fact": "module_chosen", "value": "C" }
+            ]
+          },
+          {
+            "any": [
+              { "fact": "answer", "q": "R4", "op": "eq", "value": "yes" },
+              { "fact": "answer", "q": "R2", "op": "eq", "value": "yes" },
+              { "fact": "answer", "q": "M10", "op": "eq", "value": "suddenly_within_a_few_weeks" },
+              {
+                "all": [
+                  { "fact": "answer_value", "q": "M3", "op": "gte", "value": 2 },
+                  {
+                    "any": [
+                      { "fact": "answer", "q": "M4", "op": "eq", "value": "never" },
+                      { "fact": "answered_any_except", "q": "R1", "value": ["none_of_these"] },
+                      { "fact": "age", "op": "gte", "value": 40 }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "effects": { "report_block": "MED_MALE", "dashboard_tag": "MED_MALE" },
+      "is_protected": false,
+      "sort": 4
+    },
+    {
+      "key": "MED_FEMALE",
+      "condition": {
+        "all": [
+          {
+            "any": [
+              { "fact": "sex", "op": "eq", "value": "female" },
+              { "fact": "module_chosen", "value": "D" }
+            ]
+          },
+          {
+            "any": [
+              { "fact": "answer", "q": "R3", "op": "eq", "value": "yes" },
+              { "fact": "answer", "q": "R2", "op": "eq", "value": "yes" },
+              {
+                "all": [
+                  { "fact": "module_chosen", "value": "D" },
+                  { "fact": "answer", "q": "F8", "op": "eq", "value": "no" },
+                  { "fact": "band", "module": "D", "op": "gte", "value": "Mild" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "effects": { "report_block": "MED_FEMALE", "dashboard_tag": "MED_FEMALE" },
+      "is_protected": false,
+      "sort": 5
+    },
+    {
+      "key": "MED_GENERAL",
+      "condition": {
+        "all": [
+          { "fact": "answered_any_except", "q": "R1", "value": ["none_of_these"] },
+          { "not": { "fact": "flag", "key": "MED_MALE" } },
+          { "not": { "fact": "flag", "key": "MED_FEMALE" } },
+          {
+            "any": [
+              { "fact": "answer_value", "q": "B1", "op": "gte", "value": 2 },
+              { "fact": "module_chosen", "value": "F" }
+            ]
+          }
+        ]
+      },
+      "effects": { "report_block": "MED_GENERAL" },
+      "is_protected": false,
+      "sort": 6
+    },
+    {
+      "key": "NRI",
+      "condition": { "fact": "answer", "q": "I5", "op": "eq", "value": "outside_india" },
+      "effects": { "dashboard_tag": "NRI", "report_block": "NRI_LINE" },
+      "is_protected": false,
+      "sort": 7
+    },
+    {
+      "key": "MIND_LED_PATTERN",
+      "condition": { "fact": "answer", "q": "M5", "op": "eq", "value": "often" },
+      "effects": { "dashboard_tag": "MIND_LED_PATTERN", "printed": false },
+      "is_protected": false,
+      "sort": 8
+    }
+  ],
+  "format_rules": [
+    {
+      "key": "SAFETY_INDIVIDUAL",
+      "condition": { "fact": "flag", "key": "SAFETY" },
+      "format": "individual",
+      "split": null,
+      "add_text_key": null,
+      "sort": 1
+    },
+    {
+      "key": "SOLO_INDIVIDUAL",
+      "condition": { "fact": "path", "op": "eq", "value": "solo" },
+      "format": "individual",
+      "split": null,
+      "add_text_key": null,
+      "sort": 2
+    },
+    {
+      "key": "PARTNER_NOT_WILLING",
+      "condition": { "not": { "fact": "answer", "q": "I6", "op": "eq", "value": "yes_and_they_are_willing_to_join_sessions" } },
+      "format": "individual",
+      "split": null,
+      "add_text_key": null,
+      "sort": 3
+    },
+    {
+      "key": "COUPLE_ONLY",
+      "condition": { "fact": "chosen_kinds", "op": "only", "value": ["couple"] },
+      "format": "couple",
+      "split": null,
+      "add_text_key": null,
+      "sort": 4
+    },
+    {
+      "key": "INDIVIDUAL_ONLY",
+      "condition": { "fact": "chosen_kinds", "op": "only", "value": ["individual"] },
+      "format": "individual_partner_joins",
+      "split": null,
+      "add_text_key": null,
+      "sort": 5
+    },
+    {
+      "key": "MIXED",
+      "condition": { "fact": "chosen_kinds", "op": "includes", "value": ["couple", "individual"] },
+      "format": "mixed",
+      "split": { "4": [3, 1], "6": [4, 2], "8": [5, 3], "12": [7, 5] },
+      "add_text_key": null,
+      "sort": 6
+    }
+  ],
+  "report_rules": {
+    "strengths": {
+      "count": 2,
+      "priority": ["C6", "C1", "CS1", "M4", "F6", "T7", "T8", "A7", "C12", "CS10", "C2", "C3", "CS4", "CS9", "C9", "C7", "A8", "B5"],
+      "answer": "often"
+    },
+    "stuck": {
+      "count": 3,
+      "module_order": ["primary", "second", "core"],
+      "answer_order": ["often", "sometimes"]
+    },
+    "focus": {
+      "lines": 3,
+      "second_module_min_band": "Moderate",
+      "split_when_second": [2, 1],
+      "separator": " · "
+    },
+    "tone": {
+      "condition": {
+        "all": [
+          { "fact": "answer", "q": "D4", "op": "in", "value": ["yes", "fully_committed"] },
+          {
+            "any": [
+              {
+                "all": [
+                  { "fact": "path", "op": "eq", "value": "partner" },
+                  { "fact": "answer_value", "q": "C12", "op": "gte", "value": 2 }
+                ]
+              },
+              {
+                "all": [
+                  { "fact": "path", "op": "eq", "value": "solo" },
+                  { "fact": "answer_value", "q": "CS10", "op": "gte", "value": 2 }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "ready_key": "CLOSE_READY",
+      "gentle_key": "CLOSE_GENTLE"
+    },
+    "interpretation": { "order": ["primary", "second", "core"], "second_min_band": "Mild" },
+    "layouts": {
+      "crisis": { "top_block": "CRISIS", "hide": ["H_PLAN", "PLAN_LINE", "H_FOCUS"], "next_key": "CRISIS_NEXT" }
+    },
+    "format_texts": {
+      "individual": "FORMAT_IND",
+      "individual_partner_joins": "FORMAT_IND_PLUS",
+      "couple": "FORMAT_COUPLE",
+      "mixed": "FORMAT_MIXED"
+    },
+    "report_language": {
+      "qid": "I8",
+      "map": { "english": ["en"], "hindi": ["hi"], "both": ["en", "hi"] }
+    }
+  }
+}
