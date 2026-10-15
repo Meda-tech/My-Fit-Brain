@@ -16,9 +16,13 @@ contradict it. Task briefs live in `docs/tasks/` and are executed one at a time.
 nehamehta/
 ├─ CLAUDE.md                  this file
 ├─ README.md · SUPABASE_SETUP_GUIDE.md · skills-lock.json
+├─ package.json               npm workspaces root: clients, admin, packages/* (ONE lockfile, here)
 ├─ .agents/                   points to CLAUDE.md only
-├─ admin/                     Next.js app — staff portal
-├─ clients/                   Next.js app — client portal (renamed from app/)
+├─ admin/                     Next.js app — staff portal (own git repo, nested)
+├─ clients/                   Next.js app — client portal (own git repo, nested)
+├─ packages/
+│  └─ questionbank/           @mfb/questionbank — types, condition schema, Excel parser, seed rules,
+│                             loader, qb:import CLI (TypeScript source, no build step; Vitest)
 ├─ brand/                     MFB Brand Kit v1 — MASTER files, never served directly
 │  ├─ 01_Logo/
 │  │  ├─ SVG/                 web use (first choice)
@@ -35,9 +39,11 @@ nehamehta/
 │  ├─ questionbank/
 │  │  ├─ MFB_Intimacy_Assessment_QuestionBank_v1.1_1.xlsx
 │  │  └─ MFB_Mind_Assessment_QuestionBank_v1.0_1.xlsx
-│  ├─ tasks/                  task briefs (01-ui-rebrand.md, …)
+│  │  └─ rules-reference.md   condition format and rule tables (read before touching rules)
+│  ├─ deploy/vercel.md        two Vercel projects from the monorepo
+│  ├─ tasks/                  task briefs, findings, mappings and verify SQL per task
 │  └─ rebrand-audit.md        produced by task 01
-└─ supabase/                  shared migrations and config
+└─ supabase/                  shared migrations, seed/question-bank/ load SQL (testing)
 ```
 
 ### Brand files inside the apps
@@ -100,6 +106,26 @@ text. If something is not covered, stop and ask rather than guess.
 - One engine, two configurations. Question banks are versioned DB config imported from the Excel
   files. Never hard-code questions or texts. A future test must need only a new Excel file plus its
   routing rules.
+
+## Question bank
+
+- Every question, option, report sentence and scoring / routing / flag rule lives in `qb_*` tables as
+  versioned data, managed from the admin app (Question bank). No question ID, score, threshold or report
+  text in app code.
+- Versions: `draft` → `in_review` → `live` → `retired`. One live and at most one open (draft or in review)
+  version per test. Assessments pin the version id they used.
+- Freeze rule: live and retired versions never change — a trigger rejects every write, including the
+  service role. To change anything, start a new version (copy) or import a workbook as a new draft.
+- Status changes only through `qb_start_new_version`, `qb_import_version`, `qb_submit_for_review`,
+  `qb_return_to_draft`, `qb_publish` (needs a change note), `qb_delete_draft`. Submit and publish require
+  `qb_validate_version` to return no errors. Rights: `profiles.can_edit_content` / `can_approve_content`.
+- Rules are data: seed files `packages/questionbank/seeds/<TEST>-<VERSION>.rules.json` convert the Excel
+  prose once; later versions copy rules from the previous version. Mapping and open questions:
+  `docs/tasks/03-rules-mapping.md`.
+- Condition format (one JSON shape for every rule): `docs/questionbank/rules-reference.md`. Add a fact
+  only if a source rule truly cannot be expressed, and document it there.
+- Clients may read only live tests, versions, modules, questions and options — never rules, flags, texts,
+  test cases or the audit log.
 
 ## Client flow
 
@@ -267,7 +293,10 @@ existing migrations, `.env*` files.
 
 - Windows + PowerShell. Stop dev servers before renaming or moving folders.
 - Work on a branch per task; commit in small logical chunks with conventional messages.
-- Before finishing any task: `npm run lint` and `npm run build` pass in every app you touched.
+- Install from the repo root (`npm install`); never add a lockfile inside an app. Root scripts:
+  `dev:clients`, `dev:admin`, `build`, `lint`, `test`, `qb:import`.
+- Before finishing any task: `npm run lint` and `npm run build` pass in every app you touched, and
+  `npm test` passes when a package changed.
 
 ## Status
 
@@ -280,4 +309,8 @@ existing migrations, `.env*` files.
   relationship status per I2/I3, `counsellor` role, `is_counsellor()`), shared `lib/options.ts`,
   registration AGE_STOP, Team page with counsellors, env-driven URLs (`lib/site.ts`,
   `NEXT_PUBLIC_CLIENTS_URL` / `NEXT_PUBLIC_ADMIN_URL`). See `docs/tasks/02-findings.md`.
-- Next: Task 03 — question bank as data (shared `packages/`, tables, Excel importer).
+- Done: task 03 question bank data model — npm workspaces + `@mfb/questionbank`, migration
+  `20261016000000_question_bank.sql`, seed rules and worked-example test cases for IA 1.1 / MA 1.0, admin
+  Question bank screens (overview, import, read-only version tabs, status actions). See
+  `docs/tasks/03-findings.md`, `03-rules-mapping.md`, `03-load-banks.md`.
+- Next: Task 04 — generic engine (scoring, routing, flags from `VersionConfig`; verify the test cases).
