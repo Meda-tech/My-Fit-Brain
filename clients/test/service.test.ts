@@ -110,8 +110,8 @@ describe('purchase, language, consent', () => {
     const a = await startPurchase(deps, female, 'IA');
     expect([a.status, a.version_id, a.report_id, a.payment_mode]).toEqual(['paid', IA_LIVE, 'MFB-IA-2026-00001', 'stub']);
     expect((await startPurchase(deps, female, 'IA')).id).toBe(a.id);
-    // The report language is not asked: both languages are stored, the toggle picks one (D21).
-    expect([a.report_language, (await getStep(deps, female, a.id)).kind]).toEqual(['both', 'consent']);
+    // The report language is not asked: reports are staff-only and in English (D21).
+    expect([a.report_language, (await getStep(deps, female, a.id)).kind]).toEqual(['en', 'consent']);
     await setLanguage(deps, female, a.id, 'hi');
     expect((await getStep(deps, female, a.id)).kind).toBe('consent');
     await giveConsent(deps, female, a.id);

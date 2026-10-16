@@ -3,7 +3,6 @@
 @import "tailwindcss";
 @import "../styles/mfb-tokens.css";
 /* Shared report view (workspace package, outside this app): include its classes. */
-@source "../../packages/report/src";
 
 /* Installed PWA (home-screen app) only */
 @custom-variant standalone (@media (display-mode: standalone));

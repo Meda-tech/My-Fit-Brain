@@ -15,6 +15,10 @@ interface ClientHomeViewProps {
   attempts: AttemptSummary[];
 }
 
+function formatDate(iso: string, lang: 'en' | 'hi'): string {
+  return new Date(iso).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewProps) {
   const { lang } = useLanguage();
   const t = translations[lang];
@@ -47,25 +51,38 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
           <Card className="overflow-hidden">
             <ul className="divide-y divide-sand">
               {attempts.map((a) => {
-                const href = a.status === 'completed' ? `/report/${a.id}` : `/assessment/${a.id}`;
-                const action = a.status === 'completed' ? t.assess.viewReport : a.status === 'stopped' ? null : t.assess.continue;
+                const open = a.status === 'paid' || a.status === 'in_progress';
+                const body = (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink">{local(a.name)}</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+                        <Pill tone={a.status === 'completed' ? 'mist' : 'quiet'}>{statusLabel[a.status]}</Pill>
+                        {a.status === 'completed' && a.completedAt && (
+                          <span>{t.assess.completedOn.replace('{date}', formatDate(a.completedAt, lang))}</span>
+                        )}
+                      </p>
+                    </div>
+                    {open && (
+                      <span className="flex shrink-0 items-center gap-1 text-[14px] font-semibold text-teal">
+                        {t.assess.continue}
+                        <ChevronRight size={16} strokeWidth={2} aria-hidden />
+                      </span>
+                    )}
+                  </>
+                );
                 return (
                   <li key={a.id}>
-                    <Link href={href} className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-mist/50 active:bg-mist">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-ink">{local(a.name)}</p>
-                        <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
-                          <Pill tone={a.status === 'completed' ? 'mist' : 'quiet'}>{statusLabel[a.status]}</Pill>
-                          {a.reportId && <span className="font-mono">{a.reportId}</span>}
-                        </p>
-                      </div>
-                      {action && (
-                        <span className="flex shrink-0 items-center gap-1 text-[14px] font-semibold text-teal">
-                          {action}
-                          <ChevronRight size={16} strokeWidth={2} aria-hidden />
-                        </span>
-                      )}
-                    </Link>
+                    {open ? (
+                      <Link
+                        href={`/assessment/${a.id}`}
+                        className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-mist/50 active:bg-mist"
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="flex min-h-16 items-center gap-3 px-4 py-3">{body}</div>
+                    )}
                   </li>
                 );
               })}

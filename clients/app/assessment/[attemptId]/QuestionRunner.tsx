@@ -101,8 +101,9 @@ export function QuestionRunner({
         return fail(r.code);
       }
       unsaved.current = 0;
-      if (r.status === 'completed') router.push(`/report/${attemptId}`);
-      else router.refresh();
+      // The page shows the thank-you (or stop) screen for the closed attempt.
+      router.replace(`/assessment/${attemptId}`);
+      router.refresh();
     });
 
   if (interrupt) {

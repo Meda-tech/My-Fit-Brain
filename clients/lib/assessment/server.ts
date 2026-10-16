@@ -1,6 +1,5 @@
 import 'server-only';
 import { getVersionConfig } from '@mfb/questionbank';
-import type { ReportDocument } from '@mfb/report';
 import { redirect } from 'next/navigation';
 import { getAuthUser, requireClient } from '../auth';
 import { createAdminClient } from '../supabase/admin';
@@ -8,7 +7,7 @@ import { paymentsMode } from './payments';
 import type { ServiceDeps } from './service';
 import type { AttemptStore } from './store';
 import { supabaseAttemptStore } from './supabase-store';
-import { AssessmentError, type AttemptRow, type AttemptStatus, type ClientProfile, type LocalPair } from './types';
+import { type AttemptRow, type AttemptStatus, type ClientProfile, type LocalPair } from './types';
 
 // Server wiring for the assessment screens: dependencies, the signed-in client, and read models.
 // Reads use the service role after the ownership check, because clients may not read texts or rules.
@@ -157,20 +156,4 @@ export async function homeData(client: ClientProfile): Promise<{ tests: TestCard
 
 export async function testName(code: string): Promise<LocalPair | null> {
   return (await testNames()).get(code)?.name ?? null;
-}
-
-/** The attempt, if it belongs to the client. */
-export async function ownAttemptRow(client: ClientProfile, attemptId: string): Promise<AttemptRow> {
-  const attempt = await serviceDeps().store.getAttempt(attemptId);
-  if (!attempt || attempt.client_id !== client.id) throw new AssessmentError('NOT_FOUND', 'Assessment not found.');
-  return attempt;
-}
-
-/** The stored report of a completed attempt of this client, or null. */
-export async function storedReport(client: ClientProfile, attemptId: string): Promise<{ attempt: AttemptRow; report: ReportDocument } | null> {
-  const attempt = await ownAttemptRow(client, attemptId);
-  if (attempt.status !== 'completed') return null;
-  const stored = await serviceDeps().store.getResult(attempt.id);
-  if (!stored) return null;
-  return { attempt, report: stored.report as ReportDocument };
 }

@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { currentClient, serviceDeps } from '../../../lib/assessment/server';
 import { openRunner } from '../../../lib/assessment/service';
 import type { Answers } from '@mfb/engine';
@@ -29,10 +29,9 @@ export default async function AssessmentPage({
     if (err instanceof AssessmentError && err.code === 'NOT_FOUND') notFound();
     throw err;
   }
-  if (step.kind === 'completed') redirect(`/report/${attemptId}`);
 
   return (
-    <PageChrome nav={false}>
+    <PageChrome nav={step.kind === 'completed'}>
       <AssessmentShell attemptId={attemptId} initialStep={step} initialAnswers={answers} />
     </PageChrome>
   );

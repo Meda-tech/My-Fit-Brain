@@ -139,10 +139,10 @@ export function profileAnswers(config: VersionConfig, client: ClientProfile): An
 }
 
 /**
- * The report is stored in both languages and shown in the language of the app's EN | हिं toggle, so the
- * report-language question is never asked: it is answered here from the profile side (decision D21).
+ * Reports are read only by counsellors and super admins, in English, so the report-language question
+ * is never asked: it is answered English here, from the profile side (decision D21).
  */
-export const DEFAULT_REPORT_LANGUAGE: ReportLanguageChoice = 'both';
+export const DEFAULT_REPORT_LANGUAGE: ReportLanguageChoice = 'en';
 
 export async function setLanguage(deps: ServiceDeps, client: ClientProfile, attemptId: string, lang: ReportLanguageChoice) {
   const attempt = await ownAttempt(deps, client, attemptId);

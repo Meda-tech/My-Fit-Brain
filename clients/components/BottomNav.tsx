@@ -8,13 +8,12 @@ import { translations } from '../lib/i18n';
 import { cn } from './brand';
 
 // App-style tab bar: two tabs, fixed to the bottom, above the home indicator on phones.
-// Reports belong to Home (they are opened from "Your assessments").
 export function BottomNav() {
   const pathname = usePathname();
   const { lang } = useLanguage();
   const t = translations[lang].nav;
   const tabs = [
-    { href: '/', label: t.home, icon: House, active: pathname === '/' || pathname.startsWith('/report') },
+    { href: '/', label: t.home, icon: House, active: pathname === '/' },
     { href: '/profile', label: t.profile, icon: UserRound, active: pathname.startsWith('/profile') },
   ];
 

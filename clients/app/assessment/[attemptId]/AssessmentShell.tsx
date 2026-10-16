@@ -5,7 +5,8 @@ import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
 import type { Answers } from '@mfb/engine';
 import type { LocalPair, Step } from '../../../lib/assessment/types';
-import { BinduDot, Button, Card } from '../../../components/brand';
+import { CheckCircle2 } from 'lucide-react';
+import { BinduDot, Button, ButtonLink, Card } from '../../../components/brand';
 import { giveConsentAction } from '../actions';
 import { QuestionRunner } from './QuestionRunner';
 
@@ -36,6 +37,22 @@ export function AssessmentShell({
           <input type="hidden" name="attemptId" value={attemptId} />
           <ConsentSubmit label={t.consentAgree} busy={t.paying} />
         </form>
+      </Card>
+    );
+  }
+
+  // Finished: a calm thank-you. The report is for the care team only and is never shown here.
+  if (initialStep.kind === 'completed') {
+    return (
+      <Card className="p-6 text-center sm:p-10">
+        <CheckCircle2 size={40} strokeWidth={2} className="mx-auto text-teal" aria-hidden />
+        <h1 className="mt-4 text-[26px] font-semibold leading-tight text-teal">{t.completedTitle}</h1>
+        <p role="status" className="mt-3 text-[17px] leading-7 text-ink-soft">
+          {t.completedBody}
+        </p>
+        <ButtonLink href="/" variant="secondary" className="mt-8">
+          {t.backHome}
+        </ButtonLink>
       </Card>
     );
   }
