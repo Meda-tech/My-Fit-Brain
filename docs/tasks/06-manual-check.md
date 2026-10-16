@@ -94,6 +94,20 @@ nothing more can be answered.
    answers are visible to counsellors and super admins only."
 5. Sign in as a client and try `/attempts/...` on the admin domain → no access.
 
+## D2. Admin payments
+
+Apply `supabase/migrations/20261022000000_payments_access.sql` (checks:
+`docs/tasks/08c-payments-access-verify.sql`).
+1. As a **super admin** or **coordinator**: the menu shows **Payments**. The page shows Received, This
+   month, Not completed and Failed, then the payments table (date, client, assessment + report ID,
+   amount, status, method, Razorpay ID). Filters: status chips, period chips, search by client name,
+   mobile, email, report ID or Razorpay ID.
+2. Click a row (or Tab to it and press Enter): the side sheet opens with amount and status, client
+   (link to the client page), assessment (link to the attempt), payment details and Razorpay IDs with
+   copy buttons and "Open in Razorpay". Esc, × or the backdrop closes it; the URL keeps `?payment=`.
+3. As a **counsellor**: no Payments menu item, `/payments` goes to the dashboard, and a direct read of
+   `payments` returns no rows.
+
 ## E. Payments not configured and the webhook
 
 1. Empty `RAZORPAY_KEY_ID` and restart: the payment page shows "Payments are not available right now."

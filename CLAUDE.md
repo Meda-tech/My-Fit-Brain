@@ -183,6 +183,10 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
   a per-payment advisory lock, then the existing attempt is returned, or the report number is taken and
   the attempt inserted in the same transaction, so report IDs have no gaps even when verify and webhook
   race. Never call `next_report_id()` separately from the insert.
+- Admin → Payments (`/payments`): super admins and coordinators only (nav, page guard and RLS
+  `can_view_payments()`, migration `20261022000000_payments_access.sql`); counsellors never see payments.
+  Table with filters (status, period, search by client, report ID or Razorpay ID); a row opens a side
+  sheet with the payment, client, assessment and Razorpay IDs.
 - Report IDs (`MFB-IA-YYYY-NNNNN`) identify assessments; they are **not** GST invoice numbers. Tax
   invoices need their own gap-free, consecutive series per financial year (April–March), issued for paid
   payments only. That series belongs to the payments task, not to report IDs. Checkout name/description: "My Fit Brain" / "MFB Assessment" only. Keys:
@@ -409,6 +413,8 @@ existing migrations, `.env*` files.
   `docs/tasks/08-payments-verify.sql`), order / verify / webhook routes, payment screen.
 - Done: gap-free report IDs — migration `20261021000000_paid_attempt_atomic.sql` (checks:
   `docs/tasks/08b-paid-attempt-verify.sql`).
+- Done: admin Payments page — migration `20261022000000_payments_access.sql` (checks:
+  `docs/tasks/08c-payments-access-verify.sql`).
 - Open (payments task): GST invoice numbering, its own gap-free series per financial year.
 - Next: Task 07 — polish. Task 05 (admin editor, rule builder, preview, review/publish UI)
   is still open.
