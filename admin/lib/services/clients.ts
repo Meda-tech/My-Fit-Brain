@@ -1,4 +1,5 @@
 import { createClient } from '../supabase/server';
+import { createAdminClient } from '../supabase/admin';
 import { getCurrentStaff } from '../auth';
 import { normalizePhoneNumber } from '../phone';
 import { ClientRecord } from '../types';
@@ -140,8 +141,20 @@ export async function getClientById(id: string): Promise<ClientRecord | null> {
     created_by_profile_id: data.created_by_profile_id,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    creator_name: (data as unknown as ClientRowWithCreator).profiles?.full_name || null,
+    creator_name:
+      (data as unknown as ClientRowWithCreator).profiles?.full_name ||
+      (await staffName(data.created_by_profile_id)),
   };
+}
+
+/**
+ * Name of the staff member who created a record. Only super admins may read other staff profiles
+ * under RLS, so after the staff check above the name is read with the service role (name only).
+ */
+async function staffName(profileId: string | null): Promise<string | null> {
+  if (!profileId) return null;
+  const { data } = await createAdminClient().from('profiles').select('full_name').eq('id', profileId).maybeSingle();
+  return (data as { full_name?: string | null } | null)?.full_name || null;
 }
 
 /**

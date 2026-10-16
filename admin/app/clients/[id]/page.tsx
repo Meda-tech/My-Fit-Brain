@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { UserPlus, User, Shield } from 'lucide-react';
+import { UserPlus, User } from 'lucide-react';
 import { requireStaff } from '../../../lib/auth';
 import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
@@ -19,8 +19,12 @@ interface ClientDetailPageProps {
 }
 
 const dtClasses = 'text-[12px] font-medium text-ink-muted uppercase tracking-[0.06em]';
-const codeClasses =
-  'font-mono text-[13px] text-ink-soft bg-cream p-2 rounded-input border border-sand mt-1 break-all select-all';
+const ddClasses = 'mt-0.5 text-[16px] text-ink';
+
+// Server time is UTC once deployed; staff read India time.
+function formatIndiaDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+}
 
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {
   const staff = await requireStaff();
@@ -59,86 +63,49 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
         }
       />
 
-        {/* Detailed Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Demographics Card */}
-          <Card className="p-5 sm:p-6">
-            <h2 className="text-[20px] font-semibold text-teal mb-4 flex items-center gap-2">
-              <User size={18} strokeWidth={2} aria-hidden />
-              <span>Demographics</span>
-            </h2>
+        <Card className="p-5 sm:p-6">
+          <h2 className="mb-4 flex items-center gap-2 text-[20px] font-semibold text-teal">
+            <User size={18} strokeWidth={2} aria-hidden />
+            <span>Client details</span>
+          </h2>
 
-            <dl className="space-y-3.5">
-              <div>
-                <dt className={dtClasses}>Gender</dt>
-                <dd className="text-[16px] font-semibold text-ink mt-0.5">{client.gender}</dd>
-              </div>
-
-              <div>
-                <dt className={dtClasses}>Age</dt>
-                <dd className="text-[16px] font-semibold text-ink mt-0.5">{client.age} years</dd>
-              </div>
-
-              <div>
-                <dt className={dtClasses}>Relationship status</dt>
-                <dd className="text-[16px] font-semibold text-ink mt-0.5">
-                  {client.marital_status}
-                </dd>
-              </div>
-
-              <div>
-                <dt className={dtClasses}>Location</dt>
-                <dd className="text-[16px] text-ink mt-0.5">
-                  {[client.city, client.state].filter(Boolean).join(', ') || 'Not specified'}
-                </dd>
-              </div>
-
-              <div>
-                <dt className={dtClasses}>Email address</dt>
-                <dd className="text-[16px] text-ink mt-0.5">{client.email || 'Not provided'}</dd>
-              </div>
-            </dl>
-          </Card>
-
-          {/* System Identity & Association Card */}
-          <Card className="p-5 sm:p-6">
-            <h2 className="text-[20px] font-semibold text-teal mb-4 flex items-center gap-2">
-              <Shield size={18} strokeWidth={2} aria-hidden />
-              <span>Identity &amp; security</span>
-            </h2>
-
-            <dl className="space-y-3.5">
-              <div>
-                <dt className={dtClasses}>Application UUID (stable)</dt>
-                <dd className={codeClasses}>{client.id}</dd>
-              </div>
-
-              <div>
-                <dt className={dtClasses}>Auth user ID (auth.users mapping)</dt>
-                <dd className={codeClasses}>
-                  {client.auth_user_id || 'Not yet linked (awaiting mobile OTP login)'}
-                </dd>
-              </div>
-
-              <div>
-                <dt className={dtClasses}>Created by staff</dt>
-                <dd className="text-[15px] text-ink mt-0.5">
-                  {client.creator_name ? `${client.creator_name}` : 'Self-registered'}
-                </dd>
-              </div>
-
-              <div>
-                <dt className={dtClasses}>Date registered</dt>
-                <dd className="text-[15px] text-ink-muted mt-0.5">
-                  {new Date(client.created_at).toLocaleString('en-IN', {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                  })}
-                </dd>
-              </div>
-            </dl>
-          </Card>
-        </div>
+          <dl className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <dt className={dtClasses}>Gender</dt>
+              <dd className={ddClasses}>{client.gender}</dd>
+            </div>
+            <div>
+              <dt className={dtClasses}>Age</dt>
+              <dd className={ddClasses}>{client.age} years</dd>
+            </div>
+            <div>
+              <dt className={dtClasses}>Relationship status</dt>
+              <dd className={ddClasses}>{client.marital_status}</dd>
+            </div>
+            <div>
+              <dt className={dtClasses}>Location</dt>
+              <dd className={ddClasses}>{[client.city, client.state].filter(Boolean).join(', ') || 'Not specified'}</dd>
+            </div>
+            <div>
+              <dt className={dtClasses}>Email address</dt>
+              <dd className={`${ddClasses} wrap-break-word`}>{client.email || 'Not provided'}</dd>
+            </div>
+            <div>
+              <dt className={dtClasses}>Client ID</dt>
+              <dd className="mt-0.5 select-all break-all font-mono text-[13px] text-ink-soft">{client.id}</dd>
+            </div>
+            <div>
+              <dt className={dtClasses}>Created by</dt>
+              <dd className={ddClasses}>{client.created_by_profile_id
+                  ? client.creator_name ?? 'Staff member'
+                  : 'Self-registered (phone sign-in)'}</dd>
+            </div>
+            <div>
+              <dt className={dtClasses}>Registered on</dt>
+              <dd className={ddClasses}>{formatIndiaDateTime(client.created_at)}</dd>
+            </div>
+          </dl>
+        </Card>
 
         <AttemptsList attempts={attempts} />
     </AdminShell>
