@@ -26,6 +26,9 @@ This click-through is the check against the real database.
 7. Answer a few core and module questions. Check: tapping an option only selects it (teal border, tick);
    **Next** (pinned to the bottom on a phone) saves and moves on and is disabled until a choice is made; the progress bar and "Question n of m" update; **Back** returns to the last answer with
    it selected.
+   - Saving: answers are kept in the browser and saved every 5 answers. Answer 3 questions, close the
+     tab, open `/assessment/<uuid>` again: you resume at the next unanswered question (the tab saved on
+     close). Admin → attempt → Answers shows them.
 8. Press **Back** until I6. Change it to "I do not have a partner right now".
    - Expect: the flow switches to the solo path; answers that are no longer visible are removed
      (admin → attempt → Answers no longer lists partner-only items) and the gate keeps only choices that

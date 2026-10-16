@@ -156,8 +156,10 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
 - Registration age → I1 / MI1 band. Registration gender → I2 / MI2. Never ask twice.
 - Gender options: Male / Female / Prefer not to say.
 - Relationship options (I3): Single / In a relationship / Engaged / Married / Separated / Divorced / Widowed.
-- Answers save as they are given so the client can resume. Changing a routing answer clears answers
-  from paths that are no longer visible.
+- Answers are buffered in the browser and saved in batches (every 5 answers, at once when an answer
+  raises a flag, at the last question, at submit, and when the tab is hidden or closed) so the client
+  can resume. The server still decides every next step from the answers sent. Changing a routing answer
+  clears answers from paths that are no longer visible.
 
 ### Attempts (Task 06)
 
@@ -178,6 +180,15 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
   The web report (`@mfb/report` `ReportView`, same in both apps) renders only that stored document;
   never re-score or rebuild it for display.
 - Crisis / safety / age-stop flags write one `attempt_events` row each (unique per flag) for staff.
+- Answering is built to need no database read in the usual case: the browser sends its draft answers,
+  the server checks the whole draft against the pinned version (`resolveDraft`), and the attempt row and
+  client profile come from small per-instance caches (`lib/assessment/server.ts`). Caches only skip
+  reads; every write goes to the database and its triggers decide. Page loads, consent and submit read
+  fresh.
+- Auth in the clients app uses `supabase.auth.getClaims()` (middleware and `lib/auth.ts`
+  `getAuthUser()`), which verifies the token locally when the project uses asymmetric JWT signing keys
+  (Supabase Dashboard → Project Settings → JWT Keys). With the legacy shared secret it falls back to an
+  Auth server call per request.
 - URLs and titles carry no test name: `/payment/<code>`, `/assessment/<uuid>`, `/report/<uuid>`.
 - Client app shell: `components/PageChrome.tsx` = sticky header + bottom tab bar (`BottomNav`: Home `/`,
   Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile.
