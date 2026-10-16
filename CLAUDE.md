@@ -423,6 +423,9 @@ existing migrations, `.env*` files.
   `docs/tasks/08b-paid-attempt-verify.sql`).
 - Done: admin Payments page — migration `20261022000000_payments_access.sql` (checks:
   `docs/tasks/08c-payments-access-verify.sql`).
+- Done: SMS hook v2 — migration `20261023000000_sms_hook_v2.sql`: Renflair gets the 10-digit number,
+  the API key comes from Supabase Vault (`renflair_api_key`). OTP debugging: `net._http_response` holds
+  Renflair's replies (`docs/tasks/09-sms-hook-verify.sql`).
 - Open (payments task): GST invoice numbering, its own gap-free series per financial year.
 - Next: Task 07 — polish. Task 05 (admin editor, rule builder, preview, review/publish UI)
   is still open.

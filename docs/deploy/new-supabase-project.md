@@ -26,16 +26,17 @@ transaction: if something fails, nothing from that file is saved; fix the cause 
 | 13 | `supabase/migrations/20261020000000_payments.sql` | payments, webhook events |
 | 14 | `supabase/migrations/20261021000000_paid_attempt_atomic.sql` | gap-free report IDs |
 | 15 | `supabase/migrations/20261022000000_payments_access.sql` | payments: super admin + coordinator only |
+| 16 | `supabase/migrations/20261023000000_sms_hook_v2.sql` | SMS hook v2: 10-digit numbers, key from Vault. **First** store the key: `select vault.create_secret('<key>', 'renflair_api_key', 'Renflair OTP API key');` (do not save that query) |
 
 **Why the question bank files sit between migrations:** files 5, 6, 8 and 9 publish their versions with
 the publish function as it was at that point. Migration 10 replaces that function with one that requires
-passing test runs, so those four files must run before it. Any migration added later goes after 15, in
+passing test runs, so those four files must run before it. Any migration added later goes after 16, in
 file-name order.
 
 **Checks** (read-only or rolled back), after the matching step: `docs/tasks/02-verify.sql` (after 3),
 `03-verify.sql` (after 6), `03b-verify.sql` (after 9), `06b-privacy-verify.sql` (after 12),
 `08-payments-verify.sql` (after 13), `08b-paid-attempt-verify.sql` (after 14, needs one client),
-`08c-payments-access-verify.sql` (after 15).
+`08c-payments-access-verify.sql` (after 15), `09-sms-hook-verify.sql` (after 16; sends a test SMS).
 
 Expected after step 9: Admin → Question bank shows **MFB Intimacy Assessment 1.2** and **MFB Mind
 Assessment 1.1** as live (1.1 / 1.0 retired).
@@ -45,7 +46,7 @@ Assessment 1.1** as live (1.1 / 1.0 retired).
 | Where (new project) | Set |
 |---|---|
 | Authentication → Sign In / Providers → Phone | Enabled, as in the current project |
-| Authentication → Auth Hooks → Send SMS hook | Point it to the SMS hook function from step 2, as in the current project |
+| Authentication → Auth Hooks → Send SMS hook | **Required for OTP.** Type Postgres, schema `public`, function `custom_send_sms`, enabled. The SQL creates the function but does not switch the hook on |
 | Project Settings → JWT Keys | Use the asymmetric signing keys (ECC), so sign-in checks run without a network call |
 | Authentication → URL Configuration | Site URL `https://app.myfitbrain.app`; Redirect URLs `https://app.myfitbrain.app/**`, `https://admin.myfitbrain.app/**` |
 
