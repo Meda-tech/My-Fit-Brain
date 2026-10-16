@@ -3,8 +3,16 @@ import type { ReportDocument } from '@mfb/report';
 import { createClient } from '../supabase/server';
 import { requireStaff } from '../auth';
 
-// Read-only attempt data for staff. Reads go through the staff session, so the attempts RLS
-// (active staff read all) decides access.
+// Read-only attempt data for staff. Reads go through the staff session, so RLS decides access:
+// every active staff member sees attempts and safety events; only super admins and counsellors see
+// answers and results (can_view_reports()). Coordinators never see reports.
+
+/** Roles that may see reports, answers and the counsellor view (mirrors can_view_reports()). */
+export const REPORT_ROLES = ['super_admin', 'counsellor'] as const;
+
+export function canViewReports(role: string): boolean {
+  return (REPORT_ROLES as readonly string[]).includes(role);
+}
 
 export interface AttemptListRow {
   id: string;
@@ -75,7 +83,8 @@ export async function listClientAttempts(clientId: string): Promise<AttemptListR
 }
 
 export async function getAttemptDetail(id: string): Promise<AttemptDetail | null> {
-  await requireStaff();
+  const { profile } = await requireStaff();
+  const withReport = canViewReports(profile.role);
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('attempts')
@@ -86,14 +95,17 @@ export async function getAttemptDetail(id: string): Promise<AttemptDetail | null
   if (!data) return null;
   const raw = data as unknown as RawAttempt & { clients?: { full_name?: string | null } | null };
 
+  const none = { data: null, error: null };
   const [answers, events, result] = await Promise.all([
-    supabase.from('attempt_answers').select('qid, value, source, answered_at').eq('attempt_id', id).order('answered_at'),
+    withReport
+      ? supabase.from('attempt_answers').select('qid, value, source, answered_at').eq('attempt_id', id).order('answered_at')
+      : none,
     supabase
       .from('attempt_events')
       .select('id, kind, flag_key, notify, created_at, handled_at')
       .eq('attempt_id', id)
       .order('created_at'),
-    supabase.from('attempt_results').select('result, report').eq('attempt_id', id).maybeSingle(),
+    withReport ? supabase.from('attempt_results').select('result, report').eq('attempt_id', id).maybeSingle() : none,
   ]);
   for (const r of [answers, events, result]) {
     if (r.error) throw new Error(`Could not read assessment data: ${r.error.message}`);

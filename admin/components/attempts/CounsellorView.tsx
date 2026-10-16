@@ -25,11 +25,14 @@ export function CounsellorView({
   config,
   answers,
   events,
+  eventsOnly = false,
 }: {
   result: AssessmentResult | null;
   config: VersionConfig | null;
   answers: AttemptAnswer[];
   events: AttemptEvent[];
+  /** Coordinators: safety events only, no scores or answers. */
+  eventsOnly?: boolean;
 }) {
   const moduleName = (code: string) => config?.modules.find((m) => m.code === code)?.name_en ?? code;
   const question = (qid: string) => config?.questions.find((q) => q.qid === qid);
@@ -37,6 +40,27 @@ export function CounsellorView({
     question(qid)?.options.find((o) => o.option_code === code)?.label_en ?? code;
   const showValue = (qid: string, v: string | string[]) =>
     (Array.isArray(v) ? v : [v]).map((c) => `${optionLabel(qid, c)} (${c})`).join(', ');
+
+  const safetyEvents = (
+    <Section title="Safety events">
+      {events.length === 0 ? (
+        <p className="text-[14px] text-ink-muted">None.</p>
+      ) : (
+        <ul className="space-y-1 text-[14px] text-ink">
+          {events.map((e) => (
+            <li key={e.id}>
+              <strong>{e.kind}</strong> <span className="font-mono text-[12px]">{e.flag_key}</span> · {formatDateTime(e.created_at)} ·{' '}
+              {e.handled_at ? `handled ${formatDateTime(e.handled_at)}` : 'not yet handled'}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+
+  if (eventsOnly) {
+    return <Card className="space-y-5 p-5 sm:p-6 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">{safetyEvents}</Card>;
+  }
 
   return (
     <Card className="space-y-5 p-5 sm:p-6">
@@ -177,20 +201,7 @@ export function CounsellorView({
         <p className="text-[14px] text-ink-muted">No result yet. The client has not finished this assessment.</p>
       )}
 
-      <Section title="Safety events">
-        {events.length === 0 ? (
-          <p className="text-[14px] text-ink-muted">None.</p>
-        ) : (
-          <ul className="space-y-1 text-[14px] text-ink">
-            {events.map((e) => (
-              <li key={e.id}>
-                <strong>{e.kind}</strong> <span className="font-mono text-[12px]">{e.flag_key}</span> · {formatDateTime(e.created_at)} ·{' '}
-                {e.handled_at ? `handled ${formatDateTime(e.handled_at)}` : 'not yet handled'}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Section>
+      {safetyEvents}
 
       <Section title="Answers">
         {answers.length === 0 ? (
