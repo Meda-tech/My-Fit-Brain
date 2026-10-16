@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, Check, Phone } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Phone } from 'lucide-react';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
 import { CRISIS_HELPLINES } from '../../../lib/assessment/helplines';
@@ -10,8 +10,6 @@ import type { AnswerValue, Interrupt, QuestionView, Step } from '../../../lib/as
 import { Button, Card, Notice, buttonClasses, cn } from '../../../components/brand';
 import { goBackAction, saveAnswerAction, submitAction } from '../actions';
 import { pickText } from './AssessmentShell';
-
-const ADVANCE_MS = 400;
 
 export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; initialStep: Step }) {
   const router = useRouter();
@@ -126,17 +124,14 @@ function QuestionCard({
   const { lang } = useLanguage();
   const t = translations[lang].assess;
   const heading = useRef<HTMLHeadingElement>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const multi = question.type === 'multi';
   const [single, setSingle] = useState<string | null>(typeof question.saved === 'string' ? question.saved : null);
   const [chosen, setChosen] = useState<string[]>(Array.isArray(question.saved) ? question.saved : []);
 
-  // Move focus to the new question for keyboard and screen-reader users.
+  // New question: back to the top, focus on the question for keyboard and screen-reader users.
   useEffect(() => {
-    heading.current?.focus();
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
+    window.scrollTo({ top: 0 });
+    heading.current?.focus({ preventScroll: true });
   }, []);
 
   const label = (o: QuestionView['options'][number]) => (lang === 'hi' ? o.label_hi || o.label_en : o.label_en);
@@ -144,11 +139,11 @@ function QuestionCard({
   const min = question.minChoices ?? 1;
   const max = question.maxChoices ?? question.options.length;
 
-  const pick = (code: string) => {
-    if (busy) return;
-    setSingle(code);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => onAnswer(code), ADVANCE_MS);
+
+  const ready = multi ? chosen.length >= min && chosen.length <= max : single !== null;
+  const submit = () => {
+    if (!ready || busy) return;
+    onAnswer(multi ? chosen : (single as string));
   };
 
   const toggle = (code: string, exclusive: boolean) => {
@@ -219,16 +214,6 @@ function QuestionCard({
               );
             })}
           </div>
-          <Button
-            className="mt-6"
-            fullWidth
-            disabled={busy || chosen.length < min || chosen.length > max}
-            loading={busy}
-            loadingText={t.saving}
-            onClick={() => onAnswer(chosen)}
-          >
-            {t.next}
-          </Button>
         </fieldset>
       ) : (
         <div role="radiogroup" aria-labelledby={`q-${question.qid}`} className="mt-6 space-y-3">
@@ -241,9 +226,9 @@ function QuestionCard({
                 role="radio"
                 aria-checked={on}
                 disabled={busy}
-                onClick={() => pick(o.code)}
+                onClick={() => setSingle(o.code)}
                 className={cn(
-                  'flex min-h-14 w-full items-center justify-between gap-3 rounded-card border-2 bg-white px-5 py-3 text-left text-[17px] font-medium text-ink transition-colors disabled:cursor-wait',
+                  'flex min-h-14 w-full items-center justify-between gap-3 rounded-card border-2 bg-white px-5 py-3 text-left text-[17px] font-medium text-ink transition-colors active:scale-[0.99] disabled:opacity-60',
                   on ? 'border-teal bg-mist' : 'border-sand hover:border-teal'
                 )}
               >
@@ -255,17 +240,19 @@ function QuestionCard({
         </div>
       )}
 
-      {question.canGoBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={busy}
-          className={buttonClasses({ variant: 'ghost', size: 'sm', className: 'mt-6 -ml-3' })}
-        >
-          <ArrowLeft size={16} strokeWidth={2} aria-hidden />
-          {t.back}
-        </button>
-      )}
+      {/* Action bar: pinned to the bottom of the screen so Next is always in thumb reach. */}
+      <div className="sticky bottom-0 -mx-4 mt-6 flex items-center gap-3 border-t border-sand bg-cream/95 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0">
+        {question.canGoBack && (
+          <Button variant="secondary" onClick={onBack} disabled={busy} aria-label={t.back} className="shrink-0 px-4">
+            <ArrowLeft size={18} strokeWidth={2} aria-hidden />
+            <span className="hidden sm:inline">{t.back}</span>
+          </Button>
+        )}
+        <Button className="flex-1" disabled={!ready || busy} loading={busy} loadingText={t.saving} onClick={submit}>
+          {t.next}
+          <ArrowRight size={18} strokeWidth={2} aria-hidden />
+        </Button>
+      </div>
     </section>
   );
 }

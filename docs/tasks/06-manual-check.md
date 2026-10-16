@@ -23,8 +23,8 @@ This click-through is the check against the real database.
 5. Intake: age, gender and relationship status are **not** asked (taken from registration).
    For I6 choose "Yes, and they are willing to join sessions".
 6. Gate G1: tick **G** and **A** (a third tick is blocked). Continue.
-7. Answer a few core and module questions. Check: tapping an option selects it and moves on after a
-   short pause; the progress bar and "Question n of m" update; **Back** returns to the last answer with
+7. Answer a few core and module questions. Check: tapping an option only selects it (teal border, tick);
+   **Next** (pinned to the bottom on a phone) saves and moves on and is disabled until a choice is made; the progress bar and "Question n of m" update; **Back** returns to the last answer with
    it selected.
 8. Press **Back** until I6. Change it to "I do not have a partner right now".
    - Expect: the flow switches to the solo path; answers that are no longer visible are removed
