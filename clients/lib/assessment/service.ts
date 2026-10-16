@@ -86,7 +86,7 @@ export async function startPurchase(deps: ServiceDeps, client: ClientProfile, te
   if (!versionId) throw new AssessmentError('NO_LIVE_VERSION', 'This assessment is not available right now.');
   const reportId = await deps.store.nextReportId(testCode);
   const now = deps.now().toISOString();
-  const attempt = await deps.store.createAttempt({
+  const created = await deps.store.createAttempt({
     report_id: reportId,
     client_id: client.id,
     test_code: testCode,
@@ -104,6 +104,7 @@ export async function startPurchase(deps: ServiceDeps, client: ClientProfile, te
   });
 
   const config = await deps.loadConfig(versionId);
+  const attempt = await applyReportLanguage(deps, config, created.id, DEFAULT_REPORT_LANGUAGE);
   const prefill = profileAnswers(config, client);
   if (prefill.length) await deps.store.upsertAnswers(attempt.id, prefill);
   const stopped = await stopIfNeeded(deps, config, attempt, ctx, toAnswers(prefill));
@@ -133,25 +134,36 @@ export function profileAnswers(config: VersionConfig, client: ClientProfile): An
   return rows;
 }
 
+/**
+ * The report is stored in both languages and shown in the language of the app's EN | हिं toggle, so the
+ * report-language question is never asked: it is answered here from the profile side (decision D21).
+ */
+export const DEFAULT_REPORT_LANGUAGE: ReportLanguageChoice = 'both';
+
 export async function setLanguage(deps: ServiceDeps, client: ClientProfile, attemptId: string, lang: ReportLanguageChoice) {
   const attempt = await ownAttempt(deps, client, attemptId);
   if (attempt.status !== 'paid' && attempt.status !== 'in_progress') {
     throw new AssessmentError('WRONG_STATUS', 'The report language can no longer change.');
   }
   const config = await deps.loadConfig(attempt.version_id);
-  // The report-language question is answered by this screen, never asked again.
+  return applyReportLanguage(deps, config, attempt.id, lang);
+}
+
+async function applyReportLanguage(deps: ServiceDeps, config: VersionConfig, attemptId: string, lang: ReportLanguageChoice) {
   const rl = config.report_rules.report_language;
   const wanted = lang === 'both' ? 'en|hi' : lang;
   const code = Object.entries(rl.map).find(([, langs]) => [...langs].sort().join('|') === wanted)?.[0];
-  if (code) await deps.store.upsertAnswers(attempt.id, [{ qid: rl.qid, value: code, source: 'profile' }]);
-  return deps.store.updateAttempt(attempt.id, { report_language: lang });
+  if (code) await deps.store.upsertAnswers(attemptId, [{ qid: rl.qid, value: code, source: 'profile' }]);
+  return deps.store.updateAttempt(attemptId, { report_language: lang });
 }
 
 export async function giveConsent(deps: ServiceDeps, client: ClientProfile, attemptId: string) {
   const attempt = await ownAttempt(deps, client, attemptId);
   if (attempt.status === 'in_progress') return attempt;
-  if (attempt.status !== 'paid' || !attempt.report_language) {
-    throw new AssessmentError('WRONG_STATUS', 'Choose the report language first.');
+  if (attempt.status !== 'paid') throw new AssessmentError('WRONG_STATUS', 'This assessment cannot start.');
+  // Attempts paid before D21 may have no report language yet.
+  if (!attempt.report_language) {
+    await applyReportLanguage(deps, await deps.loadConfig(attempt.version_id), attempt.id, DEFAULT_REPORT_LANGUAGE);
   }
   const now = deps.now().toISOString();
   return deps.store.updateAttempt(attempt.id, { status: 'in_progress', consent_at: now, started_at: now });
@@ -168,7 +180,6 @@ export async function getStep(deps: ServiceDeps, client: ClientProfile, attemptI
     const stop = config.flags.find((f) => f.effects.stop);
     return { kind: 'stopped', text: stop ? flagText(config, stop.key) : null };
   }
-  if (!attempt.report_language) return { kind: 'language' };
   if (!attempt.consent_at) return { kind: 'consent' };
 
   const rows = await deps.store.getAnswers(attempt.id);

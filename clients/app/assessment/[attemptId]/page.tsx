@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { currentClient, languageQuestion, ownAttemptRow, serviceDeps } from '../../../lib/assessment/server';
+import { currentClient, serviceDeps } from '../../../lib/assessment/server';
 import { getStep } from '../../../lib/assessment/service';
 import { AssessmentError, type Step } from '../../../lib/assessment/types';
 import { PageChrome } from '../../../components/PageChrome';
@@ -29,11 +29,9 @@ export default async function AssessmentPage({
   }
   if (step.kind === 'completed') redirect(`/report/${attemptId}`);
 
-  const language = step.kind === 'language' ? await languageQuestion(await ownAttemptRow(client, attemptId)) : null;
-
   return (
-    <PageChrome footer={false}>
-      <AssessmentShell attemptId={attemptId} initialStep={step} language={language} />
+    <PageChrome nav={false}>
+      <AssessmentShell attemptId={attemptId} initialStep={step} />
     </PageChrome>
   );
 }

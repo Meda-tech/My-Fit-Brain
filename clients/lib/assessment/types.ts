@@ -69,7 +69,6 @@ export interface LocalPair {
 }
 
 export type Step =
-  | { kind: 'language' }
   | { kind: 'consent' }
   | { kind: 'question'; question: QuestionView }
   | { kind: 'finish'; answered: number; total: number }

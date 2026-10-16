@@ -13,6 +13,8 @@ export interface ReportViewProps {
   seal: ReactNode;
   /** UI words for the meta line, per language. */
   labels: Record<Lang, { reportId: string; date: string }>;
+  /** Show only this language when the report has it (the app's EN | हिं toggle). Omit to show all. */
+  lang?: Lang;
 }
 
 // Static class names so Tailwind generates them (band tokens are proposed, calm, never red).
@@ -33,8 +35,9 @@ function formatDate(iso: string, lang: Lang): string {
   return new Date(iso).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function ReportView({ doc, logo, seal, labels }: ReportViewProps) {
-  const langs = doc.languages.filter((l) => doc.sections[l]);
+export function ReportView({ doc, logo, seal, labels, lang: only }: ReportViewProps) {
+  const stored = doc.languages.filter((l) => doc.sections[l]);
+  const langs = only && stored.includes(only) ? [only] : stored;
   const each = (render: (s: ReportSection, lang: Lang) => ReactNode) =>
     langs.map((lang) => (
       <div key={lang} lang={lang} className={langs.length > 1 && lang === 'hi' ? 'mt-4 border-t border-sand pt-4' : undefined}>
@@ -47,11 +50,11 @@ export function ReportView({ doc, logo, seal, labels }: ReportViewProps) {
   });
 
   return (
-    <article className="mx-auto w-full max-w-[760px] text-ink">
+    <article className="mx-auto w-full max-w-190 text-ink">
       {/* Crisis block first (crisis layout only) */}
       {doc.layout === 'crisis' && any((s) => s.crisis) && (
         <section className="mb-6 rounded-card border border-sand border-l-4 border-l-teal bg-mist p-5 sm:p-6">
-          {each((s) => s.crisis && <p className="text-[17px] leading-[27px] text-ink">{s.crisis}</p>)}
+          {each((s) => s.crisis && <p className="text-[17px] leading-6.75 text-ink">{s.crisis}</p>)}
         </section>
       )}
 
@@ -119,7 +122,7 @@ export function ReportView({ doc, logo, seal, labels }: ReportViewProps) {
               <>
                 <Heading>{s.means.heading}</Heading>
                 {s.means.items.map((t, i) => (
-                  <p key={i} className="mb-3 text-[16px] leading-[26px] text-ink-soft last:mb-0">
+                  <p key={i} className="mb-3 text-[16px] leading-6.5 text-ink-soft last:mb-0">
                     {t}
                   </p>
                 ))}
@@ -134,9 +137,9 @@ export function ReportView({ doc, logo, seal, labels }: ReportViewProps) {
               s.plan ? (
                 <>
                   <Heading>{s.plan.heading}</Heading>
-                  {s.plan.line && <p className="rounded-input bg-mist p-4 text-[16px] leading-[26px] text-ink">{s.plan.line}</p>}
+                  {s.plan.line && <p className="rounded-input bg-mist p-4 text-[16px] leading-6.5 text-ink">{s.plan.line}</p>}
                   {s.plan.extra.map((t, i) => (
-                    <p key={i} className="mt-3 text-[15px] leading-[24px] text-ink-soft">
+                    <p key={i} className="mt-3 text-[15px] leading-6 text-ink-soft">
                       {t}
                     </p>
                   ))}
@@ -168,7 +171,7 @@ export function ReportView({ doc, logo, seal, labels }: ReportViewProps) {
                   return (
                     <div key={i} className="mb-4 last:mb-0">
                       {firstMedical && s.medicalHeading && <Heading>{s.medicalHeading}</Heading>}
-                      <p className="rounded-input border border-sand border-l-4 border-l-teal bg-cream p-4 text-[15px] leading-[24px] text-ink-soft">
+                      <p className="rounded-input border border-sand border-l-4 border-l-teal bg-cream p-4 text-[15px] leading-6 text-ink-soft">
                         {b.text}
                       </p>
                     </div>
@@ -183,18 +186,18 @@ export function ReportView({ doc, logo, seal, labels }: ReportViewProps) {
           {each((s) => (
             <>
               <Heading>{s.next.heading}</Heading>
-              {s.next.text && <p className="text-[16px] leading-[26px] text-ink-soft">{s.next.text}</p>}
+              {s.next.text && <p className="text-[16px] leading-6.5 text-ink-soft">{s.next.text}</p>}
             </>
           ))}
         </Block>
 
         {any((s) => s.nri) && (
-          <Block>{each((s) => s.nri && <p className="text-[15px] leading-[24px] text-ink-soft">{s.nri}</p>)}</Block>
+          <Block>{each((s) => s.nri && <p className="text-[15px] leading-6 text-ink-soft">{s.nri}</p>)}</Block>
         )}
 
         {any((s) => s.disclaimer) && (
           <div className="mt-8 border-t border-sand pt-6">
-            {each((s) => s.disclaimer && <p className="text-[13px] leading-[21px] text-ink-muted">{s.disclaimer}</p>)}
+            {each((s) => s.disclaimer && <p className="text-[13px] leading-5.25 text-ink-muted">{s.disclaimer}</p>)}
           </div>
         )}
 
@@ -217,8 +220,8 @@ function List({ items }: { items: string[] }) {
   return (
     <ul className="space-y-2">
       {items.map((t, i) => (
-        <li key={i} className="flex gap-3 text-[16px] leading-[26px] text-ink-soft">
-          <span aria-hidden className="mt-[11px] h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
+        <li key={i} className="flex gap-3 text-[16px] leading-6.5 text-ink-soft">
+          <span aria-hidden className="mt-2.75 h-1.5 w-1.5 shrink-0 rounded-full bg-teal" />
           <span>{t}</span>
         </li>
       ))}

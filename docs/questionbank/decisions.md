@@ -36,6 +36,7 @@ Notes:
 | D18 | Tier mix target 30/30/25/15 | Scoring Rules step 12 dev note: "Target mix ≈ 30/30/25/15 across 4/6/8/12 (same as README)" | Not a rule; becomes an admin report later. | Nothing stored | Reporting, not scoring | no | IA, MA | — |
 | D19 | SAFETY / CRISIS "team notified" | Flags & Safety, SAFETY effect: "Format forced to Individual. Report prints SAFETY block. No couple invitation sent. Team notified."; CRISIS: "Coordinator notified instantly (email + WhatsApp)" | `notify: ["coordinator", "counsellor"]` for CRISIS and SAFETY in both tests. | `qb_flags.effects.notify` on CRISIS and SAFETY | Both roles act on these | no | IA, MA | IA 1.2, MA 1.1 |
 | D20 | MED_PHYSICAL "top of the medical section" | Flags & Safety, MED_PHYSICAL effect: "Add medical block at the top of the medical section." | Unchanged: medical blocks print in flag `sort` order. | MED_PHYSICAL has the lowest `sort` of the Mind medical flags | — | no | MA | unchanged |
+| D21 | I8 / MI5 report language | I8 / MI5: "Which language do you want your report in?" (English / Hindi / Both) | Not asked (owner, 2026-10-16). Every report is stored in **both** languages and shown in the language of the app's EN \| हिं toggle. | App answers I8 / MI5 = Both (`source = profile`) at payment, via `report_rules.report_language`; `attempts.report_language = both`. The question stays in the version; the engine is unchanged. | The app already has a language toggle; asking again is a repeat question | no | IA, MA | app behaviour (all versions) |
 
 ## Changes made while applying the decisions
 

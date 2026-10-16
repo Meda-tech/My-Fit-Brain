@@ -1,10 +1,8 @@
 import { notFound, redirect } from 'next/navigation';
-import { ReportView } from '@mfb/report';
 import { currentClient, storedReport } from '../../../lib/assessment/server';
 import { AssessmentError } from '../../../lib/assessment/types';
-import { translations } from '../../../lib/i18n';
-import { Logo } from '../../../components/brand';
 import { PageChrome } from '../../../components/PageChrome';
+import { ClientReport } from './ClientReport';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,19 +20,9 @@ export default async function ReportPage({ params }: { params: Promise<{ attempt
   }
   if (!stored) redirect(`/assessment/${attemptId}`);
 
-  const labels = {
-    en: { reportId: translations.en.assess.reportId, date: translations.en.assess.date },
-    hi: { reportId: translations.hi.assess.reportId, date: translations.hi.assess.date },
-  };
-
   return (
     <PageChrome width="report">
-      <ReportView
-        doc={stored.report}
-        logo={<Logo variant="endorsed" tone="colour" width={220} />}
-        seal={<Logo variant="seal" tone="colour" width={96} />}
-        labels={labels}
-      />
+      <ClientReport doc={stored.report} />
     </PageChrome>
   );
 }

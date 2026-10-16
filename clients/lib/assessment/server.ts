@@ -99,24 +99,6 @@ export async function testName(code: string): Promise<LocalPair | null> {
   return (await testNames()).get(code)?.name ?? null;
 }
 
-/** The report-language question of the attempt's version, with one option per language choice. */
-export async function languageQuestion(attempt: AttemptRow) {
-  const config = await serviceDeps().loadConfig(attempt.version_id);
-  const rl = config.report_rules.report_language;
-  const q = config.questions.find((x) => x.qid === rl.qid);
-  if (!q) return null;
-  return {
-    text: { en: q.text_en, hi: q.text_hi } as LocalPair,
-    options: Object.entries(rl.map).map(([code, langs]) => {
-      const o = q.options.find((x) => x.option_code === code);
-      return {
-        lang: (langs.length > 1 ? 'both' : langs[0]) as 'en' | 'hi' | 'both',
-        label: { en: o?.label_en ?? code, hi: o?.label_hi ?? code } as LocalPair,
-      };
-    }),
-  };
-}
-
 /** The attempt, if it belongs to the client. */
 export async function ownAttemptRow(client: ClientProfile, attemptId: string): Promise<AttemptRow> {
   const attempt = await serviceDeps().store.getAttempt(attemptId);

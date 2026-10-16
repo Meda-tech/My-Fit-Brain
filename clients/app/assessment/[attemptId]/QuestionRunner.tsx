@@ -92,14 +92,14 @@ export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; 
           ) : (
             <>
               <h1 className="text-[28px] font-semibold text-teal">{t.finishTitle}</h1>
-              <p className="mt-3 text-[16px] leading-[25px] text-ink-soft">{t.finishBody}</p>
+              <p className="mt-3 text-[16px] leading-6.25 text-ink-soft">{t.finishBody}</p>
               <Button className="mt-6" fullWidth onClick={finish} loading={pending} loadingText={t.preparing}>
                 {t.finishButton}
               </Button>
               <button
                 type="button"
                 onClick={() => back(null)}
-                className="mt-3 inline-flex min-h-[44px] items-center gap-1.5 text-[15px] font-medium text-teal hover:underline"
+                className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-[15px] font-medium text-teal hover:underline"
               >
                 <ArrowLeft size={16} strokeWidth={2} aria-hidden />
                 {t.back}
@@ -202,7 +202,7 @@ function QuestionCard({
                 <label
                   key={o.code}
                   className={cn(
-                    'flex min-h-[56px] cursor-pointer items-center gap-3 rounded-card border-2 bg-white px-4 py-3 text-[17px] text-ink transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-coral',
+                    'flex min-h-14 cursor-pointer items-center gap-3 rounded-card border-2 bg-white px-4 py-3 text-[17px] text-ink transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-coral',
                     on ? 'border-teal bg-mist' : 'border-sand hover:border-teal',
                     blocked && 'cursor-not-allowed opacity-50'
                   )}
@@ -243,7 +243,7 @@ function QuestionCard({
                 disabled={busy}
                 onClick={() => pick(o.code)}
                 className={cn(
-                  'flex min-h-[56px] w-full items-center justify-between gap-3 rounded-card border-2 bg-white px-5 py-3 text-left text-[17px] font-medium text-ink transition-colors disabled:cursor-wait',
+                  'flex min-h-14 w-full items-center justify-between gap-3 rounded-card border-2 bg-white px-5 py-3 text-left text-[17px] font-medium text-ink transition-colors disabled:cursor-wait',
                   on ? 'border-teal bg-mist' : 'border-sand hover:border-teal'
                 )}
               >
@@ -278,9 +278,9 @@ function CrisisScreen({ text, onContinue }: { text: string; onContinue: () => vo
   useEffect(() => heading.current?.focus(), []);
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="support-text" className="fixed inset-0 z-50 overflow-y-auto bg-cream">
-      <div className="mx-auto flex min-h-full max-w-[640px] flex-col justify-center px-5 py-10">
+      <div className="mx-auto flex min-h-full max-w-160 flex-col justify-center px-5 py-10">
         <Card className="p-6 sm:p-8">
-          <p id="support-text" ref={heading} tabIndex={-1} className="text-[18px] leading-[29px] text-ink outline-none">
+          <p id="support-text" ref={heading} tabIndex={-1} className="text-[18px] leading-7.25 text-ink outline-none">
             {text}
           </p>
           <div className="mt-8 space-y-3">
@@ -288,7 +288,7 @@ function CrisisScreen({ text, onContinue }: { text: string; onContinue: () => vo
               <a
                 key={h.tel}
                 href={`tel:${h.tel}`}
-                className={buttonClasses({ variant: i === 0 ? 'primary' : 'secondary', fullWidth: true, className: 'min-h-[56px] text-[18px]' })}
+                className={buttonClasses({ variant: i === 0 ? 'primary' : 'secondary', fullWidth: true, className: 'min-h-14 text-[18px]' })}
               >
                 <Phone size={20} strokeWidth={2} aria-hidden />
                 {t.callNumber.replace('{number}', h.display)}

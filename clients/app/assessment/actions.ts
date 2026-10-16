@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { currentClient, serviceDeps } from '../../lib/assessment/server';
 import * as service from '../../lib/assessment/service';
-import { AssessmentError, type AnswerValue, type Interrupt, type ReportLanguageChoice, type Step } from '../../lib/assessment/types';
+import { AssessmentError, type AnswerValue, type Interrupt, type Step } from '../../lib/assessment/types';
 
 // Server actions for the assessment screens. Each one resolves the signed-in client; the service checks
 // that the attempt is theirs and uses its pinned version. Errors come back as codes, never stack traces.
@@ -27,15 +27,6 @@ export async function startPurchaseAction(formData: FormData): Promise<void> {
     if (!(err instanceof AssessmentError)) console.error('Purchase failed:', err);
     redirect(`/payment/${encodeURIComponent(testCode)}?error=${code}`);
   }
-  redirect(`/assessment/${attemptId}`);
-}
-
-export async function setLanguageAction(formData: FormData): Promise<void> {
-  const client = await currentClient();
-  const attemptId = String(formData.get('attemptId') ?? '');
-  const lang = String(formData.get('lang') ?? '') as ReportLanguageChoice;
-  if (!['en', 'hi', 'both'].includes(lang)) redirect(`/assessment/${attemptId}`);
-  await service.setLanguage(serviceDeps(), client, attemptId, lang);
   redirect(`/assessment/${attemptId}`);
 }
 
