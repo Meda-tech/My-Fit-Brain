@@ -58,7 +58,7 @@ export default function LoginPage() {
         <h1 className="m-0 text-[32px] font-semibold leading-[1.2] text-teal sm:text-[36px]">
           Welcome back
         </h1>
-        <p className="mt-2 text-[16px] leading-[24px] text-ink-soft">
+        <p className="mt-2 text-[16px] leading-6 text-ink-soft">
           Sign in to the My Fit Brain staff portal.
         </p>
       </div>
@@ -94,7 +94,7 @@ export default function LoginPage() {
               size={18}
               strokeWidth={2}
               aria-hidden
-              className="pointer-events-none absolute left-4 top-[15px] text-teal"
+              className="pointer-events-none absolute left-4 top-3.75 text-teal"
             />
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function LoginPage() {
               size={18}
               strokeWidth={2}
               aria-hidden
-              className="pointer-events-none absolute left-4 top-[15px] text-teal"
+              className="pointer-events-none absolute left-4 top-3.75 text-teal"
             />
             <button
               type="button"
@@ -142,7 +142,7 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-8 border-t border-sand pt-6 text-[14px] leading-[22px] text-ink-muted">
+      <p className="mt-8 border-t border-sand pt-6 text-[14px] leading-5.5 text-ink-muted">
         For My Fit Brain staff only. Client information stays private.
       </p>
     </AuthLayout>

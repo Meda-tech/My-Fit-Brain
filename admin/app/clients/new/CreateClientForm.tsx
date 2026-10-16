@@ -92,7 +92,7 @@ export function CreateClientForm() {
                 value={rawPhone}
                 onChange={(e) => setRawPhone(sanitizeIndianNationalPhone(e.target.value))}
                 placeholder="98765 43210"
-                className="no-inner-outline flex-1 min-h-[46px] bg-transparent font-mono text-[16px] text-ink placeholder:font-body placeholder:text-ink-muted border-none tracking-wider"
+                className="no-inner-outline flex-1 min-h-11.5 bg-transparent font-mono text-[16px] text-ink placeholder:font-body placeholder:text-ink-muted border-none tracking-wider"
               />
             </div>
             {/* Hidden input ensures standard E.164 (+91XXXXXXXXXX) is submitted to server action */}

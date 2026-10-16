@@ -26,7 +26,7 @@ export function Notice({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-input p-4 text-[14px] leading-[22px] text-ink-soft',
+        'flex items-start gap-3 rounded-input p-4 text-[14px] leading-5.5 text-ink-soft',
         VARIANT_CLASSES[variant],
         className
       )}

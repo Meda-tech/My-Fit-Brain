@@ -15,7 +15,7 @@ export function PageHeader({ title, description, eyebrow, back, actions }: PageH
       {back && (
         <Link
           href={back.href}
-          className="mb-2 inline-flex min-h-[44px] items-center gap-1.5 text-[14px] font-medium text-teal hover:underline"
+          className="mb-2 inline-flex min-h-11 items-center gap-1.5 text-[14px] font-medium text-teal hover:underline"
         >
           <ArrowLeft size={16} strokeWidth={2} aria-hidden />
           <span>{back.label}</span>
@@ -24,11 +24,11 @@ export function PageHeader({ title, description, eyebrow, back, actions }: PageH
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           {eyebrow && <div className="mb-2 flex flex-wrap items-center gap-2">{eyebrow}</div>}
-          <h1 className="m-0 break-words text-[28px] font-semibold leading-[1.2] text-teal sm:text-[34px]">
+          <h1 className="m-0 wrap-break-word text-[28px] font-semibold leading-[1.2] text-teal sm:text-[34px]">
             {title}
           </h1>
           {description && (
-            <p className="mt-2 max-w-[640px] text-[16px] leading-[24px] text-ink-soft">
+            <p className="mt-2 max-w-160 text-[16px] leading-6 text-ink-soft">
               {description}
             </p>
           )}

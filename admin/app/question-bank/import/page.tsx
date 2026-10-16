@@ -14,7 +14,7 @@ export default async function ImportQuestionBankPage() {
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
-      <div className="mx-auto max-w-[900px]">
+      <div className="mx-auto max-w-225">
         <PageHeader
           back={{ href: '/question-bank', label: 'Back to question bank' }}
           title="Import a workbook"

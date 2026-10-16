@@ -29,8 +29,8 @@ export function AgeStopView({ lang, onLanguageChange }: AgeStopViewProps) {
       </header>
 
       <main className="flex flex-1 items-center justify-center px-4 py-10 sm:px-6">
-        <Card className="w-full max-w-[520px] p-6 text-center sm:p-10">
-          <p role="status" className="text-[17px] leading-[28px] text-ink-soft">
+        <Card className="w-full max-w-130 p-6 text-center sm:p-10">
+          <p role="status" className="text-[17px] leading-7 text-ink-soft">
             {before}
             {at >= 0 && (
               <a

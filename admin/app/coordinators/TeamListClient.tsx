@@ -255,7 +255,7 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-team-member-title"
-            className="max-w-[480px] w-full p-6"
+            className="max-w-120 w-full p-6"
           >
             <div className="flex items-center justify-between mb-4">
               <h2
@@ -372,7 +372,7 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="reset-password-title"
-            className="max-w-[420px] w-full p-6"
+            className="max-w-105 w-full p-6"
           >
             <h2
               id="reset-password-title"

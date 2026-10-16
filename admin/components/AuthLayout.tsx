@@ -20,12 +20,12 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
 
         <Logo variant="horizontal" tone="reverse" width={160} priority />
 
-        <div className="relative max-w-[440px]">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-mist">Staff portal</p>
+        <div className="relative max-w-110">
+          <p className="text-[13px] font-semibold uppercase tracking-widest text-mist">Staff portal</p>
           <h2 className="mt-3 text-[40px] font-semibold leading-[1.15] text-coral-light xl:text-[48px]">
             Space to speak.
           </h2>
-          <p className="mt-4 text-[17px] leading-[27px] text-mist">
+          <p className="mt-4 text-[17px] leading-6.75 text-mist">
             Manage client records and coordinators for MFB Assessments, in one calm place.
           </p>
 
@@ -51,7 +51,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <main className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8">
-          <div className="w-full max-w-[420px]">{children}</div>
+          <div className="w-full max-w-105">{children}</div>
         </main>
 
         <Footer bordered={false} />

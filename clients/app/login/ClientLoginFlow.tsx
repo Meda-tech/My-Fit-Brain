@@ -163,7 +163,7 @@ export function ClientLoginFlow() {
         <h1 className="m-0 text-[30px] font-semibold leading-[1.2] text-teal sm:text-[36px]">
           {step === 'phone' ? t.login.title : t.login.titleOtp}
         </h1>
-        <p className="mt-2 text-[16px] leading-[24px] text-ink-soft">
+        <p className="mt-2 text-[16px] leading-6 text-ink-soft">
           {step === 'phone' ? (
             t.login.subtitle
           ) : (
@@ -211,7 +211,7 @@ export function ClientLoginFlow() {
                 value={rawPhone}
                 onChange={(e) => setRawPhone(sanitizeIndianNationalPhone(e.target.value))}
                 placeholder="98765 43210"
-                className="no-inner-outline min-h-[46px] min-w-0 flex-1 border-none bg-transparent pl-3 font-mono text-[17px] tracking-wider text-ink placeholder:font-body placeholder:text-ink-muted"
+                className="no-inner-outline min-h-11.5 min-w-0 flex-1 border-none bg-transparent pl-3 font-mono text-[17px] tracking-wider text-ink placeholder:font-body placeholder:text-ink-muted"
               />
             </div>
 
@@ -311,7 +311,7 @@ export function ClientLoginFlow() {
       )}
 
       {/* Confidentiality Notice */}
-      <p className="mt-8 flex items-center gap-2 border-t border-sand pt-6 text-[14px] leading-[22px] text-ink-muted lg:hidden">
+      <p className="mt-8 flex items-center gap-2 border-t border-sand pt-6 text-[14px] leading-5.5 text-ink-muted lg:hidden">
         <Lock size={16} strokeWidth={2} className="shrink-0 text-teal" aria-hidden />
         <span>{t.common.confidentialityNote}</span>
       </p>

@@ -36,15 +36,15 @@ export function ClientAuthLayout({
 
         <Logo variant="horizontal" tone="reverse" width={160} priority />
 
-        <div className="relative max-w-[440px]">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.1em] text-mist">
+        <div className="relative max-w-110">
+          <p className="text-[13px] font-semibold uppercase tracking-widest text-mist">
             {t.panel.eyebrow}
           </p>
           {/* Brand line stays in English in both languages */}
           <h2 lang="en" className="mt-3 text-[40px] font-semibold leading-[1.15] text-coral-light xl:text-[48px]">
             Space to speak.
           </h2>
-          <p className="mt-4 text-[17px] leading-[27px] text-mist">{t.panel.body}</p>
+          <p className="mt-4 text-[17px] leading-6.75 text-mist">{t.panel.body}</p>
 
           <ul className="mt-8 space-y-4">
             {t.panel.points.map((text, i) => {
@@ -90,7 +90,7 @@ export function ClientAuthLayout({
         </header>
 
         <main className="flex flex-1 items-start justify-center px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-4 sm:items-center sm:px-8 sm:py-10">
-          <div className={cn('w-full', wide ? 'max-w-[540px]' : 'max-w-[440px]')}>{children}</div>
+          <div className={cn('w-full', wide ? 'max-w-135' : 'max-w-110')}>{children}</div>
         </main>
 
         <Footer bordered={false} className="standalone:hidden" />

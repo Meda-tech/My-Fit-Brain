@@ -114,13 +114,13 @@ export default async function VersionPage({ params, searchParams }: PageProps) {
                 href={`/question-bank/${version.id}?tab=${t.id}`}
                 aria-current={tab === t.id ? 'page' : undefined}
                 className={cn(
-                  'inline-flex min-h-[44px] items-center border-b-2 px-3 text-[14px] font-medium transition-colors',
+                  'inline-flex min-h-11 items-center border-b-2 px-3 text-[14px] font-medium transition-colors',
                   tab === t.id ? 'border-teal font-semibold text-teal' : 'border-transparent text-ink-soft hover:text-teal'
                 )}
               >
                 {t.label}
                 {t.id === 'validation' && errorCount > 0 && (
-                  <span className="ml-1.5 rounded-full bg-coral-deep px-1.5 text-[11px] font-semibold leading-[18px] text-white">
+                  <span className="ml-1.5 rounded-full bg-coral-deep px-1.5 text-[11px] font-semibold leading-4.5 text-white">
                     {errorCount}
                   </span>
                 )}

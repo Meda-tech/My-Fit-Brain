@@ -11,7 +11,7 @@ export default async function NewClientPage() {
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
-      <div className="mx-auto max-w-[760px]">
+      <div className="mx-auto max-w-190">
         <PageHeader
           back={{ href: '/clients', label: 'Back to clients' }}
           title="Create client record"

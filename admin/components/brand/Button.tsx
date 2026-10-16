@@ -21,8 +21,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 
 // Both sizes keep a 44px+ touch target.
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  md: 'min-h-[48px] px-6 text-[16px]',
-  sm: 'min-h-[44px] px-4 text-[14px]',
+  md: 'min-h-12 px-6 text-[16px]',
+  sm: 'min-h-11 px-4 text-[14px]',
 };
 
 export function buttonClasses({

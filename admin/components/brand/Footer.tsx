@@ -11,7 +11,7 @@ export function Footer({ tone = 'light', bordered = true, className }: FooterPro
   return (
     <footer
       className={cn(
-        'px-4 py-5 text-center text-[13px] leading-[20px]',
+        'px-4 py-5 text-center text-[13px] leading-5',
         tone === 'dark' ? 'bg-night text-white' : 'text-ink-muted',
         tone === 'light' && bordered && 'border-t border-sand',
         className

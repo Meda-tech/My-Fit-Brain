@@ -100,7 +100,7 @@ export function AdminShellClient({
       : {};
 
   const itemBase =
-    'flex h-11 w-full items-center gap-3 rounded-input pl-[18px] pr-3 text-[15px] font-medium transition-colors';
+    'flex h-11 w-full items-center gap-3 rounded-input pl-4.5 pr-3 text-[15px] font-medium transition-colors';
 
   // `rail` = desktop collapsed. Labels stay in the DOM and fade, so nothing re-flows.
   const renderPanel = (rail: boolean) => {
@@ -109,7 +109,7 @@ export function AdminShellClient({
       rail ? 'opacity-0' : 'opacity-100'
     );
     return (
-      <div className="flex h-full w-[264px] flex-col bg-night text-white">
+      <div className="flex h-full w-66 flex-col bg-night text-white">
         {/* Brand */}
         <div className="relative h-16 shrink-0 border-b border-white/10">
           <Link
@@ -120,7 +120,7 @@ export function AdminShellClient({
           >
             <span
               className={cn(
-                'absolute left-[20px] transition-opacity duration-200',
+                'absolute left-5 transition-opacity duration-200',
                 rail ? 'opacity-100' : 'pointer-events-none opacity-0'
               )}
             >
@@ -128,7 +128,7 @@ export function AdminShellClient({
             </span>
             <span
               className={cn(
-                'absolute left-[16px] transition-opacity duration-200',
+                'absolute left-4 transition-opacity duration-200',
                 rail ? 'pointer-events-none opacity-0' : 'opacity-100'
               )}
             >
@@ -141,7 +141,7 @@ export function AdminShellClient({
         <nav aria-label="Main administration" className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
           <p
             className={cn(
-              'h-8 pl-[18px] pt-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-mist/80',
+              'h-8 pl-4.5 pt-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-mist/80',
               labelClass
             )}
             aria-hidden={rail}
@@ -225,7 +225,7 @@ export function AdminShellClient({
         aria-expanded={!collapsed}
         {...tipHandlers(collapsed ? 'Expand menu' : 'Collapse menu', true)}
         style={{ left: (collapsed ? RAIL : FULL) - 14 }}
-        className="fixed top-[50px] z-40 hidden h-7 w-7 items-center justify-center rounded-full border border-sand bg-white text-teal shadow-card transition-[left,background-color] duration-200 ease-out hover:bg-mist lg:flex"
+        className="fixed top-12.5 z-40 hidden h-7 w-7 items-center justify-center rounded-full border border-sand bg-white text-teal shadow-card transition-[left,background-color] duration-200 ease-out hover:bg-mist lg:flex"
       >
         {collapsed ? (
           <PanelLeftOpen size={15} strokeWidth={2} aria-hidden />
@@ -287,7 +287,7 @@ export function AdminShellClient({
           aria-modal="true"
           aria-label="Menu"
           className={cn(
-            'absolute inset-y-0 left-0 w-[264px] max-w-[85vw] overflow-hidden shadow-card transition-transform duration-200 ease-out',
+            'absolute inset-y-0 left-0 w-66 max-w-[85vw] overflow-hidden shadow-card transition-transform duration-200 ease-out',
             mobileOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
@@ -307,10 +307,10 @@ export function AdminShellClient({
       <div
         className={cn(
           'flex min-h-screen min-w-0 flex-col overflow-x-clip transition-[padding] duration-200 ease-out',
-          collapsed ? 'lg:pl-[80px]' : 'lg:pl-[264px]'
+          collapsed ? 'lg:pl-20' : 'lg:pl-66'
         )}
       >
-        <main className="mx-auto w-full min-w-0 max-w-[1200px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <main className="mx-auto w-full min-w-0 max-w-300 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
           {children}
         </main>
         <Footer />

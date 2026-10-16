@@ -5,8 +5,8 @@ import { Pill } from '../../../components/brand';
 export function JsonDetails({ value, label = 'Raw JSON' }: { value: unknown; label?: string }) {
   return (
     <details className="mt-2 text-[13px]">
-      <summary className="inline-flex min-h-[32px] cursor-pointer items-center text-teal hover:underline">{label}</summary>
-      <pre className="mt-1 max-h-[360px] overflow-auto rounded-input border border-sand bg-cream p-3 font-mono text-[12px] leading-[18px] text-ink-soft">
+      <summary className="inline-flex min-h-8 cursor-pointer items-center text-teal hover:underline">{label}</summary>
+      <pre className="mt-1 max-h-90 overflow-auto rounded-input border border-sand bg-cream p-3 font-mono text-[12px] leading-4.5 text-ink-soft">
         {JSON.stringify(value, null, 2)}
       </pre>
     </details>
@@ -32,8 +32,8 @@ export function Empty({ children }: { children: React.ReactNode }) {
 export function BiText({ en, hi }: { en: React.ReactNode; hi: React.ReactNode }) {
   return (
     <div className="grid grid-cols-1 gap-x-6 gap-y-1 md:grid-cols-2">
-      <p lang="en" className="text-[15px] leading-[23px] text-ink">{en}</p>
-      <p lang="hi" className="text-[15px] leading-[23px] text-ink-soft">{hi}</p>
+      <p lang="en" className="text-[15px] leading-5.75 text-ink">{en}</p>
+      <p lang="hi" className="text-[15px] leading-5.75 text-ink-soft">{hi}</p>
     </div>
   );
 }

@@ -123,7 +123,7 @@ export default async function QuestionBankPage() {
                     <li key={v.id}>
                       <Link
                         href={`/question-bank/${v.id}`}
-                        className="flex min-h-[48px] items-center gap-3 py-2 transition-colors hover:bg-mist/50"
+                        className="flex min-h-12 items-center gap-3 py-2 transition-colors hover:bg-mist/50"
                       >
                         <span className="w-16 shrink-0 font-semibold text-ink">v{v.version_label}</span>
                         <StatusPill status={v.status} />

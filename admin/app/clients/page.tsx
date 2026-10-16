@@ -45,7 +45,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
               size={18}
               strokeWidth={2}
               aria-hidden
-              className="pointer-events-none absolute left-3.5 top-[15px] text-teal"
+              className="pointer-events-none absolute left-3.5 top-3.75 text-teal"
             />
             <input
               type="text"

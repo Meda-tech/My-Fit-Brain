@@ -20,7 +20,7 @@ function RuleCard({ title, children, json }: { title?: React.ReactNode; children
   return (
     <Card shadow={false} className="p-4">
       {title && <div className="mb-1.5 flex flex-wrap items-center gap-1.5">{title}</div>}
-      <div className="text-[15px] leading-[23px] text-ink">{children}</div>
+      <div className="text-[15px] leading-5.75 text-ink">{children}</div>
       <JsonDetails value={json} />
     </Card>
   );

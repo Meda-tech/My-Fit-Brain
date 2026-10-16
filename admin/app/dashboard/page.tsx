@@ -133,7 +133,7 @@ export default async function DashboardPage() {
           </div>
           <Link
             href="/clients"
-            className="inline-flex min-h-[44px] shrink-0 items-center gap-1 text-[14px] font-semibold text-teal hover:underline"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-teal hover:underline"
           >
             <span>View all</span>
             <ArrowRight size={16} strokeWidth={2} aria-hidden />
@@ -210,7 +210,7 @@ export default async function DashboardPage() {
                       <td className="px-5 py-3.5 text-right">
                         <Link
                           href={`/clients/${client.id}`}
-                          className="inline-flex min-h-[44px] items-center gap-0.5 text-[14px] font-semibold text-teal hover:underline"
+                          className="inline-flex min-h-11 items-center gap-0.5 text-[14px] font-semibold text-teal hover:underline"
                         >
                           <span>View</span>
                           <ChevronRight size={16} strokeWidth={2} aria-hidden />

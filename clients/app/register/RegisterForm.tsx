@@ -141,7 +141,7 @@ export function RegisterForm({ userPhone, lang, onAgeStop }: RegisterFormProps) 
         <h1 className="mt-2 text-[30px] font-semibold leading-[1.2] text-teal sm:text-[36px]">
           {t.register.title}
         </h1>
-        <p className="mt-2 text-[16px] leading-[24px] text-ink-soft">
+        <p className="mt-2 text-[16px] leading-6 text-ink-soft">
           {t.register.subtitle}
         </p>
       </div>

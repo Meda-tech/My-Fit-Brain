@@ -86,7 +86,7 @@ export function TestCasesTab({
               {tc.notes && <p className="mt-1 text-[13px] text-ink-muted">{tc.notes}</p>}
               {run && run.trace.length > 0 && (
                 <details className="mt-2 text-[13px]">
-                  <summary className="inline-flex min-h-[32px] cursor-pointer items-center text-teal hover:underline">How the engine decided</summary>
+                  <summary className="inline-flex min-h-8 cursor-pointer items-center text-teal hover:underline">How the engine decided</summary>
                   <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-ink-soft">
                     {run.trace.map((t, i) => (
                       <li key={i}>
