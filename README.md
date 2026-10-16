@@ -66,3 +66,4 @@ npm run dev
 - First super admin: created by the owner in Supabase; template in `supabase/seed.sql`
 - Setup, env variables, roles and Vercel deployment: `SUPABASE_SETUP_GUIDE.md`
 - Option lists (gender, relationship status, staff roles): `lib/options.ts` in each app
+"# MyFitBrain" 
