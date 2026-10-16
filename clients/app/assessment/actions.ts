@@ -19,20 +19,6 @@ function failure(err: unknown, attemptId?: string): ActionError {
   return { ok: false, code: 'ERROR' };
 }
 
-export async function startPurchaseAction(formData: FormData): Promise<void> {
-  const client = await currentClient();
-  const testCode = String(formData.get('testCode') ?? '');
-  let attemptId: string;
-  try {
-    attemptId = (await service.startPurchase(serviceDeps(), client, testCode)).id;
-  } catch (err) {
-    const code = err instanceof AssessmentError ? err.code : 'ERROR';
-    if (!(err instanceof AssessmentError)) console.error('Purchase failed:', err);
-    redirect(`/payment/${encodeURIComponent(testCode)}?error=${code}`);
-  }
-  redirect(`/assessment/${attemptId}`);
-}
-
 export async function giveConsentAction(formData: FormData): Promise<void> {
   const client = await currentClient();
   const attemptId = String(formData.get('attemptId') ?? '');

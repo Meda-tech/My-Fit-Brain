@@ -3,7 +3,6 @@ import { getVersionConfig } from '@mfb/questionbank';
 import { redirect } from 'next/navigation';
 import { getAuthUser, requireClient } from '../auth';
 import { createAdminClient } from '../supabase/admin';
-import { paymentsMode } from './payments';
 import type { ServiceDeps } from './service';
 import type { AttemptStore } from './store';
 import { supabaseAttemptStore } from './supabase-store';
@@ -70,7 +69,6 @@ export function serviceDeps(opts: { cached?: boolean } = {}): ServiceDeps {
     store: cachingStore(supabaseAttemptStore(db), !!opts.cached),
     loadConfig: (versionId) => getVersionConfig(db, versionId),
     now: () => new Date(),
-    paymentsMode: paymentsMode(),
   };
 }
 

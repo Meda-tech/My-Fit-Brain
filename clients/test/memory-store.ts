@@ -21,6 +21,9 @@ export class MemoryStore implements AttemptStore {
     return `MFB-${testCode}-2026-${String(this.counter).padStart(5, '0')}`;
   }
   async createAttempt(row: NewAttempt) {
+    if (row.payment_mode === 'live' && row.payment_ref && [...this.attempts.values()].some((a) => a.payment_mode === 'live' && a.payment_ref === row.payment_ref)) {
+      throw new Error('duplicate key value violates unique constraint "uq_attempts_live_payment_ref"');
+    }
     const attempt: AttemptRow = { ...row, id: `attempt-${++this.ids}`, created_at: '2026-10-18T00:00:00.000Z' };
     this.attempts.set(attempt.id, attempt);
     this.answers.set(attempt.id, new Map());
@@ -28,6 +31,10 @@ export class MemoryStore implements AttemptStore {
   }
   async getAttempt(id: string) {
     const a = this.attempts.get(id);
+    return a ? { ...a } : null;
+  }
+  async findAttemptByPaymentRef(paymentRef: string) {
+    const a = [...this.attempts.values()].find((x) => x.payment_mode === 'live' && x.payment_ref === paymentRef);
     return a ? { ...a } : null;
   }
   async findOpenAttempt(clientId: string, testCode: string) {

@@ -20,6 +20,8 @@ export interface AttemptStore {
   getAttempt(id: string): Promise<AttemptRow | null>;
   /** An unfinished (paid or in progress) attempt of this test for this client, if any. */
   findOpenAttempt(clientId: string, testCode: string): Promise<AttemptRow | null>;
+  /** The attempt created for a live payment (gateway payment ID), if any. */
+  findAttemptByPaymentRef(paymentRef: string): Promise<AttemptRow | null>;
   listAttempts(clientId: string): Promise<AttemptRow[]>;
   updateAttempt(id: string, patch: Partial<NewAttempt>): Promise<AttemptRow>;
   getAnswers(attemptId: string): Promise<AnswerRow[]>;

@@ -33,6 +33,15 @@ export function supabaseAttemptStore(db: SupabaseClient): AttemptStore {
       const r = await db.from('attempts').select(ATTEMPT_COLUMNS).eq('id', id).maybeSingle();
       return check(r, 'attempt') as unknown as AttemptRow | null;
     },
+    async findAttemptByPaymentRef(paymentRef) {
+      const r = await db
+        .from('attempts')
+        .select(ATTEMPT_COLUMNS)
+        .eq('payment_mode', 'live')
+        .eq('payment_ref', paymentRef)
+        .maybeSingle();
+      return check(r, 'attempt') as unknown as AttemptRow | null;
+    },
     async findOpenAttempt(clientId, testCode) {
       const r = await db
         .from('attempts')

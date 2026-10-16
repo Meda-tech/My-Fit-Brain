@@ -13,7 +13,7 @@ import {
   saveAnswer,
   saveDraft,
   setLanguage,
-  startPurchase,
+  createPaidAttempt,
   submit,
   type ServiceDeps,
 } from '../lib/assessment/service';
@@ -32,7 +32,7 @@ beforeAll(async () => {
   banks = await loadOfflineBanks();
 });
 
-function setup(paymentsMode: 'stub' | 'off' = 'stub') {
+function setup() {
   const store = new MemoryStore();
   store.live = { IA: IA_LIVE, MA: MA_LIVE };
   const configs: Record<string, VersionConfig> = {
@@ -50,7 +50,6 @@ function setup(paymentsMode: 'stub' | 'off' = 'stub') {
       return c;
     },
     now: () => new Date('2026-10-18T10:00:00.000Z'),
-    paymentsMode,
   };
   return { store, deps, loaded };
 }
@@ -62,10 +61,16 @@ function withId(config: VersionConfig, id: string): VersionConfig {
 const female: ClientProfile = { id: 'client-1', gender: 'Female', age: 27, marital_status: 'Married' };
 
 async function started(deps: ServiceDeps, client: ClientProfile, test: string, lang: ReportLanguageChoice = 'en') {
-  const attempt = await startPurchase(deps, client, test);
+  const attempt = await purchase(deps, client, test);
   await setLanguage(deps, client, attempt.id, lang);
   await giveConsent(deps, client, attempt.id);
   return attempt.id;
+}
+
+let payments = 0;
+/** A verified payment, as the payment service passes it in. */
+function purchase(deps: ServiceDeps, client: ClientProfile, test: string) {
+  return createPaidAttempt(deps, client, test, { ref: `pay_test_${++payments}`, paidAt: '2026-10-18T09:59:00.000Z' });
 }
 
 async function expectError(p: Promise<unknown>, code: AssessmentError['code']) {
@@ -100,16 +105,11 @@ describe('profile prefill', () => {
 });
 
 describe('purchase, language, consent', () => {
-  it('the stub works only in stub mode', async () => {
-    const { deps } = setup('off');
-    await expectError(startPurchase(deps, female, 'IA'), 'PAYMENTS_DISABLED');
-  });
-
-  it('creates a paid attempt pinned to the live version, with a report ID; reuses an open one', async () => {
+  it('creates a paid attempt pinned to the live version, with a report ID', async () => {
     const { deps } = setup();
-    const a = await startPurchase(deps, female, 'IA');
-    expect([a.status, a.version_id, a.report_id, a.payment_mode]).toEqual(['paid', IA_LIVE, 'MFB-IA-2026-00001', 'stub']);
-    expect((await startPurchase(deps, female, 'IA')).id).toBe(a.id);
+    const a = await purchase(deps, female, 'IA');
+    expect([a.status, a.version_id, a.report_id, a.payment_mode]).toEqual(['paid', IA_LIVE, 'MFB-IA-2026-00001', 'live']);
+    expect(a.payment_ref).toMatch(/^pay_test_/);
     // The report language is not asked: reports are staff-only and in English (D21).
     expect([a.report_language, (await getStep(deps, female, a.id)).kind]).toEqual(['en', 'consent']);
     await setLanguage(deps, female, a.id, 'hi');
@@ -191,7 +191,7 @@ describe('interrupts and events', () => {
   it('an age stop ends the attempt and keeps no answers', async () => {
     const { deps, store } = setup();
     const minor = { ...female, id: 'client-minor', age: 16 };
-    const attempt = await startPurchase(deps, minor, 'IA');
+    const attempt = await purchase(deps, minor, 'IA');
     expect(attempt.status).toBe('stopped');
     expect(await store.getAnswers(attempt.id)).toEqual([]);
     expect(store.events.map((e) => e.kind)).toEqual(['age_stop']);

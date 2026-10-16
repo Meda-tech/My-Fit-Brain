@@ -15,7 +15,6 @@ import {
 import type { VersionConfig } from '@mfb/questionbank';
 import { RELATIONSHIP_STATUSES } from '../options';
 import { buildReportDocument } from './report-document';
-import type { PaymentsMode } from './payments';
 import type { AttemptStore } from './store';
 import {
   AssessmentError,
@@ -38,7 +37,6 @@ export interface ServiceDeps {
   store: AttemptStore;
   loadConfig(versionId: string): Promise<VersionConfig>;
   now(): Date;
-  paymentsMode: PaymentsMode;
 }
 
 const SEXES: readonly Sex[] = ['Male', 'Female', 'Prefer not to say'];
@@ -75,17 +73,22 @@ function clientItems(flow: FlowItem[], rows: AnswerRow[]): FlowItem[] {
 // ---------------------------------------------------------------------------------------------
 // Purchase, language, consent
 
-/** Testing stub only: creates a paid attempt pinned to the live version. */
-export async function startPurchase(deps: ServiceDeps, client: ClientProfile, testCode: string): Promise<AttemptRow> {
-  if (deps.paymentsMode !== 'stub') throw new AssessmentError('PAYMENTS_DISABLED', 'Payments are not available yet.');
-  const ctx = contextFor(client);
-  const open = await deps.store.findOpenAttempt(client.id, testCode);
-  if (open) return open;
+/** A verified payment: the gateway's payment ID and when it was paid. */
+export interface PaidWith {
+  ref: string;
+  paidAt: string;
+}
 
+/**
+ * Creates the attempt for a verified payment, pinned to the version live at that moment, with its
+ * report ID (CLAUDE.md: ID assigned on payment success). Called only by the payment service after the
+ * payment is confirmed with the gateway; one payment gives one attempt (unique payment_ref).
+ */
+export async function createPaidAttempt(deps: ServiceDeps, client: ClientProfile, testCode: string, paid: PaidWith): Promise<AttemptRow> {
+  const ctx = contextFor(client);
   const versionId = await deps.store.liveVersionId(testCode);
   if (!versionId) throw new AssessmentError('NO_LIVE_VERSION', 'This assessment is not available right now.');
   const reportId = await deps.store.nextReportId(testCode);
-  const now = deps.now().toISOString();
   const created = await deps.store.createAttempt({
     report_id: reportId,
     client_id: client.id,
@@ -95,9 +98,9 @@ export async function startPurchase(deps: ServiceDeps, client: ClientProfile, te
     status: 'paid',
     report_language: null,
     consent_at: null,
-    payment_mode: 'stub',
-    payment_ref: `stub:${reportId}`,
-    paid_at: now,
+    payment_mode: 'live',
+    payment_ref: paid.ref,
+    paid_at: paid.paidAt,
     started_at: null,
     completed_at: null,
     engine_version: null,
@@ -109,7 +112,7 @@ export async function startPurchase(deps: ServiceDeps, client: ClientProfile, te
   if (prefill.length) await deps.store.upsertAnswers(attempt.id, prefill);
   const stopped = await stopIfNeeded(deps, config, attempt, ctx, toAnswers(prefill));
   if (stopped) return stopped;
-  // Flags raised by registration answers alone are recorded now; saveAnswer records only new ones.
+  // Flags raised by registration answers alone are recorded now; answering records only new ones.
   const raised = firedFlags(config, ctx, toAnswers(prefill));
   await Promise.all(raised.map((f) => deps.store.insertEvent(eventFor(attempt.id, f))));
   return attempt;
