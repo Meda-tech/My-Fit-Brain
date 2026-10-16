@@ -20,7 +20,7 @@ declare
     raw_phone text;
     clean_phone text;
     otp_code text;
-    renflair_api_key text := '4aa349c41601514fd09b204ff71a88b4';
+    renflair_api_key text := 'API KEY';
     request_url text;
 begin
     -- Extract phone and OTP from the Supabase Auth Hook event payload
