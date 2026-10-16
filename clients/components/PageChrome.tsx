@@ -2,33 +2,35 @@
 
 import { useLanguage } from './LanguageProvider';
 import { ClientHeader } from './ClientHeader';
-import { Footer } from './brand';
+import { BottomNav } from './BottomNav';
 import { cn } from './brand';
 
-// Sticky header with the EN | हिं toggle around server-rendered content.
+// App shell: sticky header with the EN | हिं toggle, content, and the bottom tab bar on the main
+// screens. Focused flows (payment, assessment) hide the tab bar so nothing pulls the client away.
 export function PageChrome({
   children,
   width = 'narrow',
-  footer = true,
+  nav = true,
 }: {
   children: React.ReactNode;
-  /** narrow = 640px (assessment), report = 760px, wide = 960px */
-  width?: 'narrow' | 'report' | 'wide';
-  footer?: boolean;
+  /** narrow = 640px (app screens, assessment), report = 760px + padding */
+  width?: 'narrow' | 'report';
+  nav?: boolean;
 }) {
   const { lang, setLang } = useLanguage();
   return (
-    <div lang={lang} className="flex min-h-screen flex-col bg-cream">
-      <ClientHeader currentLang={lang} onLanguageChange={setLang} showSignOut />
+    <div lang={lang} className="flex min-h-dvh flex-col bg-cream">
+      <ClientHeader currentLang={lang} onLanguageChange={setLang} />
       <main
         className={cn(
-          'mx-auto w-full flex-1 px-4 pb-[max(32px,env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:py-10',
-          width === 'narrow' ? 'max-w-[640px]' : width === 'report' ? 'max-w-[808px]' : 'max-w-[960px]'
+          'mx-auto w-full flex-1 px-4 pt-6 sm:px-6 sm:pt-10',
+          width === 'narrow' ? 'max-w-160' : 'max-w-202',
+          nav ? 'pb-[calc(96px+env(safe-area-inset-bottom))]' : 'pb-[max(32px,env(safe-area-inset-bottom))]'
         )}
       >
         {children}
       </main>
-      {footer && <Footer className="standalone:hidden" />}
+      {nav && <BottomNav />}
     </div>
   );
 }

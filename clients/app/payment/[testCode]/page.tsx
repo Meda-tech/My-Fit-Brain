@@ -20,7 +20,7 @@ export default async function PaymentPage({
   if (!name) notFound();
 
   return (
-    <PageChrome>
+    <PageChrome nav={false}>
       <PaymentView testCode={testCode} name={name} stub={paymentsMode() === 'stub'} error={error ?? null} />
     </PageChrome>
   );

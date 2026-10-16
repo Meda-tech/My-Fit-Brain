@@ -12,6 +12,7 @@ export default async function ClientHomePage() {
     age: client.age,
     marital_status: client.marital_status,
   });
+  const firstName = client.full_name.trim().split(/\s+/)[0] || client.full_name;
 
-  return <ClientHomeView client={client} tests={tests} attempts={attempts} />;
+  return <ClientHomeView firstName={firstName} tests={tests} attempts={attempts} />;
 }

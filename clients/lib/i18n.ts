@@ -162,6 +162,18 @@ export const translations = {
       nextPhaseNote: 'Your assessment will appear here when it is ready. There is nothing you need to do right now.',
       counsellingAssurance: 'Your answers stay private between you and your qualified counsellor.',
     },
+    nav: {
+      label: 'Main',
+      home: 'Home',
+      profile: 'Profile',
+    },
+    profile: {
+      title: 'My profile',
+      email: 'Email',
+      language: 'Language',
+      languageNote: 'Questions and reports show in this language.',
+      privacy: 'Your information stays private.',
+    },
   },
   hi: {
     brand: {
@@ -318,6 +330,18 @@ export const translations = {
       nextPhaseTitle: 'आगे क्या होगा',
       nextPhaseNote: 'आपका असेसमेंट तैयार होने पर यहीं दिखेगा। अभी आपको कुछ करने की ज़रूरत नहीं है।',
       counsellingAssurance: 'आपके उत्तर आपके और आपके योग्य काउंसलर के बीच निजी रहते हैं।',
+    },
+    nav: {
+      label: 'मुख्य',
+      home: 'होम',
+      profile: 'प्रोफ़ाइल',
+    },
+    profile: {
+      title: 'मेरी प्रोफ़ाइल',
+      email: 'ईमेल',
+      language: 'भाषा',
+      languageNote: 'सवाल और रिपोर्ट इसी भाषा में दिखेंगे।',
+      privacy: 'आपकी जानकारी निजी रहती है।',
     },
   },
 };

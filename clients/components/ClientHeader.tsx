@@ -23,7 +23,7 @@ export function ClientHeader({
 
   return (
     <header className="sticky top-0 z-20 select-none border-b border-sand bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-240 items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center" aria-label="My Fit Brain home">
           <Logo variant="horizontal" tone="colour" width={120} priority />
         </Link>
