@@ -65,7 +65,7 @@ export default async function AttemptPage({
             detail.report ? (
               <div className="max-w-190">
                 <div className="mb-4 flex justify-end print:hidden">
-                  <DownloadPdfButton reportId={attempt.report_id} />
+                  <DownloadPdfButton attemptId={attempt.id} reportId={attempt.report_id} />
                 </div>
                 <ReportView
                   doc={detail.report}

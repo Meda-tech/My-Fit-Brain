@@ -325,9 +325,14 @@ so copy the master file there before using a new combination.
 - Scoring runs server-side only. The browser submits option indexes; the server loads config, scores,
   and writes results.
 - Every attempt stores its question-bank version.
-- Report PDFs are never stored (owner, 2026-10-16): staff download them from the admin report page
-  through the browser ("Download PDF" → Save as PDF, A4 print styles), file name = report ID. The staff
-  copy is headed with the client's name and the test name.
+- Report PDFs are never stored (owner, 2026-10-16): super admins and counsellors download them from
+  the admin report page ("Download PDF" → `admin/app/attempts/[id]/pdf/route.ts`, built on request with
+  `@react-pdf/renderer` from the stored report, sent with `Cache-Control: no-store`), file name = report
+  ID. Layout follows `brand/MFB_Assessment_Report_Template_A4.pdf` (`admin/lib/report-pdf/`): cover with
+  endorsed logo, test name, Prepared for / Date / Report ID, founder seal and the disclaimer band; content
+  pages with logo header, numbered sections and the brand footer. Colours come from
+  `brand/mfb-tokens.json`, fonts from `admin/app/fonts`, logos from `brand/01_Logo/PNG` (the renderer
+  cannot embed SVG; `next.config.ts` traces these files into the deployment).
 - Secrets live in env vars or Supabase Vault. Never commit keys or put them in SQL or code comments.
 - Nothing in UI, reports, metadata or code comments may contain a diagnosis name, medical claim, cure or
   guarantee word, price (outside payment), or an unapproved credential.
