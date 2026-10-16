@@ -203,7 +203,7 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
   client profile come from small per-instance caches (`lib/assessment/server.ts`). Caches only skip
   reads; every write goes to the database and its triggers decide. Page loads, consent and submit read
   fresh.
-- Auth in the clients app uses `supabase.auth.getClaims()` (middleware and `lib/auth.ts`
+- Auth in the clients app uses `supabase.auth.getClaims()` (`proxy.ts` → `lib/supabase/middleware.ts`, and `lib/auth.ts`
   `getAuthUser()`), which verifies the token locally when the project uses asymmetric JWT signing keys
   (Supabase Dashboard → Project Settings → JWT Keys). With the legacy shared secret it falls back to an
   Auth server call per request.

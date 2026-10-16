@@ -2,6 +2,9 @@
   "name": "mfb-assessments",
   "private": true,
   "description": "MFB Assessments monorepo: clients/ and admin/ Next.js apps plus shared packages/",
+  "engines": {
+    "node": "22.x"
+  },
   "workspaces": [
     "clients",
     "admin",
