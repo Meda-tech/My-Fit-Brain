@@ -21,14 +21,10 @@ const nextConfig: NextConfig = {
   // Server-only libraries (Excel parser, report PDF renderer); keep them out of the bundle.
   serverExternalPackages: ["exceljs", "@react-pdf/renderer"],
   // The report PDF route reads the brand fonts and PNG logos from disk (lib/report-pdf/assets.ts).
+  // Both are copies inside the app: paths outside the app folder are not traced into the deployment.
   outputFileTracingRoot: path.join(__dirname, ".."),
   outputFileTracingIncludes: {
-    "/attempts/[id]/pdf": [
-      "./app/fonts/*.ttf",
-      "../brand/01_Logo/PNG/Endorsed_FoundedBy/MFB_Endorsed_FoundedBy_FullColour.png",
-      "../brand/01_Logo/PNG/Horizontal/MFB_Horizontal_FullColour.png",
-      "../brand/01_Logo/PNG/Founder_Seal/MFB_Founder_Seal_FullColour.png",
-    ],
+    "/attempts/[id]/pdf": ["./app/fonts/*.ttf", "./assets/report-pdf/*.png"],
   },
   // Dev only: phone testing over the local network.
   allowedDevOrigins: ["192.168.29.64", "192.168.29.*", "localhost"],

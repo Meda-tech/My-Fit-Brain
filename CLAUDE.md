@@ -59,6 +59,7 @@ Next.js serves only each app's own `public/`. Each app keeps COPIES of what it n
 | `<app>/public/` favicon.ico, apple-touch-icon-180.png, android-chrome-*.png | `brand/` |
 | `<app>/app/fonts/*.ttf` (or `src/app/fonts/`) | `brand/fonts/` |
 | `<app>/styles/mfb-tokens.css` | `brand/mfb-tokens.css` |
+| `admin/assets/report-pdf/*.png` (report PDF logos) | `brand/01_Logo/PNG/` (Endorsed, Horizontal, Founder seal, FullColour) |
 
 Never edit a copy so it differs from the master. If a master changes, update both apps.
 `brand/01_Logo/PDF/` is used by the report PDF generator (server-side), not copied into `public/`.
@@ -349,8 +350,9 @@ so copy the master file there before using a new combination.
   ID. Layout follows `brand/MFB_Assessment_Report_Template_A4.pdf` (`admin/lib/report-pdf/`): cover with
   endorsed logo, test name, Prepared for / Date / Report ID, founder seal and the disclaimer band; content
   pages with logo header, numbered sections and the brand footer. Colours come from
-  `brand/mfb-tokens.json`, fonts from `admin/app/fonts`, logos from `brand/01_Logo/PNG` (the renderer
-  cannot embed SVG; `next.config.ts` traces these files into the deployment).
+  `brand/mfb-tokens.json` (bundled), fonts from `admin/app/fonts`, logos from `admin/assets/report-pdf/`
+  (copies of `brand/01_Logo/PNG`; the renderer cannot embed SVG). Runtime files must live inside the app:
+  `next.config.ts` traces them into the deployment, and paths outside the app folder are not traced.
 - Secrets live in env vars or Supabase Vault. Never commit keys or put them in SQL or code comments.
 - Nothing in UI, reports, metadata or code comments may contain a diagnosis name, medical claim, cure or
   guarantee word, price (outside payment), or an unapproved credential.

@@ -18,12 +18,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const detail = await getAttemptDetail(id);
   if (!detail?.report) return new Response('Report not found', { status: 404 });
 
-  const element = createElement(ReportPdf, {
-    doc: detail.report,
-    clientName: detail.clientName ?? 'Client',
-    testName: detail.attempt.test_name,
-  }) as unknown as ReactElement<DocumentProps>;
-  const pdf = await renderToBuffer(element);
+  let pdf: Buffer;
+  try {
+    const element = createElement(ReportPdf, {
+      doc: detail.report,
+      clientName: detail.clientName ?? 'Client',
+      testName: detail.attempt.test_name,
+    }) as unknown as ReactElement<DocumentProps>;
+    pdf = await renderToBuffer(element);
+  } catch (err) {
+    // Shows in the deployment's function logs (Vercel → project → Logs).
+    console.error(`Report PDF failed for attempt ${id}:`, err);
+    return new Response('The PDF could not be prepared.', { status: 500 });
+  }
 
   const fileName = `${detail.attempt.report_id}.pdf`;
   return new Response(new Uint8Array(pdf), {
