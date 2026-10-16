@@ -45,7 +45,9 @@ This click-through is the check against the real database.
 9. Answer to the end (R5 = No). The submit screen says "When you submit, your answers are saved.
    Nothing can be changed after this." with **Submit my answers** and **Back**.
    - Expect: "Saving your answers...", then a thank-you screen. No report anywhere in the client app;
-     `/report/<uuid>` is a 404. Home → Your assessments shows "Completed" with the date, not clickable.
+     `/report/<uuid>` is a 404. Home → Your assessments shows "Completed" with the date and **View details**. It opens the
+     completed screen: "You completed this assessment on <date>", the reference ID, what happens next,
+     and the Payment card (Paid, amount, paid on, method, Razorpay payment ID). No report.
 10. Reload `/assessment/<uuid>` → the thank-you screen. Answers can no longer change.
 
 ## B. Mind, crisis answer

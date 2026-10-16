@@ -155,3 +155,20 @@ export async function homeData(client: ClientProfile): Promise<{ tests: TestCard
 export async function testName(code: string): Promise<LocalPair | null> {
   return (await testNames()).get(code)?.name ?? null;
 }
+
+export interface AttemptSummaryDetails {
+  testName: LocalPair;
+  reportId: string | null;
+  completedAt: string | null;
+}
+
+/** Name, reference and completion date of the client's own attempt (for the completed screen). */
+export async function attemptDetails(client: ClientProfile, attemptId: string): Promise<AttemptSummaryDetails | null> {
+  const attempt = await serviceDeps().store.getAttempt(attemptId);
+  if (!attempt || attempt.client_id !== client.id) return null;
+  return {
+    testName: (await testName(attempt.test_code)) ?? { en: attempt.test_code, hi: null },
+    reportId: attempt.report_id,
+    completedAt: attempt.completed_at,
+  };
+}

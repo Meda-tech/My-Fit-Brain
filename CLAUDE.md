@@ -107,7 +107,8 @@ report text. If something is not covered, stop and ask rather than guess.
 - **MFB Mind Assessment** — ID `MFB-MA-YYYY-NNNNN`
 - Progress re-tests append `-P1`, `-P2`, `-P3`. PDF file name = ID only.
 - Each costs ₹3,500 and includes the assessment and one consultation. The report is for the care team
-  only (D22). No price anywhere except the payment step. Progress re-tests are included, never charged.
+  only (D22). No price anywhere except the payment step and the client's own payment receipt (completed
+  assessment screen: amount paid, date, method, Razorpay payment ID). Progress re-tests are included, never charged.
 - Display line under each name: "Designed by Dr. Neha Mehta".
 - One person per assessment. A partner takes and pays for their own; reports are never linked.
 - One engine, two configurations. Question banks are versioned DB config imported from the Excel
@@ -209,7 +210,8 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
 - URLs and titles carry no test name: `/payment/<code>`, `/assessment/<uuid>`.
 - Client app shell: `components/PageChrome.tsx` = sticky header + bottom tab bar (`BottomNav`: Home `/`,
   Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile. Home
-  lists the client's assessments (status and date only, no report).
+  lists the client's assessments: unfinished → Continue; completed → View details
+  (`/assessment/<id>`: completion date, reference, what happens next, payment receipt; never the report).
 - Prefer canonical Tailwind classes (`min-h-11`, not `min-h-[44px]`); keep arbitrary values only for
   sizes off the 4px scale (font sizes, `calc()`, safe-area).
 

@@ -51,7 +51,9 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
           <Card className="overflow-hidden">
             <ul className="divide-y divide-sand">
               {attempts.map((a) => {
+                // Unfinished: continue. Completed: confirmation and payment receipt (no report).
                 const open = a.status === 'paid' || a.status === 'in_progress';
+                const action = open ? t.assess.continue : a.status === 'completed' ? t.assess.viewDetails : null;
                 const body = (
                   <>
                     <div className="min-w-0 flex-1">
@@ -63,9 +65,9 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
                         )}
                       </p>
                     </div>
-                    {open && (
+                    {action && (
                       <span className="flex shrink-0 items-center gap-1 text-[14px] font-semibold text-teal">
-                        {t.assess.continue}
+                        {action}
                         <ChevronRight size={16} strokeWidth={2} aria-hidden />
                       </span>
                     )}
@@ -73,7 +75,7 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
                 );
                 return (
                   <li key={a.id}>
-                    {open ? (
+                    {action ? (
                       <Link
                         href={`/assessment/${a.id}`}
                         className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-mist/50 active:bg-mist"

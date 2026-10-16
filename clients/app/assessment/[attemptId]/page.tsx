@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { currentClient, serviceDeps } from '../../../lib/assessment/server';
+import { attemptDetails, currentClient, serviceDeps } from '../../../lib/assessment/server';
+import { paymentReceipt } from '../../../lib/payments/server';
 import { openRunner } from '../../../lib/assessment/service';
 import type { Answers } from '@mfb/engine';
 import { AssessmentError, type Step } from '../../../lib/assessment/types';
@@ -30,9 +31,16 @@ export default async function AssessmentPage({
     throw err;
   }
 
+  const completed =
+    step.kind === 'completed'
+      ? await Promise.all([attemptDetails(client, attemptId), paymentReceipt(client, attemptId)]).then(([d, receipt]) =>
+          d ? { ...d, receipt } : null
+        )
+      : null;
+
   return (
     <PageChrome nav={step.kind === 'completed'}>
-      <AssessmentShell attemptId={attemptId} initialStep={step} initialAnswers={answers} />
+      <AssessmentShell attemptId={attemptId} initialStep={step} initialAnswers={answers} completed={completed} />
     </PageChrome>
   );
 }
