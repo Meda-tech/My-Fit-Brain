@@ -167,7 +167,9 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
   through the server (service role) in `clients/lib/assessment/`.
 - Each attempt is **pinned** to the version that was live when it was paid (`version_id`). Answers,
   scoring and the report always use that version, even after a newer version goes live.
-- Answers from registration are stored with `source = profile` and never asked again. Completed and
+- Answers from registration are stored with `source = profile` and never asked again. The
+  report-language question (I8 / MI5) is never asked: it is answered Both at payment and the report
+  follows the EN | हिं toggle (D21). Completed and
   stopped attempts are frozen by triggers.
 - Payments: until the live gateway task, `PAYMENTS_MODE=stub` (local / preview only) shows a
   "Mark as paid (testing)" button. The stub is always off when `VERCEL_ENV=production`. Never set it in
@@ -177,6 +179,10 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
   never re-score or rebuild it for display.
 - Crisis / safety / age-stop flags write one `attempt_events` row each (unique per flag) for staff.
 - URLs and titles carry no test name: `/payment/<code>`, `/assessment/<uuid>`, `/report/<uuid>`.
+- Client app shell: `components/PageChrome.tsx` = sticky header + bottom tab bar (`BottomNav`: Home `/`,
+  Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile.
+- Prefer canonical Tailwind classes (`min-h-11`, not `min-h-[44px]`); keep arbitrary values only for
+  sizes off the 4px scale (font sizes, `calc()`, safe-area).
 
 ---
 

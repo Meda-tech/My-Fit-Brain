@@ -19,7 +19,7 @@ This click-through is the check against the real database.
    in the app). Press **Mark as paid (testing)**.
    - Expect: URL is `/assessment/<uuid>` (no test name). Admin → client → Assessments shows
      `MFB-IA-<year>-NNNNN`, status "Paid, not started", "test payment".
-4. Report language screen → choose English. Consent screen → one line → **I agree, start**.
+4. No report-language question (D21). Consent screen → one line → **I agree, start**.
 5. Intake: age, gender and relationship status are **not** asked (taken from registration).
    For I6 choose "Yes, and they are willing to join sessions".
 6. Gate G1: tick **G** and **A** (a third tick is blocked). Continue.
@@ -33,11 +33,12 @@ This click-through is the check against the real database.
 9. Answer to the end (R5 = No). Finish screen → **See my report**.
    - Expect: "Preparing your report", then `/report/<uuid>` with the endorsed logo, report ID, date,
      snapshot bars (calm colours, no red), strengths / stuck, plan line, next step, founder seal.
+   - Switch EN | हिं in the header: the report changes language (both are stored).
 10. Reload `/assessment/<uuid>` → redirects to the report. Answers can no longer change.
 
 ## B. Mind, crisis answer
 
-1. Home → **MFB Mind Assessment** → Mark as paid → language → consent.
+1. Home → **MFB Mind Assessment** → Mark as paid → consent.
 2. Answer to MR5 and choose **Yes**.
    - Expect: a full-screen calm support screen with the version's support text, two large call buttons
      (Tele-MANAS 14416 and 1-800-891-4416, `tel:` links that open the dialer on a phone) and
@@ -51,6 +52,14 @@ This click-through is the check against the real database.
 A client registered under 18 never reaches here (registration stops). If the version's age question
 can produce AGE_STOP from an attempt, the stop screen shows the AGE_STOP text and **Close** signs out;
 nothing more can be answered.
+
+## C2. App shell
+
+1. On Home, Profile and the report, a bottom tab bar shows **Home** and **Profile**; the active tab is
+   teal with a mist pill. It is hidden on the payment and assessment screens.
+2. Profile shows initials, name, mobile, details (read-only), the language toggle, a privacy line and
+   **Sign out**. The header no longer has a sign-out button.
+3. On a phone (or installed as an app) the tab bar sits above the home indicator.
 
 ## D. Admin
 
