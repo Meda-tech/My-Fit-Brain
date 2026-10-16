@@ -1,8 +1,12 @@
-import type { AttemptStore, NewAttempt, StoredResult } from '../lib/assessment/store';
+import type { AttemptStore, NewAttempt, NewPaidAttempt, StoredResult } from '../lib/assessment/store';
 import type { AnswerRow, AttemptRow, EventRow } from '../lib/assessment/types';
 
 // In-memory AttemptStore for tests. It enforces the same rules as the database triggers that matter
-// to the service: answers lock once completed, results never change, one event per (attempt, flag).
+// to the service: answers lock once completed, results never change, one event per (attempt, flag),
+// and createPaidAttempt behaves like public.create_paid_attempt() (per-payment lock; a report number
+// only for a new attempt). Each step yields like a database round trip, so concurrent calls interleave.
+
+const roundTrip = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 export class MemoryStore implements AttemptStore {
   attempts = new Map<string, AttemptRow>();
@@ -10,24 +14,52 @@ export class MemoryStore implements AttemptStore {
   events: EventRow[] = [];
   results = new Map<string, StoredResult>();
   live: Record<string, string> = {};
-  private counter = 0;
+  /** Report numbers issued (report_counters.last_number). */
+  counter = 0;
   private ids = 0;
+  private locks = new Map<string, Promise<void>>();
 
   async liveVersionId(testCode: string) {
     return this.live[testCode] ?? null;
   }
-  async nextReportId(testCode: string) {
-    this.counter += 1;
-    return `MFB-${testCode}-2026-${String(this.counter).padStart(5, '0')}`;
-  }
-  async createAttempt(row: NewAttempt) {
-    if (row.payment_mode === 'live' && row.payment_ref && [...this.attempts.values()].some((a) => a.payment_mode === 'live' && a.payment_ref === row.payment_ref)) {
-      throw new Error('duplicate key value violates unique constraint "uq_attempts_live_payment_ref"');
+  async createPaidAttempt(row: NewPaidAttempt) {
+    // pg_advisory_xact_lock on the payment reference: callers for one payment run one after another.
+    const previous = this.locks.get(row.payment_ref) ?? Promise.resolve();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    this.locks.set(row.payment_ref, previous.then(() => held));
+    await previous;
+    try {
+      await roundTrip();
+      const existing = [...this.attempts.values()].find((a) => a.payment_mode === 'live' && a.payment_ref === row.payment_ref);
+      if (existing) return { attempt: { ...existing }, created: false };
+      await roundTrip();
+      // next_report_id() and the insert, in one transaction.
+      this.counter += 1;
+      const attempt: AttemptRow = {
+        id: `attempt-${++this.ids}`,
+        report_id: `MFB-${row.test_code}-2026-${String(this.counter).padStart(5, '0')}`,
+        client_id: row.client_id,
+        test_code: row.test_code,
+        version_id: row.version_id,
+        kind: 'initial',
+        status: 'paid',
+        report_language: null,
+        consent_at: null,
+        payment_mode: 'live',
+        payment_ref: row.payment_ref,
+        paid_at: row.paid_at,
+        started_at: null,
+        completed_at: null,
+        engine_version: null,
+        created_at: '2026-10-18T00:00:00.000Z',
+      };
+      this.attempts.set(attempt.id, attempt);
+      this.answers.set(attempt.id, new Map());
+      return { attempt: { ...attempt }, created: true };
+    } finally {
+      release();
     }
-    const attempt: AttemptRow = { ...row, id: `attempt-${++this.ids}`, created_at: '2026-10-18T00:00:00.000Z' };
-    this.attempts.set(attempt.id, attempt);
-    this.answers.set(attempt.id, new Map());
-    return { ...attempt };
   }
   async getAttempt(id: string) {
     const a = this.attempts.get(id);

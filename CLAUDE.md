@@ -178,8 +178,14 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
   checkout, and the server marks a payment paid only after checking the checkout signature and fetching
   the payment from Razorpay (order, amount, currency, status; authorized payments are captured). The
   signed webhook (`/api/payments/webhook`: payment.captured, order.paid, payment.failed) does the same
-  when the browser never returns. One payment → one attempt (unique `payment_ref`); every step is
-  idempotent. Checkout name/description: "My Fit Brain" / "MFB Assessment" only. Keys:
+  when the browser never returns. One payment → one attempt; every step is idempotent. Paid attempts are
+  created only through `public.create_paid_attempt()` (migration `20261021000000_paid_attempt_atomic.sql`):
+  a per-payment advisory lock, then the existing attempt is returned, or the report number is taken and
+  the attempt inserted in the same transaction, so report IDs have no gaps even when verify and webhook
+  race. Never call `next_report_id()` separately from the insert.
+- Report IDs (`MFB-IA-YYYY-NNNNN`) identify assessments; they are **not** GST invoice numbers. Tax
+  invoices need their own gap-free, consecutive series per financial year (April–March), issued for paid
+  payments only. That series belongs to the payments task, not to report IDs. Checkout name/description: "My Fit Brain" / "MFB Assessment" only. Keys:
   `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-side env only; test and live
   differ only by keys). No stub or test switch exists in code.
 - The report is built once at submit from the engine result, in English, and stored in
@@ -401,5 +407,8 @@ existing migrations, `.env*` files.
   views and dashboard counts. Manual check: `docs/tasks/06-manual-check.md`.
 - Done: Razorpay payments — migration `20261020000000_payments.sql` (checks:
   `docs/tasks/08-payments-verify.sql`), order / verify / webhook routes, payment screen.
+- Done: gap-free report IDs — migration `20261021000000_paid_attempt_atomic.sql` (checks:
+  `docs/tasks/08b-paid-attempt-verify.sql`).
+- Open (payments task): GST invoice numbering, its own gap-free series per financial year.
 - Next: Task 07 — polish. Task 05 (admin editor, rule builder, preview, review/publish UI)
   is still open.

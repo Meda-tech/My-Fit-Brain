@@ -118,6 +118,23 @@ describe('purchase, language, consent', () => {
     expect((await getStep(deps, female, a.id)).kind).toBe('question');
   });
 
+  it('two simultaneous creations for one payment give one attempt and use no report number twice', async () => {
+    const { deps, store } = setup();
+    const paid = { ref: 'pay_race_1', paidAt: '2026-10-18T09:59:00.000Z' };
+    const [a, b] = await Promise.all([
+      createPaidAttempt(deps, female, 'IA', paid),
+      createPaidAttempt(deps, female, 'IA', paid),
+    ]);
+    expect(a.id).toBe(b.id);
+    expect([...store.attempts.values()].filter((x) => x.payment_ref === 'pay_race_1')).toHaveLength(1);
+    expect(a.report_id).toBe('MFB-IA-2026-00001');
+    // No gap: one number taken, and the next payment gets the next number.
+    expect(store.counter).toBe(1);
+    const next = await createPaidAttempt(deps, female, 'IA', { ref: 'pay_race_2', paidAt: paid.paidAt });
+    expect(next.report_id).toBe('MFB-IA-2026-00002');
+    expect(store.counter).toBe(store.attempts.size);
+  });
+
   it('another client cannot see the attempt', async () => {
     const { deps } = setup();
     const id = await started(deps, female, 'IA');

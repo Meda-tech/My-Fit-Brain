@@ -82,29 +82,22 @@ export interface PaidWith {
 /**
  * Creates the attempt for a verified payment, pinned to the version live at that moment, with its
  * report ID (CLAUDE.md: ID assigned on payment success). Called only by the payment service after the
- * payment is confirmed with the gateway; one payment gives one attempt (unique payment_ref).
+ * payment is confirmed with the gateway. One payment gives one attempt; calling again (or at the same
+ * time) returns the same attempt and never uses up a report number.
  */
 export async function createPaidAttempt(deps: ServiceDeps, client: ClientProfile, testCode: string, paid: PaidWith): Promise<AttemptRow> {
   const ctx = contextFor(client);
   const versionId = await deps.store.liveVersionId(testCode);
   if (!versionId) throw new AssessmentError('NO_LIVE_VERSION', 'This assessment is not available right now.');
-  const reportId = await deps.store.nextReportId(testCode);
-  const created = await deps.store.createAttempt({
-    report_id: reportId,
+  // Atomic: returns the existing attempt for this payment, or takes the report number and inserts.
+  const { attempt: created, created: isNew } = await deps.store.createPaidAttempt({
     client_id: client.id,
     test_code: testCode,
     version_id: versionId,
-    kind: 'initial',
-    status: 'paid',
-    report_language: null,
-    consent_at: null,
-    payment_mode: 'live',
     payment_ref: paid.ref,
     paid_at: paid.paidAt,
-    started_at: null,
-    completed_at: null,
-    engine_version: null,
   });
+  if (!isNew) return created;
 
   const config = await deps.loadConfig(versionId);
   const attempt = await applyReportLanguage(deps, config, created.id, DEFAULT_REPORT_LANGUAGE);

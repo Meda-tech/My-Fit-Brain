@@ -155,8 +155,8 @@ describe('webhook', () => {
     expect([...store.attempts.keys()]).toEqual([attemptId]);
   });
 
-  it('verify and webhook at the same time still give one attempt', async () => {
-    const { deps, store, rzp } = setup();
+  it('verify and webhook at the same time give one attempt and no report ID gap', async () => {
+    const { deps, store, payments, rzp } = setup();
     const c = await order(deps);
     const p = rzp.pay(c.orderId);
     await Promise.all([
@@ -164,6 +164,16 @@ describe('webhook', () => {
       webhook(deps, 'payment.captured', p, 'evt_9'),
     ]);
     expect(store.attempts.size).toBe(1);
+    // The race used up no report number: the next payment is 00002.
+    expect([...store.attempts.values()][0].report_id).toBe('MFB-IA-2026-00001');
+    const other: ClientProfile = { ...client, id: 'client-2' };
+    payments.clients.set(other.id, other);
+    const c2 = await createCheckout(deps, other, 'IA');
+    if (c2.kind !== 'order') throw new Error('expected an order');
+    const p2 = rzp.pay(c2.orderId);
+    await webhook(deps, 'payment.captured', p2, 'evt_10');
+    expect([...store.attempts.values()].map((x) => x.report_id).sort()).toEqual(['MFB-IA-2026-00001', 'MFB-IA-2026-00002']);
+    expect(store.counter).toBe(2);
   });
 
   it('rejects a bad signature; records failures; ignores unknown orders and mismatches', async () => {

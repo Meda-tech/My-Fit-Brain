@@ -6,6 +6,15 @@ import type { AnswerRow, AttemptRow, EventRow } from './types';
 
 export type NewAttempt = Omit<AttemptRow, 'id' | 'created_at'>;
 
+/** A live payment's attempt to create (status paid, kind initial). */
+export interface NewPaidAttempt {
+  client_id: string;
+  test_code: string;
+  version_id: string;
+  payment_ref: string;
+  paid_at: string;
+}
+
 export interface StoredResult {
   result: unknown;
   report: unknown;
@@ -14,9 +23,13 @@ export interface StoredResult {
 export interface AttemptStore {
   /** The live version of a test, or null. */
   liveVersionId(testCode: string): Promise<string | null>;
-  /** Next report ID for the test (MFB-IA-2026-00001). */
-  nextReportId(testCode: string): Promise<string>;
-  createAttempt(row: NewAttempt): Promise<AttemptRow>;
+  /**
+   * Creates the attempt for a live payment, or returns the one that exists (created: false). The
+   * report ID (MFB-IA-2026-00001) is taken in the same transaction as the insert and only when the
+   * attempt is new, so concurrent calls for one payment never use up a number
+   * (public.create_paid_attempt).
+   */
+  createPaidAttempt(row: NewPaidAttempt): Promise<{ attempt: AttemptRow; created: boolean }>;
   getAttempt(id: string): Promise<AttemptRow | null>;
   /** An unfinished (paid or in progress) attempt of this test for this client, if any. */
   findOpenAttempt(clientId: string, testCode: string): Promise<AttemptRow | null>;

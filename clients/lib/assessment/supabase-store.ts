@@ -1,6 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AttemptStore, NewAttempt, StoredResult } from './store';
+import type { AttemptStore, StoredResult } from './store';
 import type { AnswerRow, AttemptRow, EventRow } from './types';
 
 // AttemptStore on Supabase with the service role. Only the assessment service calls it, after it has
@@ -21,13 +21,16 @@ export function supabaseAttemptStore(db: SupabaseClient): AttemptStore {
       const r = await db.from('qb_versions').select('id').eq('test_code', testCode).eq('status', 'live').maybeSingle();
       return (check(r, 'live version') as { id: string } | null)?.id ?? null;
     },
-    async nextReportId(testCode) {
-      const r = await db.rpc('next_report_id', { p_test_code: testCode });
-      return check(r, 'report id') as string;
-    },
-    async createAttempt(row: NewAttempt) {
-      const r = await db.from('attempts').insert(row).select(ATTEMPT_COLUMNS).single();
-      return check(r, 'create attempt') as unknown as AttemptRow;
+    async createPaidAttempt(row) {
+      const r = await db.rpc('create_paid_attempt', {
+        p_client_id: row.client_id,
+        p_test_code: row.test_code,
+        p_version_id: row.version_id,
+        p_payment_ref: row.payment_ref,
+        p_paid_at: row.paid_at,
+      });
+      const out = check(r, 'create paid attempt') as { created: boolean; attempt: AttemptRow };
+      return { created: out.created, attempt: out.attempt };
     },
     async getAttempt(id) {
       const r = await db.from('attempts').select(ATTEMPT_COLUMNS).eq('id', id).maybeSingle();

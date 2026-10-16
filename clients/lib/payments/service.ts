@@ -122,18 +122,16 @@ async function fulfil(deps: PaymentDeps, payment: PaymentRow, rp: RazorpayPaymen
   });
   if (paid.attempt_id) return paid.attempt_id;
 
-  const store = deps.assessment.store;
-  let attempt = await store.findAttemptByPaymentRef(rp.id);
+  // Verify and webhook may arrive together: createPaidAttempt returns the same attempt to both and
+  // takes one report number.
+  let attempt = await deps.assessment.store.findAttemptByPaymentRef(rp.id);
   if (!attempt) {
     const client = await deps.payments.clientProfile(payment.client_id);
     if (!client) throw new PaymentError('NOT_FOUND', 'Client not found.');
-    try {
-      attempt = await createPaidAttempt(deps.assessment, client, payment.test_code, { ref: rp.id, paidAt: paid.paid_at ?? deps.now().toISOString() });
-    } catch (err) {
-      // Verify and webhook arrived together: the other one created it (unique payment_ref).
-      attempt = await store.findAttemptByPaymentRef(rp.id);
-      if (!attempt) throw err;
-    }
+    attempt = await createPaidAttempt(deps.assessment, client, payment.test_code, {
+      ref: rp.id,
+      paidAt: paid.paid_at ?? deps.now().toISOString(),
+    });
   }
   await deps.payments.linkAttempt(payment.id, attempt.id);
   return attempt.id;
