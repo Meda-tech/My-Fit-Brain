@@ -30,9 +30,10 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the access token locally with the project's signing keys (no Auth server
+  // call per request) and refreshes the session when it is about to expire.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const isLoginPage = request.nextUrl.pathname.startsWith('/login');
   const isRegisterPage = request.nextUrl.pathname.startsWith('/register');

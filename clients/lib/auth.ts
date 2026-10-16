@@ -13,19 +13,28 @@ export interface CurrentClientSession {
 }
 
 /**
+ * The signed-in user from the verified access token. getClaims() checks the token locally with the
+ * project's signing keys (no Auth server call per request); with a legacy shared secret it asks the
+ * Auth server, like getUser().
+ */
+export async function getAuthUser(): Promise<{ id: string; phone?: string } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (error || !claims?.sub) return null;
+  const phone = typeof claims.phone === 'string' && claims.phone ? claims.phone : undefined;
+  return { id: claims.sub, phone };
+}
+
+/**
  * Returns current authenticated Supabase user and their linked client record.
  */
 export async function getCurrentClient(): Promise<CurrentClientSession | null> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
+  const user = await getAuthUser();
+  if (!user) {
     return null;
   }
+  const supabase = await createClient();
 
   // 1. Fetch client record associated with this auth UID
   let { data: client } = await supabase
