@@ -8,7 +8,9 @@ This click-through is the check against the real database.
 
 ## Setup
 
-1. `clients/.env.local`: add `PAYMENTS_MODE=stub`. Restart `npm run dev:clients` (port 3000).
+1. Apply `supabase/migrations/20261020000000_payments.sql` (checks: `docs/tasks/08-payments-verify.sql`).
+   In `clients/.env.local` fill `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` (test mode keys,
+   `rzp_test_...`) and `RAZORPAY_WEBHOOK_SECRET`. Restart `npm run dev:clients` (port 3000).
 2. `npm run dev:admin` (port 3001) and sign in as a super admin or coordinator in another browser.
 3. Use a test phone number with no earlier assessments.
 
@@ -17,9 +19,15 @@ This click-through is the check against the real database.
 1. Open `http://localhost:3000`, log in with phone OTP, finish registration (age 18 or over).
 2. Home shows both tests with "Designed by Dr. Neha Mehta" and no price. Tab title is "My Fit Brain".
 3. Choose **MFB Intimacy Assessment** → payment page shows the endorsed logo and ₹3,500 (the only price
-   in the app). Press **Mark as paid (testing)**.
+   in the app). Press **Pay ₹3,500**: Razorpay checkout opens with "My Fit Brain · MFB Assessment".
+   Pay with a Razorpay test method (e.g. UPI `success@razorpay`, or a test card from Razorpay's docs).
    - Expect: URL is `/assessment/<uuid>` (no test name). Admin → client → Assessments shows
-     `MFB-IA-<year>-NNNNN`, status "Paid, not started", "test payment".
+     `MFB-IA-<year>-NNNNN`, status "Paid, not started"; the attempt page shows the Razorpay payment ID.
+   - Close the checkout without paying → back to the Pay button, no assessment created.
+   - Fail a test payment (UPI `failure@razorpay`) → "The payment did not go through"; `payments.status`
+     = failed. Pay again in the same checkout → succeeds.
+   - Press Pay again for the same test while that assessment is unfinished → it opens the assessment
+     instead of charging again.
 4. No report-language question (D21). Consent screen → one line → **I agree, start**.
 5. Intake: age, gender and relationship status are **not** asked (taken from registration).
    For I6 choose "Yes, and they are willing to join sessions".
@@ -42,7 +50,7 @@ This click-through is the check against the real database.
 
 ## B. Mind, crisis answer
 
-1. Home → **MFB Mind Assessment** → Mark as paid → consent.
+1. Home → **MFB Mind Assessment** → pay (test mode) → consent.
 2. Answer to MR5 and choose **Yes**.
    - Expect: a full-screen calm support screen with the version's support text, two large call buttons
      (Tele-MANAS 14416 and 1-800-891-4416, `tel:` links that open the dialer on a phone) and
@@ -86,7 +94,11 @@ nothing more can be answered.
    answers are visible to counsellors and super admins only."
 5. Sign in as a client and try `/attempts/...` on the admin domain → no access.
 
-## E. Payments off
+## E. Payments not configured and the webhook
 
-Remove `PAYMENTS_MODE` (or set `VERCEL_ENV=production`) and restart: the payment page shows
-"Payments are not open yet. Please check back soon." and no button; posting the form directly returns `PAYMENTS_DISABLED`.
+1. Empty `RAZORPAY_KEY_ID` and restart: the payment page shows "Payments are not available right now."
+   and no button; `POST /api/payments/order` answers 503.
+2. Webhook (needs a public URL: a Vercel preview, or a tunnel such as ngrok to port 3000): in Razorpay
+   test mode add `<url>/api/payments/webhook` with events payment.captured, order.paid, payment.failed
+   and the same secret as `RAZORPAY_WEBHOOK_SECRET`. Pay, then close the tab before it returns: the
+   assessment still appears on Home (created by the webhook). `payment_events` lists the event IDs.

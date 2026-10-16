@@ -26,6 +26,7 @@ export interface AttemptListRow {
   status: 'paid' | 'in_progress' | 'completed' | 'stopped';
   report_language: 'en' | 'hi' | 'both' | null;
   payment_mode: 'stub' | 'live';
+  payment_ref: string | null;
   paid_at: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -58,7 +59,7 @@ export interface AttemptDetail {
 }
 
 const ATTEMPT_COLUMNS =
-  'id, report_id, client_id, test_code, version_id, kind, status, report_language, payment_mode, paid_at, started_at, completed_at, created_at, qb_tests(name_en), qb_versions(version_label)';
+  'id, report_id, client_id, test_code, version_id, kind, status, report_language, payment_mode, payment_ref, paid_at, started_at, completed_at, created_at, qb_tests(name_en), qb_versions(version_label)';
 
 type RawAttempt = Omit<AttemptListRow, 'test_name' | 'version_label'> & {
   qb_tests?: { name_en?: string | null } | null;

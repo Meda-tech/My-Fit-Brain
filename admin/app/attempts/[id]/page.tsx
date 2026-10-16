@@ -51,7 +51,7 @@ export default async function AttemptPage({
           description={
             <>
               Version {attempt.version_label} · paid {formatDateTime(attempt.paid_at)}
-              {attempt.payment_mode === 'stub' ? ' (test payment)' : ''} · completed {formatDateTime(attempt.completed_at)}
+              {attempt.payment_mode === 'stub' ? ' (test payment)' : attempt.payment_ref ? ` (Razorpay ${attempt.payment_ref})` : ''} · completed {formatDateTime(attempt.completed_at)}
             </>
           }
         />

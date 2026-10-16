@@ -173,9 +173,15 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
 - Answers from registration are stored with `source = profile` and never asked again. The
   report-language question (I8 / MI5) is never asked: it is answered English at payment (D21). Completed and
   stopped attempts are frozen by triggers.
-- Payments: until the live gateway task, `PAYMENTS_MODE=stub` (local / preview only) shows a
-  "Mark as paid (testing)" button. The stub is always off when `VERCEL_ENV=production`. Never set it in
-  production.
+- Payments: Razorpay Standard Checkout (`clients/lib/payments/`, migration `20261020000000_payments.sql`).
+  The server creates the order for the fixed price (`ASSESSMENT_PRICE_PAISE`), the browser only opens the
+  checkout, and the server marks a payment paid only after checking the checkout signature and fetching
+  the payment from Razorpay (order, amount, currency, status; authorized payments are captured). The
+  signed webhook (`/api/payments/webhook`: payment.captured, order.paid, payment.failed) does the same
+  when the browser never returns. One payment → one attempt (unique `payment_ref`); every step is
+  idempotent. Checkout name/description: "My Fit Brain" / "MFB Assessment" only. Keys:
+  `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-side env only; test and live
+  differ only by keys). No stub or test switch exists in code.
 - The report is built once at submit from the engine result, in English, and stored in
   `attempt_results.report`. Only super admins and counsellors see it (admin → attempt; `ReportView` from
   `@mfb/report`), never clients or coordinators (D22; RLS `can_view_reports()` on `attempt_answers` and
@@ -390,8 +396,10 @@ existing migrations, `.env*` files.
   cases pass offline; migration `20261017000000_qb_test_runs.sql` (test runs, `content_changed_at`, publish
   gate; paste-ready in `docs/tasks/04-apply.sql`); admin Test cases tab runs and records test cases.
 - Done: task 06 client assessment flow — migration `20261018000000_attempts.sql` (paste-ready in
-  `docs/tasks/06-apply.sql`), server layer `clients/lib/assessment/`, test choice, stub payment, language,
+  `docs/tasks/06-apply.sql`), server layer `clients/lib/assessment/`, test choice, payment (now Razorpay), language,
   consent, question runner, crisis support screen, web report (`@mfb/report`), admin read-only attempt
   views and dashboard counts. Manual check: `docs/tasks/06-manual-check.md`.
-- Next: Task 07 — report PDF and polish. Task 05 (admin editor, rule builder, preview, review/publish UI)
+- Done: Razorpay payments — migration `20261020000000_payments.sql` (checks:
+  `docs/tasks/08-payments-verify.sql`), order / verify / webhook routes, payment screen.
+- Next: Task 07 — polish. Task 05 (admin editor, rule builder, preview, review/publish UI)
   is still open.
