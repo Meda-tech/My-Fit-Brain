@@ -84,6 +84,7 @@ export class AssessmentError extends Error {
   constructor(
     public readonly code:
       | 'NOT_FOUND'
+      | 'STALE'
       | 'PAYMENTS_DISABLED'
       | 'NO_LIVE_VERSION'
       | 'WRONG_STATUS'

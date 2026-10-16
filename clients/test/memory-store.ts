@@ -56,6 +56,13 @@ export class MemoryStore implements AttemptStore {
     this.locked(attemptId);
     for (const r of rows) this.answers.get(attemptId)!.set(r.qid, { ...r });
   }
+  async replaceAnswers(attemptId: string, rows: AnswerRow[]) {
+    this.locked(attemptId);
+    if (this.attempts.get(attemptId)?.status === 'stopped') throw new Error('attempt is stopped');
+    const m = this.answers.get(attemptId)!;
+    m.clear();
+    for (const r of rows) m.set(r.qid, { ...r });
+  }
   async deleteAnswers(attemptId: string, qids: string[] | 'all') {
     this.locked(attemptId);
     const m = this.answers.get(attemptId)!;

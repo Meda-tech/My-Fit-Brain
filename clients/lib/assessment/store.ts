@@ -24,6 +24,11 @@ export interface AttemptStore {
   updateAttempt(id: string, patch: Partial<NewAttempt>): Promise<AttemptRow>;
   getAnswers(attemptId: string): Promise<AnswerRow[]>;
   upsertAnswers(attemptId: string, rows: AnswerRow[]): Promise<void>;
+  /**
+   * Makes the stored answers exactly these rows: upserts them and deletes every other answer of the
+   * attempt. Used when a batch of answers buffered in the browser is saved.
+   */
+  replaceAnswers(attemptId: string, rows: AnswerRow[]): Promise<void>;
   /** Deletes the given answers, or every answer of the attempt. */
   deleteAnswers(attemptId: string, qids: string[] | 'all'): Promise<void>;
   /** Inserts once per (attempt, flag); returns false when it already existed. */

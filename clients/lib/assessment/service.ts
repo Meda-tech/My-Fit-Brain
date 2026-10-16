@@ -31,7 +31,7 @@ import {
   type Step,
 } from './types';
 
-// The client assessment flow. Every call reloads the attempt, checks it belongs to the client and uses
+// The client assessment flow. Every call loads the attempt, checks it belongs to the client and uses
 // the attempt's pinned version. All rules come from the version through @mfb/engine.
 
 export interface ServiceDeps {
@@ -153,11 +153,17 @@ export async function setLanguage(deps: ServiceDeps, client: ClientProfile, atte
   return applyReportLanguage(deps, config, attempt.id, lang);
 }
 
-async function applyReportLanguage(deps: ServiceDeps, config: VersionConfig, attemptId: string, lang: ReportLanguageChoice) {
+/** The report-language question answered for a language choice, from the version's own map. */
+function languageRow(config: VersionConfig, lang: ReportLanguageChoice): AnswerRow | null {
   const rl = config.report_rules.report_language;
   const wanted = lang === 'both' ? 'en|hi' : lang;
   const code = Object.entries(rl.map).find(([, langs]) => [...langs].sort().join('|') === wanted)?.[0];
-  if (code) await deps.store.upsertAnswers(attemptId, [{ qid: rl.qid, value: code, source: 'profile' }]);
+  return code ? { qid: rl.qid, value: code, source: 'profile' } : null;
+}
+
+async function applyReportLanguage(deps: ServiceDeps, config: VersionConfig, attemptId: string, lang: ReportLanguageChoice) {
+  const row = languageRow(config, lang);
+  if (row) await deps.store.upsertAnswers(attemptId, [row]);
   return deps.store.updateAttempt(attemptId, { report_language: lang });
 }
 
@@ -175,19 +181,35 @@ export async function giveConsent(deps: ServiceDeps, client: ClientProfile, atte
 
 // ---------------------------------------------------------------------------------------------
 // Questions
+//
+// Answers are buffered in the browser and saved in batches. Every call sends the client's answers so
+// far (the "draft"); the server checks the whole draft against the pinned version, works out the next
+// step with the engine, and writes to the database only when asked to (every few answers, when the tab
+// is hidden), when an answer raises a flag (crisis, safety, stop) and when the last question is answered.
+// Answers from registration and the report language are never in the draft: the server adds them.
 
 export async function getStep(deps: ServiceDeps, client: ClientProfile, attemptId: string, atQid?: string | null): Promise<Step> {
+  return (await openRunner(deps, client, attemptId, atQid)).step;
+}
+
+/** The current step and the client's saved answers, for opening the assessment screen. */
+export async function openRunner(
+  deps: ServiceDeps,
+  client: ClientProfile,
+  attemptId: string,
+  atQid?: string | null
+): Promise<{ step: Step; answers: Answers }> {
   const attempt = await ownAttempt(deps, client, attemptId);
-  if (attempt.status === 'completed') return { kind: 'completed' };
+  if (attempt.status === 'completed') return { step: { kind: 'completed' }, answers: {} };
   const config = await deps.loadConfig(attempt.version_id);
   if (attempt.status === 'stopped') {
     const stop = config.flags.find((f) => f.effects.stop);
-    return { kind: 'stopped', text: stop ? flagText(config, stop.key) : null };
+    return { step: { kind: 'stopped', text: stop ? flagText(config, stop.key) : null }, answers: {} };
   }
-  if (!attempt.consent_at) return { kind: 'consent' };
+  if (!attempt.consent_at) return { step: { kind: 'consent' }, answers: {} };
 
   const rows = await deps.store.getAnswers(attempt.id);
-  return stepFor(config, contextFor(client), rows, atQid ?? null);
+  return { step: stepFor(config, contextFor(client), rows, atQid ?? null), answers: clientAnswers(rows) };
 }
 
 function stepFor(config: VersionConfig, ctx: EngineContext, rows: AnswerRow[], atQid: string | null): Step {
@@ -240,80 +262,155 @@ function checkValue(item: FlowItem, value: AnswerValue) {
   }
 }
 
-export interface SaveResult {
-  step: Step;
-  interrupt: Interrupt | null;
+/** Answers the server adds itself: registration answers and the report language (D21). */
+function fixedAnswers(config: VersionConfig, client: ClientProfile, attempt: AttemptRow): AnswerRow[] {
+  const rows = profileAnswers(config, client);
+  const lang = attempt.report_language ? languageRow(config, attempt.report_language) : null;
+  if (lang && !rows.some((r) => r.qid === lang.qid)) rows.push(lang);
+  return rows;
 }
 
-export async function saveAnswer(
-  deps: ServiceDeps,
-  client: ClientProfile,
-  attemptId: string,
-  qid: string,
-  value: AnswerValue
-): Promise<SaveResult> {
-  // One round trip for the attempt and its answers; the ownership check follows before anything is used.
-  const [attempt, rows] = await Promise.all([deps.store.getAttempt(attemptId), deps.store.getAnswers(attemptId)]);
-  if (!attempt || attempt.client_id !== client.id) throw new AssessmentError('NOT_FOUND', 'Assessment not found.');
+function clientAnswers(rows: AnswerRow[]): Answers {
+  return toAnswers(rows.filter((r) => r.source === 'client'));
+}
+
+/**
+ * The full answer set from a draft sent by the browser. Every draft answer must be a question the
+ * client is shown, with a valid value; otherwise the draft is stale or altered and is rejected (the
+ * screen then reloads from the saved answers).
+ */
+function resolveDraft(config: VersionConfig, ctx: EngineContext, fixed: AnswerRow[], draft: unknown): AnswerRow[] {
+  const stale = () => new AssessmentError('STALE', 'Your answers are out of date.');
+  if (!draft || typeof draft !== 'object' || Array.isArray(draft)) throw stale();
+  const fixedQids = new Set(fixed.map((r) => r.qid));
+  const rows: AnswerRow[] = [...fixed];
+  for (const [qid, value] of Object.entries(draft as Record<string, unknown>)) {
+    if (fixedQids.has(qid)) continue;
+    if (typeof value !== 'string' && !(Array.isArray(value) && value.every((v) => typeof v === 'string'))) throw stale();
+    rows.push({ qid, value: value as AnswerValue, source: 'client' });
+  }
+  let items: FlowItem[];
+  try {
+    items = clientItems(getFlow(config, ctx, toAnswers(rows)), rows);
+  } catch {
+    throw stale();
+  }
+  const shown = new Map(items.map((i) => [i.qid, i]));
+  for (const r of rows) {
+    if (r.source !== 'client') continue;
+    const item = shown.get(r.qid);
+    if (!item) throw stale();
+    try {
+      checkValue(item, r.value);
+    } catch {
+      throw stale();
+    }
+  }
+  return rows;
+}
+
+async function openDraft(deps: ServiceDeps, client: ClientProfile, attemptId: string, draft: unknown) {
+  const attempt = await ownAttempt(deps, client, attemptId);
   if (attempt.status !== 'in_progress') throw new AssessmentError('WRONG_STATUS', 'This assessment is not open for answers.');
   const config = await deps.loadConfig(attempt.version_id);
   const ctx = contextFor(client);
+  const rows = resolveDraft(config, ctx, fixedAnswers(config, client, attempt), draft);
+  return { attempt, config, ctx, rows };
+}
+
+export interface AnswerResult {
+  step: Step;
+  interrupt: Interrupt | null;
+  /** The client's answers after this one (hidden paths removed); the browser keeps these. */
+  answers: Answers;
+  /** True when this call saved the answers to the database. */
+  saved: boolean;
+}
+
+/** One answer. Saves when `flush` is set, when a flag is newly raised or when the last question is answered. */
+export async function answer(
+  deps: ServiceDeps,
+  client: ClientProfile,
+  attemptId: string,
+  draft: unknown,
+  qid: string,
+  value: AnswerValue,
+  opts: { flush?: boolean } = {}
+): Promise<AnswerResult> {
+  const { attempt, config, ctx, rows } = await openDraft(deps, client, attemptId, draft);
   const answers = toAnswers(rows);
 
-  const flow = getFlow(config, ctx, answers);
-  const item = clientItems(flow, rows).find((i) => i.qid === qid);
+  const item = clientItems(getFlow(config, ctx, answers), rows).find((i) => i.qid === qid);
   if (!item) throw new AssessmentError('NOT_VISIBLE', 'That question is not part of your assessment right now.');
   checkValue(item, value);
 
   const before = firedFlags(config, ctx, answers);
-  const { answers: kept, removed } = pruneAnswers(config, ctx, { ...answers, [qid]: value });
+  // Changing a routing answer removes answers that are no longer shown and trims choices that are no
+  // longer offered (e.g. a gate option hidden on the new path).
+  const { answers: kept } = pruneAnswers(config, ctx, { ...answers, [qid]: value });
   getFlow(config, ctx, kept); // the engine re-checks every answer
-
-  // "removed" lists answers that disappeared and answers that lost choices (e.g. a gate option now
-  // hidden): keep what is left of the latter, delete the former. Writes go out together.
   const sourceOf = new Map(rows.map((r) => [r.qid, r.source]));
-  const trimmed = removed.filter((q) => q !== qid && kept[q] !== undefined);
-  const gone = removed.filter((q) => kept[q] === undefined);
-  const upserts: AnswerRow[] = [
-    { qid, value, source: 'client' },
-    ...trimmed.map((q) => ({ qid: q, value: kept[q], source: sourceOf.get(q) ?? ('client' as const) })),
-  ];
-  await Promise.all([
-    deps.store.upsertAnswers(attempt.id, upserts),
-    gone.length ? deps.store.deleteAnswers(attempt.id, gone) : null,
-  ]);
-
-  const stopped = await stopIfNeeded(deps, config, attempt, ctx, kept);
-  if (stopped) return { step: await getStep(deps, client, attempt.id), interrupt: null };
-
-  // Record an event when a flag is newly raised (once per flag, also enforced by the table); show an
-  // interrupt screen for it.
-  const raised = firedFlags(config, ctx, kept).filter((f) => !before.some((b) => b.key === f.key));
-  await Promise.all(raised.map((f) => deps.store.insertEvent(eventFor(attempt.id, f))));
-  const shown = raised.find((f) => f.effects.interrupt);
-  const interrupt: Interrupt | null = shown ? { flag: shown.key, text: flagText(config, shown.key) } : null;
-
-  // The new answer set is known here; no need to read it back.
-  const newRows: AnswerRow[] = Object.entries(kept).map(([q, v]) => ({
+  const keptRows: AnswerRow[] = Object.entries(kept).map(([q, v]) => ({
     qid: q,
     value: v,
     source: q === qid ? 'client' : sourceOf.get(q) ?? 'client',
   }));
-  return { step: stepFor(config, ctx, newRows, null), interrupt };
+
+  const stopped = await stopIfNeeded(deps, config, attempt, ctx, kept);
+  if (stopped) return { step: await getStep(deps, client, attempt.id), interrupt: null, answers: {}, saved: true };
+
+  // A newly raised flag is recorded once (also enforced by the table) and saves the answers at once.
+  const raised = firedFlags(config, ctx, kept).filter((f) => !before.some((b) => b.key === f.key));
+  const step = stepFor(config, ctx, keptRows, null);
+  const save = !!opts.flush || raised.length > 0 || step.kind === 'finish';
+  await Promise.all([
+    save ? deps.store.replaceAnswers(attempt.id, keptRows) : null,
+    ...raised.map((f) => deps.store.insertEvent(eventFor(attempt.id, f))),
+  ]);
+  const shown = raised.find((f) => f.effects.interrupt);
+  const interrupt: Interrupt | null = shown ? { flag: shown.key, text: flagText(config, shown.key) } : null;
+  return { step, interrupt, answers: clientAnswers(keptRows), saved: save };
 }
 
-export async function goBack(deps: ServiceDeps, client: ClientProfile, attemptId: string, fromQid: string | null): Promise<Step> {
-  const attempt = await ownAttempt(deps, client, attemptId);
-  if (attempt.status !== 'in_progress') return getStep(deps, client, attemptId);
-  const config = await deps.loadConfig(attempt.version_id);
-  const ctx = contextFor(client);
-  const rows = await deps.store.getAnswers(attempt.id);
+/** The question before `fromQid` (or the last one when null), from the draft. No database write. */
+export async function back(
+  deps: ServiceDeps,
+  client: ClientProfile,
+  attemptId: string,
+  draft: unknown,
+  fromQid: string | null
+): Promise<Step> {
+  const { config, ctx, rows } = await openDraft(deps, client, attemptId, draft);
   const answers = toAnswers(rows);
   const items = clientItems(getFlow(config, ctx, answers), rows);
   const from = fromQid ? items.findIndex((i) => i.qid === fromQid) : items.length;
   const target = items[Math.max(0, (from === -1 ? items.length : from) - 1)];
   if (!target) return stepFor(config, ctx, rows, null);
   return { kind: 'question', question: view(target, items, answers) };
+}
+
+/** Saves a buffered draft (e.g. when the tab is hidden). Does nothing once the attempt is closed. */
+export async function saveDraft(deps: ServiceDeps, client: ClientProfile, attemptId: string, draft: unknown): Promise<boolean> {
+  const attempt = await ownAttempt(deps, client, attemptId);
+  if (attempt.status !== 'in_progress') return false;
+  const { rows } = await openDraft(deps, client, attemptId, draft);
+  await deps.store.replaceAnswers(attempt.id, rows);
+  return true;
+}
+
+// Single-answer helpers on the saved answers (each call saves at once). Used by tests and scripts.
+
+export type SaveResult = AnswerResult;
+
+export async function saveAnswer(deps: ServiceDeps, client: ClientProfile, attemptId: string, qid: string, value: AnswerValue) {
+  const saved = (await openRunner(deps, client, attemptId)).answers;
+  return answer(deps, client, attemptId, saved, qid, value, { flush: true });
+}
+
+export async function goBack(deps: ServiceDeps, client: ClientProfile, attemptId: string, fromQid: string | null): Promise<Step> {
+  const { step, answers } = await openRunner(deps, client, attemptId);
+  if (step.kind !== 'question' && step.kind !== 'finish') return step;
+  return back(deps, client, attemptId, answers, fromQid);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -351,7 +448,14 @@ async function stopIfNeeded(
 }
 
 /** Scores the attempt with its pinned version and stores the result once. Safe to call again. */
-export async function submit(deps: ServiceDeps, client: ClientProfile, attemptId: string): Promise<{ status: 'completed' | 'stopped' }> {
+export async function submit(
+  deps: ServiceDeps,
+  client: ClientProfile,
+  attemptId: string,
+  draft?: unknown
+): Promise<{ status: 'completed' | 'stopped' }> {
+  // Buffered answers are saved first, so scoring always reads the database.
+  if (draft !== undefined) await saveDraft(deps, client, attemptId, draft);
   const attempt = await ownAttempt(deps, client, attemptId);
   if (attempt.status === 'completed' || (await deps.store.getResult(attempt.id))) {
     if (attempt.status !== 'completed') await completeAttempt(deps, attempt);

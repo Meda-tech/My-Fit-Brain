@@ -4,16 +4,20 @@ import type { TestCase, VersionConfig } from '@mfb/questionbank';
 import { loadOfflineBanks, type OfflineBank } from '@mfb/questionbank/offline';
 import type { ReportDocument } from '@mfb/report';
 import {
+  answer,
+  back,
   getStep,
   giveConsent,
   goBack,
   profileAnswers,
   saveAnswer,
+  saveDraft,
   setLanguage,
   startPurchase,
   submit,
   type ServiceDeps,
 } from '../lib/assessment/service';
+import type { Answers } from '@mfb/engine';
 import { AssessmentError, type ClientProfile, type ReportLanguageChoice, type Step } from '../lib/assessment/types';
 import { MemoryStore } from './memory-store';
 
@@ -197,6 +201,56 @@ describe('interrupts and events', () => {
   });
 });
 
+describe('buffered answers', () => {
+  it('answers stay in the draft until a flush, then are saved together', async () => {
+    const { deps, store } = setup();
+    const id = await started(deps, female, 'IA');
+    const before = (await store.getAnswers(id)).length;
+    let r = await answer(deps, female, id, {}, 'I4', '1_3_years');
+    expect([r.saved, r.answers]).toEqual([false, { I4: '1_3_years' }]);
+    expect((await store.getAnswers(id)).length).toBe(before);
+    r = await answer(deps, female, id, r.answers, 'I5', (r.step as Extract<Step, { kind: 'question' }>).question.options[0].code, {
+      flush: true,
+    });
+    expect(r.saved).toBe(true);
+    const saved = await store.getAnswers(id);
+    expect(saved.filter((x) => x.source === 'client').map((x) => x.qid).sort()).toEqual(['I4', 'I5']);
+    expect(saved.filter((x) => x.source === 'profile').map((x) => x.qid).sort()).toEqual(['I1', 'I2', 'I3', 'I8']);
+  });
+
+  it('a crisis answer is saved at once, without a flush', async () => {
+    const { deps, store } = setup();
+    const id = await started(deps, female, 'MA');
+    const r = await answer(deps, female, id, {}, 'MR5', 'yes');
+    expect([r.saved, r.interrupt?.flag]).toEqual([true, 'CRISIS']);
+    expect((await store.getAnswers(id)).find((x) => x.qid === 'MR5')?.value).toBe('yes');
+  });
+
+  it('rejects a stale or altered draft', async () => {
+    const { deps } = setup();
+    const id = await started(deps, female, 'IA');
+    await expectError(answer(deps, female, id, { A1: 'often' }, 'I4', '1_3_years'), 'STALE'); // A1 not shown yet
+    await expectError(answer(deps, female, id, { I4: 'forever' }, 'I6', 'no_they_do_not_know'), 'STALE');
+    await expectError(answer(deps, female, id, ['I4'], 'I4', '1_3_years'), 'STALE');
+    // Registration answers in a draft are ignored: the server always uses the profile.
+    const r = await answer(deps, female, id, { I2: 'male' }, 'I4', '1_3_years');
+    expect(r.answers).toEqual({ I4: '1_3_years' });
+  });
+
+  it('back and saveDraft work from the draft', async () => {
+    const { deps, store } = setup();
+    const id = await started(deps, female, 'IA');
+    const first = (await getStep(deps, female, id)) as Extract<Step, { kind: 'question' }>;
+    const r = await answer(deps, female, id, {}, first.question.qid, first.question.options[0].code);
+    const second = (r.step as Extract<Step, { kind: 'question' }>).question.qid;
+    const prev = (await back(deps, female, id, r.answers, second)) as Extract<Step, { kind: 'question' }>;
+    expect(prev.question.qid).toBe(first.question.qid);
+    expect(prev.question.saved).toBe(first.question.options[0].code);
+    expect(await saveDraft(deps, female, id, r.answers)).toBe(true);
+    expect((await store.getAnswers(id)).some((x) => x.qid === first.question.qid)).toBe(true);
+  });
+});
+
 describe('going back', () => {
   it('returns the previous question with its saved answer', async () => {
     const { deps } = setup();
@@ -228,18 +282,25 @@ function languageOf(config: VersionConfig, tc: TestCase): ReportLanguageChoice {
   return langs.length > 1 ? 'both' : (langs[0] as 'en' | 'hi');
 }
 
+const FLUSH_EVERY = 5;
+
 async function playThrough(deps: ServiceDeps, store: MemoryStore, config: VersionConfig, tc: TestCase, n: number) {
   const client = profileFor(config, tc, `client-${tc.name}-${n}`);
   const id = await started(deps, client, config.version.test_code, languageOf(config, tc));
+  // As the browser does it: answers buffered in a draft, saved every FLUSH_EVERY answers.
   let step = await getStep(deps, client, id);
+  let draft: Answers = {};
+  let unsaved = 0;
   for (let guard = 0; step.kind === 'question' && guard < 200; guard++) {
     const qid = step.question.qid;
     const value = tc.answers[qid];
     if (value === undefined) throw new Error(`${tc.name}: the flow asks ${qid}, which the test case does not answer`);
-    step = (await saveAnswer(deps, client, id, qid, value)).step;
+    const r = await answer(deps, client, id, draft, qid, value, { flush: unsaved + 1 >= FLUSH_EVERY });
+    ({ step, answers: draft } = r);
+    unsaved = r.saved ? 0 : unsaved + 1;
   }
   expect(step.kind).toBe('finish');
-  expect(await submit(deps, client, id)).toEqual({ status: 'completed' });
+  expect(await submit(deps, client, id, draft)).toEqual({ status: 'completed' });
   const stored = (await store.getResult(id))!;
   return { id, client, result: stored.result as AssessmentResult, report: stored.report as ReportDocument };
 }

@@ -66,6 +66,21 @@ export function supabaseAttemptStore(db: SupabaseClient): AttemptStore {
         });
       check(r, 'save answers');
     },
+    async replaceAnswers(attemptId, rows) {
+      // answered_at is left out: a new row gets now(), an existing row keeps its time.
+      const upsert = rows.length
+        ? db
+            .from('attempt_answers')
+            .upsert(rows.map((x) => ({ attempt_id: attemptId, qid: x.qid, value: x.value, source: x.source })), {
+              onConflict: 'attempt_id,qid',
+            })
+        : null;
+      let others = db.from('attempt_answers').delete().eq('attempt_id', attemptId);
+      if (rows.length) others = others.not('qid', 'in', `(${rows.map((x) => `"${x.qid}"`).join(',')})`);
+      const [u, d] = await Promise.all([upsert, others]);
+      if (u) check(u, 'save answers');
+      check(d, 'clear answers');
+    },
     async deleteAnswers(attemptId, qids) {
       let q = db.from('attempt_answers').delete().eq('attempt_id', attemptId);
       if (qids !== 'all') q = q.in('qid', qids);
