@@ -108,7 +108,11 @@ export async function startPurchase(deps: ServiceDeps, client: ClientProfile, te
   const prefill = profileAnswers(config, client);
   if (prefill.length) await deps.store.upsertAnswers(attempt.id, prefill);
   const stopped = await stopIfNeeded(deps, config, attempt, ctx, toAnswers(prefill));
-  return stopped ?? attempt;
+  if (stopped) return stopped;
+  // Flags raised by registration answers alone are recorded now; saveAnswer records only new ones.
+  const raised = firedFlags(config, ctx, toAnswers(prefill));
+  await Promise.all(raised.map((f) => deps.store.insertEvent(eventFor(attempt.id, f))));
+  return attempt;
 }
 
 /**
@@ -248,11 +252,12 @@ export async function saveAnswer(
   qid: string,
   value: AnswerValue
 ): Promise<SaveResult> {
-  const attempt = await ownAttempt(deps, client, attemptId);
+  // One round trip for the attempt and its answers; the ownership check follows before anything is used.
+  const [attempt, rows] = await Promise.all([deps.store.getAttempt(attemptId), deps.store.getAnswers(attemptId)]);
+  if (!attempt || attempt.client_id !== client.id) throw new AssessmentError('NOT_FOUND', 'Assessment not found.');
   if (attempt.status !== 'in_progress') throw new AssessmentError('WRONG_STATUS', 'This assessment is not open for answers.');
   const config = await deps.loadConfig(attempt.version_id);
   const ctx = contextFor(client);
-  const rows = await deps.store.getAnswers(attempt.id);
   const answers = toAnswers(rows);
 
   const flow = getFlow(config, ctx, answers);
@@ -263,33 +268,37 @@ export async function saveAnswer(
   const before = firedFlags(config, ctx, answers);
   const { answers: kept, removed } = pruneAnswers(config, ctx, { ...answers, [qid]: value });
   getFlow(config, ctx, kept); // the engine re-checks every answer
-  await deps.store.upsertAnswers(attempt.id, [{ qid, value, source: 'client' }]);
+
   // "removed" lists answers that disappeared and answers that lost choices (e.g. a gate option now
-  // hidden): keep what is left of the latter, delete the former.
+  // hidden): keep what is left of the latter, delete the former. Writes go out together.
   const sourceOf = new Map(rows.map((r) => [r.qid, r.source]));
   const trimmed = removed.filter((q) => q !== qid && kept[q] !== undefined);
   const gone = removed.filter((q) => kept[q] === undefined);
-  if (trimmed.length) {
-    await deps.store.upsertAnswers(
-      attempt.id,
-      trimmed.map((q) => ({ qid: q, value: kept[q], source: sourceOf.get(q) ?? 'client' }))
-    );
-  }
-  if (gone.length) await deps.store.deleteAnswers(attempt.id, gone);
+  const upserts: AnswerRow[] = [
+    { qid, value, source: 'client' },
+    ...trimmed.map((q) => ({ qid: q, value: kept[q], source: sourceOf.get(q) ?? ('client' as const) })),
+  ];
+  await Promise.all([
+    deps.store.upsertAnswers(attempt.id, upserts),
+    gone.length ? deps.store.deleteAnswers(attempt.id, gone) : null,
+  ]);
 
   const stopped = await stopIfNeeded(deps, config, attempt, ctx, kept);
   if (stopped) return { step: await getStep(deps, client, attempt.id), interrupt: null };
 
-  // Record events once per flag; show an interrupt screen when this answer newly raised it.
-  const after = firedFlags(config, ctx, kept);
-  let interrupt: Interrupt | null = null;
-  for (const flag of after) {
-    await deps.store.insertEvent(eventFor(attempt.id, flag));
-    if (flag.effects.interrupt && !before.some((b) => b.key === flag.key) && !interrupt) {
-      interrupt = { flag: flag.key, text: flagText(config, flag.key) };
-    }
-  }
-  const newRows = await deps.store.getAnswers(attempt.id);
+  // Record an event when a flag is newly raised (once per flag, also enforced by the table); show an
+  // interrupt screen for it.
+  const raised = firedFlags(config, ctx, kept).filter((f) => !before.some((b) => b.key === f.key));
+  await Promise.all(raised.map((f) => deps.store.insertEvent(eventFor(attempt.id, f))));
+  const shown = raised.find((f) => f.effects.interrupt);
+  const interrupt: Interrupt | null = shown ? { flag: shown.key, text: flagText(config, shown.key) } : null;
+
+  // The new answer set is known here; no need to read it back.
+  const newRows: AnswerRow[] = Object.entries(kept).map(([q, v]) => ({
+    qid: q,
+    value: v,
+    source: q === qid ? 'client' : sourceOf.get(q) ?? 'client',
+  }));
   return { step: stepFor(config, ctx, newRows, null), interrupt };
 }
 
