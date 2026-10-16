@@ -17,22 +17,9 @@ GitHub repo ──┬── Vercel project "mfb-clients"  Root Directory: client
 
 ## 1. Before the first deploy
 
-1. **Database.** In the Supabase SQL Editor, every migration in `supabase/migrations/` must be applied,
-   in file-name order (each is one paste-ready `BEGIN … COMMIT`):
-
-   | # | File | Checks |
-   |---|---|---|
-   | 1 | `20261013000000_phase1_init.sql` | |
-   | 2 | `20261013000001_renflair_sms_hook.sql` | |
-   | 3 | `20261015000000_mfb_foundation.sql` | `docs/tasks/02-verify.sql` |
-   | 4 | `20261016000000_question_bank.sql` | `docs/tasks/03-verify.sql` |
-   | 5 | `20261016100000_qb_rule_decisions.sql` | `docs/tasks/03b-apply.md`, `03b-verify.sql` |
-   | 6 | `20261017000000_qb_test_runs.sql` | `docs/tasks/04-apply.sql` |
-   | 7 | `20261018000000_attempts.sql` | `docs/tasks/06-apply.sql` |
-   | 8 | `20261019000000_attempt_privacy.sql` | `docs/tasks/06b-privacy-verify.sql` |
-   | 9 | `20261020000000_payments.sql` | `docs/tasks/08-payments-verify.sql` |
-   | 10 | `20261021000000_paid_attempt_atomic.sql` | `docs/tasks/08b-paid-attempt-verify.sql` |
-   | 11 | `20261022000000_payments_access.sql` | `docs/tasks/08c-payments-access-verify.sql` |
+1. **Database.** The current Supabase project already has every migration and the question bank. For a
+   **new** Supabase project follow `docs/deploy/new-supabase-project.md`: the question-bank load files
+   must run between certain migrations, so do not simply run every migration first.
 
 2. **GitHub.** Push the repository (private). `.gitignore` keeps out `node_modules/`, `.next/`, every
    `.env*` file except the `.env.example` templates, build output, logs and local tooling. Check before

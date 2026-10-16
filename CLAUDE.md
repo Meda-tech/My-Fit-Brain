@@ -385,7 +385,8 @@ existing migrations, `.env*` files.
   `npm test` passes when a package changed.
 - Deploy: two Vercel projects from this repository (Root Directory `clients` / `admin`, install
   `cd .. && npm ci`, include files outside the root). Full steps, env vars and checks:
-  `docs/deploy/vercel.md`. Next.js 16 uses `proxy.ts` (the old `middleware.ts` name is deprecated).
+  `docs/deploy/vercel.md`; a new Supabase project: `docs/deploy/new-supabase-project.md` (exact SQL order).
+  Next.js 16 uses `proxy.ts` (the old `middleware.ts` name is deprecated).
 - Security headers live in each app's `next.config.ts` (HSTS, nosniff, frame and permissions policy;
   admin also `noindex`). Local-network origins are trusted in development only.
 
