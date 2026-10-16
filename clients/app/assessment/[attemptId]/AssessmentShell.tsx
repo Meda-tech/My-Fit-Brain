@@ -3,6 +3,7 @@
 import { useFormStatus } from 'react-dom';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
+import type { Answers } from '@mfb/engine';
 import type { LocalPair, Step } from '../../../lib/assessment/types';
 import { BinduDot, Button, Card } from '../../../components/brand';
 import { giveConsentAction } from '../actions';
@@ -16,9 +17,11 @@ export function pickText(pair: LocalPair | null | undefined, lang: 'en' | 'hi'):
 export function AssessmentShell({
   attemptId,
   initialStep,
+  initialAnswers,
 }: {
   attemptId: string;
   initialStep: Step;
+  initialAnswers: Answers;
 }) {
   const { lang } = useLanguage();
   const t = translations[lang].assess;
@@ -52,7 +55,7 @@ export function AssessmentShell({
     );
   }
 
-  return <QuestionRunner attemptId={attemptId} initialStep={initialStep} />;
+  return <QuestionRunner attemptId={attemptId} initialStep={initialStep} initialAnswers={initialAnswers} />;
 }
 
 function ConsentSubmit({ label, busy }: { label: string; busy: string }) {

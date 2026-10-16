@@ -6,12 +6,24 @@ import { AlertCircle, ArrowLeft, ArrowRight, Check, Phone } from 'lucide-react';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
 import { CRISIS_HELPLINES } from '../../../lib/assessment/helplines';
+import type { Answers } from '@mfb/engine';
 import type { AnswerValue, Interrupt, QuestionView, Step } from '../../../lib/assessment/types';
 import { Button, Card, Notice, buttonClasses, cn } from '../../../components/brand';
-import { goBackAction, saveAnswerAction, submitAction } from '../actions';
+import { answerAction, backAction, submitAction } from '../actions';
 import { pickText } from './AssessmentShell';
 
-export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; initialStep: Step }) {
+/** Answers are saved in batches of this size (and at once on a flag, at the end, or when the tab hides). */
+const SAVE_EVERY = 5;
+
+export function QuestionRunner({
+  attemptId,
+  initialStep,
+  initialAnswers,
+}: {
+  attemptId: string;
+  initialStep: Step;
+  initialAnswers: Answers;
+}) {
   const router = useRouter();
   const { lang } = useLanguage();
   const t = translations[lang].assess;
@@ -21,15 +33,50 @@ export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; 
   const [pending, startTransition] = useTransition();
   const [preparing, setPreparing] = useState(false);
 
+  // The client's answers so far, and how many of them are not yet saved to the database.
+  const draft = useRef<Answers>(initialAnswers);
+  const unsaved = useRef(0);
+
+  // Save buffered answers when the tab is hidden or closed (keepalive lets the request finish).
+  useEffect(() => {
+    const flush = () => {
+      if (unsaved.current === 0) return;
+      unsaved.current = 0;
+      void fetch('/api/assessment/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, answers: draft.current }),
+        keepalive: true,
+      }).catch(() => undefined);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [attemptId]);
+
+  // A stale draft (e.g. answers changed in another tab) reloads the saved answers.
+  const fail = (code: string) => {
+    if (code === 'STALE' || code === 'WRONG_STATUS' || code === 'NOT_VISIBLE') {
+      unsaved.current = 0;
+      window.location.reload();
+      return;
+    }
+    setError(t.error);
+  };
+
   const answer = (qid: string, value: AnswerValue) =>
     startTransition(async () => {
       setError(null);
-      const r = await saveAnswerAction(attemptId, qid, value);
-      if (!r.ok) {
-        setError(t.error);
-        if (r.code === 'NOT_VISIBLE' || r.code === 'WRONG_STATUS') router.refresh();
-        return;
-      }
+      const r = await answerAction(attemptId, draft.current, qid, value, unsaved.current + 1 >= SAVE_EVERY);
+      if (!r.ok) return fail(r.code);
+      draft.current = r.answers;
+      unsaved.current = r.saved ? 0 : unsaved.current + 1;
       setStep(r.step);
       if (r.interrupt) setInterrupt(r.interrupt);
       window.history.replaceState(null, '', `/assessment/${attemptId}`);
@@ -38,11 +85,8 @@ export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; 
   const back = (fromQid: string | null) =>
     startTransition(async () => {
       setError(null);
-      const r = await goBackAction(attemptId, fromQid);
-      if (!r.ok) {
-        setError(t.error);
-        return;
-      }
+      const r = await backAction(attemptId, draft.current, fromQid);
+      if (!r.ok) return fail(r.code);
       setStep(r.step);
       if (r.step.kind === 'question') window.history.replaceState(null, '', `/assessment/${attemptId}?q=${r.step.question.qid}`);
     });
@@ -51,12 +95,12 @@ export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; 
     startTransition(async () => {
       setError(null);
       setPreparing(true);
-      const r = await submitAction(attemptId);
+      const r = await submitAction(attemptId, draft.current);
       if (!r.ok) {
         setPreparing(false);
-        setError(t.error);
-        return;
+        return fail(r.code);
       }
+      unsaved.current = 0;
       if (r.status === 'completed') router.push(`/report/${attemptId}`);
       else router.refresh();
     });

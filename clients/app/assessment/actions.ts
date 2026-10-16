@@ -1,16 +1,19 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { currentClient, serviceDeps } from '../../lib/assessment/server';
+import type { Answers } from '@mfb/engine';
+import { currentClient, forgetAttempt, serviceDeps } from '../../lib/assessment/server';
 import * as service from '../../lib/assessment/service';
 import { AssessmentError, type AnswerValue, type Interrupt, type Step } from '../../lib/assessment/types';
 
 // Server actions for the assessment screens. Each one resolves the signed-in client; the service checks
 // that the attempt is theirs and uses its pinned version. Errors come back as codes, never stack traces.
+// Answers are buffered in the browser and sent as a draft with every call (see service.ts, Questions).
 
 export type ActionError = { ok: false; code: string };
 
-function failure(err: unknown): ActionError {
+function failure(err: unknown, attemptId?: string): ActionError {
+  if (attemptId) forgetAttempt(attemptId);
   if (err instanceof AssessmentError) return { ok: false, code: err.code };
   console.error('Assessment action failed:', err);
   return { ok: false, code: 'ERROR' };
@@ -37,35 +40,40 @@ export async function giveConsentAction(formData: FormData): Promise<void> {
   redirect(`/assessment/${attemptId}`);
 }
 
-export async function saveAnswerAction(
+export async function answerAction(
   attemptId: string,
+  draft: Answers,
   qid: string,
-  value: AnswerValue
-): Promise<{ ok: true; step: Step; interrupt: Interrupt | null } | ActionError> {
+  value: AnswerValue,
+  flush: boolean
+): Promise<{ ok: true; step: Step; interrupt: Interrupt | null; answers: Answers; saved: boolean } | ActionError> {
   try {
     const client = await currentClient();
-    const r = await service.saveAnswer(serviceDeps(), client, attemptId, qid, value);
-    return { ok: true, step: r.step, interrupt: r.interrupt };
+    const r = await service.answer(serviceDeps({ cached: true }), client, attemptId, draft, qid, value, { flush });
+    return { ok: true, ...r };
   } catch (err) {
-    return failure(err);
+    return failure(err, attemptId);
   }
 }
 
-export async function goBackAction(attemptId: string, fromQid: string | null): Promise<{ ok: true; step: Step } | ActionError> {
+export async function backAction(attemptId: string, draft: Answers, fromQid: string | null): Promise<{ ok: true; step: Step } | ActionError> {
   try {
     const client = await currentClient();
-    return { ok: true, step: await service.goBack(serviceDeps(), client, attemptId, fromQid) };
+    return { ok: true, step: await service.back(serviceDeps({ cached: true }), client, attemptId, draft, fromQid) };
   } catch (err) {
-    return failure(err);
+    return failure(err, attemptId);
   }
 }
 
-export async function submitAction(attemptId: string): Promise<{ ok: true; status: 'completed' | 'stopped' } | ActionError> {
+export async function submitAction(
+  attemptId: string,
+  draft: Answers
+): Promise<{ ok: true; status: 'completed' | 'stopped' } | ActionError> {
   try {
     const client = await currentClient();
-    const r = await service.submit(serviceDeps(), client, attemptId);
+    const r = await service.submit(serviceDeps(), client, attemptId, draft);
     return { ok: true, status: r.status };
   } catch (err) {
-    return failure(err);
+    return failure(err, attemptId);
   }
 }

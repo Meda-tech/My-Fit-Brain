@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { currentClient, serviceDeps } from '../../../lib/assessment/server';
-import { getStep } from '../../../lib/assessment/service';
+import { openRunner } from '../../../lib/assessment/service';
+import type { Answers } from '@mfb/engine';
 import { AssessmentError, type Step } from '../../../lib/assessment/types';
 import { PageChrome } from '../../../components/PageChrome';
 import { AssessmentShell } from './AssessmentShell';
@@ -21,8 +22,9 @@ export default async function AssessmentPage({
   const { q } = await searchParams;
 
   let step: Step;
+  let answers: Answers;
   try {
-    step = await getStep(serviceDeps(), client, attemptId, q ?? null);
+    ({ step, answers } = await openRunner(serviceDeps(), client, attemptId, q ?? null));
   } catch (err) {
     if (err instanceof AssessmentError && err.code === 'NOT_FOUND') notFound();
     throw err;
@@ -31,7 +33,7 @@ export default async function AssessmentPage({
 
   return (
     <PageChrome nav={false}>
-      <AssessmentShell attemptId={attemptId} initialStep={step} />
+      <AssessmentShell attemptId={attemptId} initialStep={step} initialAnswers={answers} />
     </PageChrome>
   );
 }
