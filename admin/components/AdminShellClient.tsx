@@ -212,7 +212,7 @@ export function AdminShellClient({
       {/* Desktop sidebar */}
       <aside
         style={{ width: collapsed ? RAIL : FULL }}
-        className="fixed inset-y-0 left-0 z-30 hidden overflow-hidden transition-[width] duration-200 ease-out lg:block"
+        className="fixed inset-y-0 left-0 z-30 hidden overflow-hidden transition-[width] duration-200 ease-out lg:block print:hidden"
       >
         {renderPanel(collapsed)}
       </aside>
@@ -225,7 +225,7 @@ export function AdminShellClient({
         aria-expanded={!collapsed}
         {...tipHandlers(collapsed ? 'Expand menu' : 'Collapse menu', true)}
         style={{ left: (collapsed ? RAIL : FULL) - 14 }}
-        className="fixed top-12.5 z-40 hidden h-7 w-7 items-center justify-center rounded-full border border-sand bg-white text-teal shadow-card transition-[left,background-color] duration-200 ease-out hover:bg-mist lg:flex"
+        className="fixed top-12.5 z-40 hidden print:hidden h-7 w-7 items-center justify-center rounded-full border border-sand bg-white text-teal shadow-card transition-[left,background-color] duration-200 ease-out hover:bg-mist lg:flex"
       >
         {collapsed ? (
           <PanelLeftOpen size={15} strokeWidth={2} aria-hidden />
@@ -246,7 +246,7 @@ export function AdminShellClient({
       )}
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between bg-night px-2 lg:hidden">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between bg-night px-2 lg:hidden print:hidden">
         <button
           type="button"
           onClick={() => setOpenedOn(pathname)}
@@ -270,7 +270,7 @@ export function AdminShellClient({
 
       {/* Mobile drawer */}
       <div
-        className={cn('fixed inset-0 z-40 lg:hidden', mobileOpen ? '' : 'pointer-events-none')}
+        className={cn('fixed inset-0 z-40 lg:hidden print:hidden', mobileOpen ? '' : 'pointer-events-none')}
         aria-hidden={!mobileOpen}
         inert={!mobileOpen}
       >
@@ -307,13 +307,14 @@ export function AdminShellClient({
       <div
         className={cn(
           'flex min-h-screen min-w-0 flex-col overflow-x-clip transition-[padding] duration-200 ease-out',
-          collapsed ? 'lg:pl-20' : 'lg:pl-66'
+          collapsed ? 'lg:pl-20' : 'lg:pl-66',
+          'print:min-h-0 print:pl-0'
         )}
       >
-        <main className="mx-auto w-full min-w-0 max-w-300 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <main className="mx-auto w-full min-w-0 max-w-300 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10 print:max-w-none print:p-0">
           {children}
         </main>
-        <Footer />
+        <Footer className="print:hidden" />
       </div>
     </div>
   );

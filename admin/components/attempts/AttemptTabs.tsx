@@ -35,7 +35,7 @@ export function AttemptTabs({
 
   return (
     <div>
-      <div role="tablist" aria-label="Assessment sections" className="mb-6 flex gap-1 border-b border-sand">
+      <div role="tablist" aria-label="Assessment sections" className="mb-6 flex gap-1 border-b border-sand print:hidden">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -62,10 +62,10 @@ export function AttemptTabs({
           </button>
         ))}
       </div>
-      <div role="tabpanel" id="panel-report" aria-labelledby="tab-report" hidden={view !== 'report'}>
+      <div role="tabpanel" id="panel-report" aria-labelledby="tab-report" hidden={view !== 'report'} className="print:block!">
         {report}
       </div>
-      <div role="tabpanel" id="panel-counsellor" aria-labelledby="tab-counsellor" hidden={view !== 'counsellor'}>
+      <div role="tabpanel" id="panel-counsellor" aria-labelledby="tab-counsellor" hidden={view !== 'counsellor'} className="print:hidden">
         {counsellor}
       </div>
     </div>

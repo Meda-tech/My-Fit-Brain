@@ -6,6 +6,7 @@ import { PageHeader } from '../../../components/PageHeader';
 import { AttemptStatusPill, formatDateTime } from '../../../components/attempts/AttemptStatusPill';
 import { CounsellorView } from '../../../components/attempts/CounsellorView';
 import { AttemptTabs } from '../../../components/attempts/AttemptTabs';
+import { DownloadPdfButton } from '../../../components/attempts/DownloadPdfButton';
 import { canViewReports, getAttemptDetail } from '../../../lib/services/attempts';
 import { loadVersionConfig } from '../../../lib/question-bank/data';
 import { Lock } from 'lucide-react';
@@ -37,22 +38,24 @@ export default async function AttemptPage({
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
-      <PageHeader
-        back={{ href: `/clients/${attempt.client_id}`, label: `Back to ${detail.clientName ?? 'client'}` }}
-        eyebrow={
-          <>
-            <Pill tone="quiet">{attempt.test_name}</Pill>
-            <AttemptStatusPill status={attempt.status} />
-          </>
-        }
-        title={<span className="font-mono">{attempt.report_id}</span>}
-        description={
-          <>
-            Version {attempt.version_label} · paid {formatDateTime(attempt.paid_at)}
-            {attempt.payment_mode === 'stub' ? ' (test payment)' : ''} · completed {formatDateTime(attempt.completed_at)}
-          </>
-        }
-      />
+      <div className="print:hidden">
+        <PageHeader
+          back={{ href: `/clients/${attempt.client_id}`, label: `Back to ${detail.clientName ?? 'client'}` }}
+          eyebrow={
+            <>
+              <Pill tone="quiet">{attempt.test_name}</Pill>
+              <AttemptStatusPill status={attempt.status} />
+            </>
+          }
+          title={<span className="font-mono">{attempt.report_id}</span>}
+          description={
+            <>
+              Version {attempt.version_label} · paid {formatDateTime(attempt.paid_at)}
+              {attempt.payment_mode === 'stub' ? ' (test payment)' : ''} · completed {formatDateTime(attempt.completed_at)}
+            </>
+          }
+        />
+      </div>
 
       {withReport ? (
         <AttemptTabs
@@ -60,13 +63,19 @@ export default async function AttemptPage({
           alerts={detail.events.length}
           report={
             detail.report ? (
-              <ReportView
-                doc={detail.report}
-                lang="en"
-                logo={<Logo variant="endorsed" tone="colour" width={220} />}
-                seal={<Logo variant="seal" tone="colour" width={96} />}
-                labels={LABELS}
-              />
+              <div className="max-w-190">
+                <div className="mb-4 flex justify-end print:hidden">
+                  <DownloadPdfButton reportId={attempt.report_id} />
+                </div>
+                <ReportView
+                  doc={detail.report}
+                  lang="en"
+                  preparedFor={{ name: detail.clientName ?? 'Client', testName: attempt.test_name }}
+                  logo={<Logo variant="endorsed" tone="colour" width={220} />}
+                  seal={<Logo variant="seal" tone="colour" width={96} />}
+                  labels={LABELS}
+                />
+              </div>
             ) : (
               <Card className="max-w-202 p-5 text-[15px] text-ink-muted">The report appears here once the client finishes.</Card>
             )

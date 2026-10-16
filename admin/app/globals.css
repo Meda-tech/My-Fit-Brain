@@ -68,3 +68,19 @@ h1:lang(hi), h2:lang(hi), h3:lang(hi) { font-family: var(--font-heading-hi); lin
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* Report PDF (browser "Save as PDF"): A4, white page, brand colours kept. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html,
+  body {
+    background: var(--color-white) !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

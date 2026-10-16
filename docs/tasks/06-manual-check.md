@@ -74,6 +74,11 @@ nothing more can be answered.
    module %/bands, points breakdown, tier before/after overrides, format and who decided it, flags and
    tags (e.g. `CRISIS` on the Mind attempt), readiness, every answer with its question text and whether
    it came from registration, and safety events.
+   - The report header shows the client's name and the test name (not "Your report").
+   - **Download PDF** opens the print dialog; choose "Save as PDF". Expect one A4 report with no admin
+     menu, tabs or counsellor data, brand colours kept, suggested file name = the report ID.
+   - Client page: one **Client details** card (no auth user ID); "Created by" shows the staff name (also
+     when a coordinator or counsellor opens it) or "Self-registered (phone sign-in)"; dates in India time.
 4. As a **coordinator**, the same page shows status, dates and safety events only, with "Reports and
    answers are visible to counsellors and super admins only."
 5. Sign in as a client and try `/attempts/...` on the admin domain → no access.

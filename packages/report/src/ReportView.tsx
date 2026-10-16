@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import type { Lang, ReportArea, ReportDocument, ReportSection } from './types';
 
-// The web report, identical in the clients app and the admin. Sections follow the developer spec
-// (section 7). With both languages, each section shows English then Hindi. Counsellor-only data is
-// never part of the stored report, so it cannot appear here.
+// The web report, read by the care team (D22). Sections follow the developer spec (section 7). With
+// both languages, each section shows English then Hindi. Counsellor-only data is never part of the
+// stored report, so it cannot appear here. Print styles make the browser's "Save as PDF" an A4 report.
 
 export interface ReportViewProps {
   doc: ReportDocument;
@@ -13,8 +13,13 @@ export interface ReportViewProps {
   seal: ReactNode;
   /** UI words for the meta line, per language. */
   labels: Record<Lang, { reportId: string; date: string }>;
-  /** Show only this language when the report has it (the app's EN | हिं toggle). Omit to show all. */
+  /** Show only this language when the report has it. Omit to show all. */
   lang?: Lang;
+  /**
+   * Staff copy: the header names the client and the test instead of the version's client-facing
+   * title and subtitle ("Your report"). The report sections themselves are unchanged.
+   */
+  preparedFor?: { name: string; testName: string };
 }
 
 // Static class names so Tailwind generates them (band tokens are proposed, calm, never red).
@@ -35,7 +40,7 @@ function formatDate(iso: string, lang: Lang): string {
   return new Date(iso).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function ReportView({ doc, logo, seal, labels, lang: only }: ReportViewProps) {
+export function ReportView({ doc, logo, seal, labels, lang: only, preparedFor }: ReportViewProps) {
   const stored = doc.languages.filter((l) => doc.sections[l]);
   const langs = only && stored.includes(only) ? [only] : stored;
   const each = (render: (s: ReportSection, lang: Lang) => ReactNode) =>
@@ -58,14 +63,23 @@ export function ReportView({ doc, logo, seal, labels, lang: only }: ReportViewPr
         </section>
       )}
 
-      <section className="rounded-card border border-sand bg-white p-5 shadow-card sm:p-8">
+      <section className="rounded-card border border-sand bg-white p-5 shadow-card sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none">
         {/* Header */}
         <header className="mb-8 border-b border-sand pb-6">
           <div className="mb-5">{logo}</div>
           {each((s, lang) => (
             <>
-              {s.title && <h1 className="text-[26px] font-semibold leading-[1.25] text-teal sm:text-[30px]">{s.title}</h1>}
-              {s.subtitle && <p className="mt-2 text-[16px] text-ink-soft">{s.subtitle}</p>}
+              {preparedFor ? (
+                <>
+                  <h1 className="text-[26px] font-semibold leading-[1.25] text-teal sm:text-[30px]">{preparedFor.name}</h1>
+                  <p className="mt-2 text-[16px] font-medium text-ink-soft">{preparedFor.testName}</p>
+                </>
+              ) : (
+                <>
+                  {s.title && <h1 className="text-[26px] font-semibold leading-[1.25] text-teal sm:text-[30px]">{s.title}</h1>}
+                  {s.subtitle && <p className="mt-2 text-[16px] text-ink-soft">{s.subtitle}</p>}
+                </>
+              )}
               {s.designedBy && <p className="mt-1 text-[14px] text-ink-muted">{s.designedBy}</p>}
               <p className="mt-3 text-[13px] text-ink-muted">
                 {doc.reportId && (
@@ -208,7 +222,7 @@ export function ReportView({ doc, logo, seal, labels, lang: only }: ReportViewPr
 }
 
 function Block({ children }: { children: ReactNode }) {
-  return <section className="mb-8 last:mb-0">{children}</section>;
+  return <section className="mb-8 last:mb-0 print:mb-6">{children}</section>;
 }
 
 function Heading({ children }: { children: ReactNode }) {
@@ -232,7 +246,7 @@ function List({ items }: { items: string[] }) {
 function AreaBar({ area }: { area: ReportArea }) {
   const pct = Math.max(0, Math.min(100, area.percent ?? 0));
   return (
-    <li>
+    <li className="break-inside-avoid">
       <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-[15px] font-medium text-ink">{area.name ?? area.module}</span>
         <span className="flex items-center gap-2">
