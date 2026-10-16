@@ -8,26 +8,32 @@ select has_function_privilege('anon', 'public.create_paid_attempt(uuid,text,uuid
        has_function_privilege('authenticated', 'public.create_paid_attempt(uuid,text,uuid,text,timestamptz)', 'execute') as auth,  -- false
        has_function_privilege('service_role', 'public.create_paid_attempt(uuid,text,uuid,text,timestamptz)', 'execute') as service; -- true
 
--- 2. Same payment twice gives one attempt and takes one number. Runs inside a transaction that is
---    rolled back, so nothing is kept (uses the first client and the live Intimacy version).
+-- 2. Same payment twice gives one attempt and takes one number. Run this block ON ITS OWN (select
+--    from "begin;" to "rollback;" and run): the SQL Editor shows only the last result table.
+--    Everything is rolled back, so nothing is kept (uses the first client and the live Intimacy version).
+--    Expect one row: first_created = true, second_created = false, same_attempt = true, numbers_taken = 1.
 begin;
+create temp table paid_attempt_check (
+  first_created boolean, second_created boolean, same_attempt boolean, numbers_taken integer
+) on commit drop;
 do $$
 declare
   v_client uuid := (select id from public.clients order by created_at limit 1);
   v_version uuid := (select id from public.qb_versions where test_code = 'IA' and status = 'live');
-  v_before integer := coalesce((select last_number from public.report_counters
-                                where test_code = 'IA' and year = extract(year from (now() at time zone 'Asia/Kolkata'))::int), 0);
+  v_year integer := extract(year from (now() at time zone 'Asia/Kolkata'))::int;
+  v_before integer := coalesce((select last_number from public.report_counters where test_code = 'IA' and year = v_year), 0);
   a jsonb;
   b jsonb;
-  v_after integer;
 begin
   a := public.create_paid_attempt(v_client, 'IA', v_version, 'pay_verify_check', now());
   b := public.create_paid_attempt(v_client, 'IA', v_version, 'pay_verify_check', now());
-  v_after := (select last_number from public.report_counters
-              where test_code = 'IA' and year = extract(year from (now() at time zone 'Asia/Kolkata'))::int);
-  raise notice 'first created=%, second created=%, same attempt=%, numbers taken=%',
-    a->>'created', b->>'created', (a->'attempt'->>'id') = (b->'attempt'->>'id'), v_after - v_before;
-  -- Expect: first created=true, second created=false, same attempt=true, numbers taken=1
+  insert into paid_attempt_check values (
+    (a->>'created')::boolean,
+    (b->>'created')::boolean,
+    (a->'attempt'->>'id') = (b->'attempt'->>'id'),
+    (select last_number from public.report_counters where test_code = 'IA' and year = v_year) - v_before
+  );
 end;
 $$;
+select * from paid_attempt_check;
 rollback;
