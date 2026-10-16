@@ -173,8 +173,6 @@ export const translations = {
     profile: {
       title: 'My profile',
       email: 'Email',
-      language: 'Language',
-      languageNote: 'Questions show in this language.',
       privacy: 'Your information stays private.',
     },
   },
@@ -345,8 +343,6 @@ export const translations = {
     profile: {
       title: 'मेरी प्रोफ़ाइल',
       email: 'ईमेल',
-      language: 'भाषा',
-      languageNote: 'सवाल इसी भाषा में दिखेंगे।',
       privacy: 'आपकी जानकारी निजी रहती है।',
     },
   },

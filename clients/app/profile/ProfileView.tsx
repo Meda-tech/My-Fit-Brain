@@ -1,12 +1,11 @@
 'use client';
 
-import { Languages, Lock, LogOut } from 'lucide-react';
+import { Lock, LogOut } from 'lucide-react';
 import { ClientRecord } from '../../lib/types';
 import { isGender, isRelationshipStatus } from '../../lib/options';
 import { translations } from '../../lib/i18n';
 import { formatDisplayPhone } from '../../lib/phone';
 import { useLanguage } from '../../components/LanguageProvider';
-import { LanguageToggle } from '../../components/LanguageToggle';
 import { PageChrome } from '../../components/PageChrome';
 import { Button, Card, Footer } from '../../components/brand';
 
@@ -16,7 +15,7 @@ function initials(name: string): string {
 }
 
 export function ProfileView({ client }: { client: ClientRecord }) {
-  const { lang, setLang } = useLanguage();
+  const { lang } = useLanguage();
   const t = translations[lang];
   const location = [client.city, client.state].filter(Boolean).join(', ');
 
@@ -64,17 +63,6 @@ export function ProfileView({ client }: { client: ClientRecord }) {
         </dl>
       </Card>
 
-      {/* Language */}
-      <Card className="mt-4 flex items-center justify-between gap-4 p-5">
-        <div className="flex min-w-0 items-start gap-3">
-          <Languages size={20} strokeWidth={2} className="mt-0.5 shrink-0 text-teal" aria-hidden />
-          <div>
-            <h2 className="text-[16px] font-semibold text-ink">{t.profile.language}</h2>
-            <p className="mt-0.5 text-[14px] text-ink-muted">{t.profile.languageNote}</p>
-          </div>
-        </div>
-        <LanguageToggle currentLang={lang} onLanguageChange={setLang} />
-      </Card>
 
       <p className="mt-4 flex items-start gap-2 rounded-input bg-mist px-4 py-3 text-[14px] leading-5.5 text-ink-soft">
         <Lock size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-teal" aria-hidden />

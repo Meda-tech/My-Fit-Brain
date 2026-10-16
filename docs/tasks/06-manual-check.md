@@ -62,7 +62,7 @@ nothing more can be answered.
 
 1. On Home, Profile and the thank-you screen, a bottom tab bar shows **Home** and **Profile**; the active tab is
    teal with a mist pill. It is hidden on the payment and assessment screens.
-2. Profile shows initials, name, mobile, details (read-only), the language toggle, a privacy line and
+2. Profile shows initials, name, mobile, details (read-only), a privacy line and
    **Sign out**. The header no longer has a sign-out button.
 3. On a phone (or installed as an app) the tab bar sits above the home indicator.
 
