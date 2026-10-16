@@ -383,6 +383,11 @@ existing migrations, `.env*` files.
   `dev:clients`, `dev:admin`, `build`, `lint`, `test`, `qb:import`, `qb:patch`.
 - Before finishing any task: `npm run lint` and `npm run build` pass in every app you touched, and
   `npm test` passes when a package changed.
+- Deploy: two Vercel projects from this repository (Root Directory `clients` / `admin`, install
+  `cd .. && npm ci`, include files outside the root). Full steps, env vars and checks:
+  `docs/deploy/vercel.md`. Next.js 16 uses `proxy.ts` (the old `middleware.ts` name is deprecated).
+- Security headers live in each app's `next.config.ts` (HSTS, nosniff, frame and permissions policy;
+  admin also `noindex`). Local-network origins are trusted in development only.
 
 ## Status
 
