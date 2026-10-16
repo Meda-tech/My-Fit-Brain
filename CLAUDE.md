@@ -106,8 +106,8 @@ report text. If something is not covered, stop and ask rather than guess.
 - **MFB Intimacy Assessment** — ID `MFB-IA-YYYY-NNNNN`
 - **MFB Mind Assessment** — ID `MFB-MA-YYYY-NNNNN`
 - Progress re-tests append `-P1`, `-P2`, `-P3`. PDF file name = ID only.
-- Each costs ₹3,500 and includes the assessment, the report and one consultation. No price anywhere
-  except the payment step. Progress re-tests are included, never charged.
+- Each costs ₹3,500 and includes the assessment and one consultation. The report is for the care team
+  only (D22). No price anywhere except the payment step. Progress re-tests are included, never charged.
 - Display line under each name: "Designed by Dr. Neha Mehta".
 - One person per assessment. A partner takes and pays for their own; reports are never linked.
 - One engine, two configurations. Question banks are versioned DB config imported from the Excel
@@ -151,7 +151,8 @@ report text. If something is not covered, stop and ask rather than guess.
 
 Phone OTP login → registration (name, gender, age, relationship status, city, state, email;
 under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID assigned on payment success
-→ one-line consent → remaining intake → gate (max 2) → core → modules → dose → flags → report.
+→ one-line consent → remaining intake → gate (max 2) → core → modules → dose → flags → submit
+("nothing can be changed after this") → thank-you screen. The client never sees the report (D22).
 
 - Registration age → I1 / MI1 band. Registration gender → I2 / MI2. Never ask twice.
 - Gender options: Male / Female / Prefer not to say.
@@ -170,15 +171,15 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
 - Each attempt is **pinned** to the version that was live when it was paid (`version_id`). Answers,
   scoring and the report always use that version, even after a newer version goes live.
 - Answers from registration are stored with `source = profile` and never asked again. The
-  report-language question (I8 / MI5) is never asked: it is answered Both at payment and the report
-  follows the EN | हिं toggle (D21). Completed and
+  report-language question (I8 / MI5) is never asked: it is answered English at payment (D21). Completed and
   stopped attempts are frozen by triggers.
 - Payments: until the live gateway task, `PAYMENTS_MODE=stub` (local / preview only) shows a
   "Mark as paid (testing)" button. The stub is always off when `VERCEL_ENV=production`. Never set it in
   production.
-- The report is built once at submit from the engine result and stored in `attempt_results.report`.
-  The web report (`@mfb/report` `ReportView`, same in both apps) renders only that stored document;
-  never re-score or rebuild it for display.
+- The report is built once at submit from the engine result, in English, and stored in
+  `attempt_results.report`. Only super admins and counsellors see it (admin → attempt; `ReportView` from
+  `@mfb/report`), never clients or coordinators (D22; RLS `can_view_reports()` on `attempt_answers` and
+  `attempt_results`). Never re-score or rebuild it for display.
 - Crisis / safety / age-stop flags write one `attempt_events` row each (unique per flag) for staff.
 - Answering is built to need no database read in the usual case: the browser sends its draft answers,
   the server checks the whole draft against the pinned version (`resolveDraft`), and the attempt row and
@@ -189,9 +190,10 @@ under 18 → AGE_STOP, save nothing) → choose test → payment ₹3,500 → ID
   `getAuthUser()`), which verifies the token locally when the project uses asymmetric JWT signing keys
   (Supabase Dashboard → Project Settings → JWT Keys). With the legacy shared secret it falls back to an
   Auth server call per request.
-- URLs and titles carry no test name: `/payment/<code>`, `/assessment/<uuid>`, `/report/<uuid>`.
+- URLs and titles carry no test name: `/payment/<code>`, `/assessment/<uuid>`.
 - Client app shell: `components/PageChrome.tsx` = sticky header + bottom tab bar (`BottomNav`: Home `/`,
-  Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile.
+  Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile. Home
+  lists the client's assessments (status and date only, no report).
 - Prefer canonical Tailwind classes (`min-h-11`, not `min-h-[44px]`); keep arbitrary values only for
   sizes off the 4px scale (font sizes, `calc()`, safe-area).
 

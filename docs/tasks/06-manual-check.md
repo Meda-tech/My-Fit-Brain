@@ -1,6 +1,7 @@
 # Task 06 — manual click-through
 
-Run this after `docs/tasks/06-apply.sql` is applied on the testing database.
+Run this after `docs/tasks/06-apply.sql` and `supabase/migrations/20261019000000_attempt_privacy.sql`
+(checks: `docs/tasks/06b-privacy-verify.sql`) are applied on the testing database.
 No local database was available while building Task 06, so the scripted runs (Step 5.2) used the
 in-memory store with the real engine and the real IA 1.2 / MA 1.1 configs (`clients/test/service.test.ts`).
 This click-through is the check against the real database.
@@ -33,11 +34,11 @@ This click-through is the check against the real database.
    - Expect: the flow switches to the solo path; answers that are no longer visible are removed
      (admin → attempt → Answers no longer lists partner-only items) and the gate keeps only choices that
      are still offered.
-9. Answer to the end (R5 = No). Finish screen → **See my report**.
-   - Expect: "Preparing your report", then `/report/<uuid>` with the endorsed logo, report ID, date,
-     snapshot bars (calm colours, no red), strengths / stuck, plan line, next step, founder seal.
-   - Switch EN | हिं in the header: the report changes language (both are stored).
-10. Reload `/assessment/<uuid>` → redirects to the report. Answers can no longer change.
+9. Answer to the end (R5 = No). The submit screen says "When you submit, your answers are saved.
+   Nothing can be changed after this." with **Submit my answers** and **Back**.
+   - Expect: "Saving your answers...", then a thank-you screen. No report anywhere in the client app;
+     `/report/<uuid>` is a 404. Home → Your assessments shows "Completed" with the date, not clickable.
+10. Reload `/assessment/<uuid>` → the thank-you screen. Answers can no longer change.
 
 ## B. Mind, crisis answer
 
@@ -47,8 +48,9 @@ This click-through is the check against the real database.
      (Tele-MANAS 14416 and 1-800-891-4416, `tel:` links that open the dialer on a phone) and
      "Continue the assessment". No red, no alarm icons.
    - Admin → attempt → Safety events shows one `crisis` event (answering again does not add a second).
-3. Continue to the end and open the report.
-   - Expect: crisis layout — crisis block first, no plan line and no focus lines.
+3. Continue to the end and submit.
+   - Expect (admin, as super admin or counsellor): crisis layout — crisis block first, no plan line and
+     no focus lines.
 
 ## C. Under 18 (optional)
 
@@ -58,7 +60,7 @@ nothing more can be answered.
 
 ## C2. App shell
 
-1. On Home, Profile and the report, a bottom tab bar shows **Home** and **Profile**; the active tab is
+1. On Home, Profile and the thank-you screen, a bottom tab bar shows **Home** and **Profile**; the active tab is
    teal with a mist pill. It is hidden on the payment and assessment screens.
 2. Profile shows initials, name, mobile, details (read-only), the language toggle, a privacy line and
    **Sign out**. The header no longer has a sign-out button.
@@ -68,12 +70,13 @@ nothing more can be answered.
 
 1. Dashboard: "Assessments completed" and "In progress" counts match A and B.
 2. Client detail → Assessments: both attempts with report ID, test, version, status, dates.
-3. `/attempts/<id>`: the client report exactly as the client sees it, and the Counsellor view —
+3. As a **super admin or counsellor**, `/attempts/<id>`: the report in English, and the Counsellor view —
    module %/bands, points breakdown, tier before/after overrides, format and who decided it, flags and
    tags (e.g. `CRISIS` on the Mind attempt), readiness, every answer with its question text and whether
    it came from registration, and safety events.
-4. Sign in as a client and try `/attempts/...` on the admin domain → no access. Try another client's
-   `/report/<uuid>` on the client app → not found.
+4. As a **coordinator**, the same page shows status, dates and safety events only, with "Reports and
+   answers are visible to counsellors and super admins only."
+5. Sign in as a client and try `/attempts/...` on the admin domain → no access.
 
 ## E. Payments off
 
