@@ -70,7 +70,7 @@ nothing more can be answered.
 
 1. Dashboard: "Assessments completed" and "In progress" counts match A and B.
 2. Client detail → Assessments: both attempts with report ID, test, version, status, dates.
-3. As a **super admin or counsellor**, `/attempts/<id>`: the report in English, and the Counsellor view —
+3. As a **super admin or counsellor**, `/attempts/<id>`: two tabs, **Report** (English) and **Counsellor view** (switch without scrolling; `?view=counsellor` opens the second tab) —
    module %/bands, points breakdown, tier before/after overrides, format and who decided it, flags and
    tags (e.g. `CRISIS` on the Mind attempt), readiness, every answer with its question text and whether
    it came from registration, and safety events.
