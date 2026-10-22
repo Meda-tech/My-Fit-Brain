@@ -4,6 +4,10 @@ import { APP_HOSTS } from "./lib/site";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+// Dev only: phone testing over the local network. Any private address (home and office Wi-Fi hand out
+// different ones), so a new IP never blocks the dev server. "*" matches one part of the address.
+const LOCAL_NETWORK = ["192.168.*.*", "10.*.*.*", "172.*.*.*"];
+
 // Security headers for every response. HSTS: HTTPS only (Vercel serves HTTPS).
 const SECURITY_HEADERS = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -20,15 +24,15 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, ".."),
   // Shared workspace packages (TypeScript source, no build step).
   transpilePackages: ["@mfb/questionnaire"],
-  // Dev only: phone testing over the local network.
-  allowedDevOrigins: ["192.168.29.64", "192.168.29.*", "localhost"],
+  // Dev only: phone testing over the local network. Read when `next dev` starts: restart after a change.
+  allowedDevOrigins: ["localhost", ...LOCAL_NETWORK],
   experimental: {
     serverActions: {
       allowedOrigins: [
         // Both app origins, from NEXT_PUBLIC_CLIENTS_URL / NEXT_PUBLIC_ADMIN_URL.
         ...APP_HOSTS,
         // Dev only: phone testing over the local network. Never trusted in production.
-        ...(isDev ? ["192.168.29.64:3000", "192.168.29.64:3001", "192.168.29.64"] : []),
+        ...(isDev ? LOCAL_NETWORK : []),
       ],
     },
   },
