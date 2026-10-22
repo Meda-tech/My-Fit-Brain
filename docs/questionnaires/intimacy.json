@@ -1,0 +1,4557 @@
+{
+  "title": {
+    "en": "MFB Intimacy Assessment",
+    "hi": "MFB इंटिमेसी असेसमेंट"
+  },
+  "subtitle": {
+    "en": "Prepared for your consultation with the My Fit Brain team",
+    "hi": "माई फ़िट ब्रेन टीम के साथ आपके परामर्श के लिए तैयार"
+  },
+  "closing": {
+    "en": "It is normal to feel unsure at this stage. Your consultation is a safe place to ask every question before anything begins. The plan above is a recommendation, not a commitment.",
+    "hi": "इस मोड़ पर असमंजस होना सामान्य है। आपका परामर्श एक सुरक्षित जगह है जहाँ कुछ भी शुरू होने से पहले आप हर सवाल पूछ सकते हैं। ऊपर की योजना एक सलाह है, बंधन नहीं।"
+  },
+  "disclaimer": {
+    "en": "This report is based on your own answers and is prepared to guide your consultation with the My Fit Brain team. It is a counselling assessment, not a medical diagnosis, and it does not promise a result. Your counsellor will confirm or adjust the plan with you in your consultation. Your answers are confidential.",
+    "hi": "यह रिपोर्ट आपके अपने जवाबों पर आधारित है और माई फ़िट ब्रेन टीम के साथ आपके परामर्श को दिशा देने के लिए बनाई गई है। यह एक काउंसलिंग असेसमेंट है, मेडिकल निदान नहीं, और यह किसी नतीजे का वादा नहीं करती। आपका काउंसलर परामर्श में आपके साथ योजना की पुष्टि या बदलाव करेगा। आपके जवाब गोपनीय हैं।"
+  },
+  "ranges": [
+    {
+      "up_to": 25,
+      "en": "Low",
+      "hi": "कम"
+    },
+    {
+      "up_to": 50,
+      "en": "Mild",
+      "hi": "हल्का"
+    },
+    {
+      "up_to": 75,
+      "en": "Moderate",
+      "hi": "मध्यम"
+    },
+    {
+      "up_to": 100,
+      "en": "High",
+      "hi": "ज़्यादा"
+    }
+  ],
+  "plan": [
+    {
+      "range": 1,
+      "name": {
+        "en": "Clarity Plan",
+        "hi": "स्पष्टता योजना"
+      },
+      "sessions": 4,
+      "pace": {
+        "en": "weekly, about 1 month",
+        "hi": "हर हफ्ते, लगभग 1 महीना"
+      }
+    },
+    {
+      "range": 2,
+      "name": {
+        "en": "Reset Plan",
+        "hi": "रीसेट योजना"
+      },
+      "sessions": 6,
+      "pace": {
+        "en": "weekly, about 6 weeks",
+        "hi": "हर हफ्ते, लगभग 6 हफ्ते"
+      }
+    },
+    {
+      "range": 3,
+      "name": {
+        "en": "Rebuild Plan",
+        "hi": "पुनर्निर्माण योजना"
+      },
+      "sessions": 8,
+      "pace": {
+        "en": "weekly, about 2 months",
+        "hi": "हर हफ्ते, लगभग 2 महीने"
+      }
+    },
+    {
+      "range": 4,
+      "name": {
+        "en": "Transformation Plan",
+        "hi": "परिवर्तन योजना"
+      },
+      "sessions": 12,
+      "pace": {
+        "en": "weekly then fortnightly, about 3 months",
+        "hi": "पहले हर हफ्ते फिर हर 15 दिन, लगभग 3 महीने"
+      }
+    }
+  ],
+  "sections": [
+    {
+      "id": "s_intake",
+      "title": {
+        "en": "About you",
+        "hi": "आपके बारे में"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_i4",
+          "text": {
+            "en": "How long have you been with your current partner?",
+            "hi": "आप अपने वर्तमान साथी के साथ कितने समय से हैं?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_under_1_year",
+              "text": {
+                "en": "Less than 1 year",
+                "hi": "1 साल से कम"
+              },
+              "value": null
+            },
+            {
+              "id": "o_1_3_years",
+              "text": {
+                "en": "1–3 years",
+                "hi": "1–3 साल"
+              },
+              "value": null
+            },
+            {
+              "id": "o_3_10_years",
+              "text": {
+                "en": "3–10 years",
+                "hi": "3–10 साल"
+              },
+              "value": null
+            },
+            {
+              "id": "o_over_10_years",
+              "text": {
+                "en": "More than 10 years",
+                "hi": "10 साल से ज़्यादा"
+              },
+              "value": null
+            },
+            {
+              "id": "o_not_applicable",
+              "text": {
+                "en": "Not applicable",
+                "hi": "लागू नहीं"
+              },
+              "value": null
+            }
+          ]
+        },
+        {
+          "id": "q_i5",
+          "text": {
+            "en": "Where do you live?",
+            "hi": "आप कहाँ रहते हैं?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_india",
+              "text": {
+                "en": "India",
+                "hi": "भारत"
+              },
+              "value": null
+            },
+            {
+              "id": "o_outside_india",
+              "text": {
+                "en": "Outside India",
+                "hi": "भारत के बाहर"
+              },
+              "value": null
+            }
+          ]
+        },
+        {
+          "id": "q_i6",
+          "text": {
+            "en": "Does your partner know you are doing this assessment?",
+            "hi": "क्या आपके साथी को पता है कि आप यह असेसमेंट कर रहे हैं?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_yes_willing",
+              "text": {
+                "en": "Yes, and they are willing to join sessions",
+                "hi": "हाँ, और वे सेशन में साथ आने को तैयार हैं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_yes_not_willing",
+              "text": {
+                "en": "Yes, but they are not willing",
+                "hi": "हाँ, पर वे तैयार नहीं हैं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_no_does_not_know",
+              "text": {
+                "en": "No, they do not know",
+                "hi": "नहीं, उन्हें नहीं पता"
+              },
+              "value": null
+            },
+            {
+              "id": "o_no_partner",
+              "text": {
+                "en": "I do not have a partner right now",
+                "hi": "अभी मेरा कोई साथी नहीं है"
+              },
+              "value": null
+            }
+          ]
+        },
+        {
+          "id": "q_i7",
+          "text": {
+            "en": "Children",
+            "hi": "बच्चे"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no_children",
+              "text": {
+                "en": "No children",
+                "hi": "कोई बच्चा नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_have_children",
+              "text": {
+                "en": "Yes, we have children",
+                "hi": "हाँ, बच्चे हैं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_trying_to_conceive",
+              "text": {
+                "en": "We are trying to conceive",
+                "hi": "हम बच्चे की कोशिश कर रहे हैं"
+              },
+              "value": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s_gate",
+      "title": {
+        "en": "What brings you here",
+        "hi": "आप यहाँ क्यों आए हैं"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_g1",
+          "text": {
+            "en": "Where do you feel stuck right now? (choose up to 2)",
+            "hi": "अभी आप ज़िंदगी में कहाँ अटका हुआ महसूस करते हैं? (ज़्यादा से ज़्यादा 2 चुनें)"
+          },
+          "multiple": true,
+          "max_choices": 2,
+          "options": [
+            {
+              "id": "o_a",
+              "text": {
+                "en": "Fights, distance or trust issues in my marriage/relationship",
+                "hi": "शादी/रिश्ते में झगड़े, दूरी या भरोसे की कमी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_b",
+              "text": {
+                "en": "We feel disconnected, little desire or no intimacy",
+                "hi": "हम कटे-कटे महसूस करते हैं, इच्छा कम है या नज़दीकी नहीं है"
+              },
+              "value": null
+            },
+            {
+              "id": "o_c",
+              "text": {
+                "en": "My performance or confidence during intimacy (men)",
+                "hi": "नज़दीकी के समय मेरा प्रदर्शन या आत्मविश्वास (पुरुष)"
+              },
+              "value": null
+            },
+            {
+              "id": "o_d",
+              "text": {
+                "en": "Discomfort, pain or fear during intimacy (women)",
+                "hi": "नज़दीकी के समय असहजता, दर्द या डर (महिला)"
+              },
+              "value": null
+            },
+            {
+              "id": "o_e",
+              "text": {
+                "en": "Porn or habits I cannot control",
+                "hi": "पोर्न या ऐसी आदतें जो मैं रोक नहीं पाता/पाती"
+              },
+              "value": null
+            },
+            {
+              "id": "o_f",
+              "text": {
+                "en": "Stress, low mood or low confidence hurting my relationship",
+                "hi": "तनाव, उदासी या कम आत्मविश्वास जो रिश्ते को नुकसान पहुँचा रहा है"
+              },
+              "value": null
+            },
+            {
+              "id": "o_g",
+              "text": {
+                "en": "A past hurt or broken trust that still affects us",
+                "hi": "कोई पुराना दर्द या टूटा भरोसा जो अब भी हम पर असर करता है"
+              },
+              "value": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s_core",
+      "title": {
+        "en": "Relationship Health",
+        "hi": "रिश्ते की सेहत"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_c1",
+          "text": {
+            "en": "I feel happy in my relationship overall.",
+            "hi": "कुल मिलाकर मैं अपने रिश्ते में खुश हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_c2",
+          "text": {
+            "en": "We can talk about difficult things without it turning into a fight.",
+            "hi": "हम मुश्किल बातों पर बिना झगड़े के बात कर पाते हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_c3",
+          "text": {
+            "en": "I feel my partner understands what I am going through.",
+            "hi": "मुझे लगता है मेरा साथी समझता है कि मैं किस दौर से गुज़र रहा/रही हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_c4",
+          "text": {
+            "en": "Small issues turn into big arguments.",
+            "hi": "छोटी बातें बड़े झगड़ों में बदल जाती हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_c5",
+          "text": {
+            "en": "I feel emotionally distant from my partner.",
+            "hi": "मैं अपने साथी से भावनात्मक रूप से दूर महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_c6",
+          "text": {
+            "en": "I trust my partner.",
+            "hi": "मुझे अपने साथी पर भरोसा है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_c7",
+          "text": {
+            "en": "I am satisfied with the physical closeness in my relationship.",
+            "hi": "मैं अपने रिश्ते की शारीरिक नज़दीकी से संतुष्ट हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_c8",
+          "text": {
+            "en": "I avoid intimacy or find reasons to delay it.",
+            "hi": "मैं नज़दीकी से बचता/बचती हूँ या उसे टालने के बहाने ढूँढता/ढूँढती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_c9",
+          "text": {
+            "en": "I feel confident about myself as a partner.",
+            "hi": "एक साथी के रूप में मुझे खुद पर भरोसा है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_c10",
+          "text": {
+            "en": "Stress from work, family or money affects my relationship.",
+            "hi": "काम, परिवार या पैसों का तनाव मेरे रिश्ते पर असर डालता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_c11",
+          "text": {
+            "en": "I have thought about separation or ending the relationship.",
+            "hi": "मैंने अलग होने या रिश्ता खत्म करने के बारे में सोचा है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_c12",
+          "text": {
+            "en": "I feel hopeful that things can improve.",
+            "hi": "मुझे उम्मीद है कि चीज़ें बेहतर हो सकती हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": null
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": null
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_i6",
+        "is_not": [
+          "o_no_partner"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "Your relationship has a solid base. The specific area you chose is where the work is, not the relationship itself.",
+            "hi": "आपके रिश्ते की नींव मज़बूत है। काम उस खास क्षेत्र पर है जो आपने चुना, रिश्ते पर नहीं।"
+          },
+          {
+            "en": "The relationship is mostly working, with a few patterns that create friction. These are usually quick to shift once named.",
+            "hi": "रिश्ता ज़्यादातर ठीक चल रहा है, कुछ ऐसी आदतें हैं जो रगड़ पैदा करती हैं। इन्हें पहचानते ही ये अक्सर जल्दी बदल जाती हैं।"
+          },
+          {
+            "en": "Distance, repeated arguments or reduced closeness are showing up regularly. The pattern is clear enough to work on directly.",
+            "hi": "दूरी, बार-बार के झगड़े या कम होती नज़दीकी नियमित रूप से दिख रही है। यह पैटर्न इतना साफ है कि इस पर सीधे काम किया जा सकता है।"
+          },
+          {
+            "en": "The relationship is under real strain right now. This is exactly when structured sessions help most, because both of you need a safe, guided space.",
+            "hi": "रिश्ता अभी सचमुच दबाव में है। यही वह समय है जब संरचित सेशन सबसे ज़्यादा मदद करते हैं, क्योंकि आप दोनों को एक सुरक्षित, मार्गदर्शित जगह चाहिए।"
+          }
+        ],
+        "focus": []
+      }
+    },
+    {
+      "id": "s_solo_core",
+      "title": {
+        "en": "Self & Relationships",
+        "hi": "खुद और रिश्ते"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_cs1",
+          "text": {
+            "en": "I feel comfortable with who I am when it comes to love and closeness.",
+            "hi": "प्यार और नज़दीकी के मामले में मैं जैसा/जैसी हूँ, उससे मैं सहज हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_cs2",
+          "text": {
+            "en": "I feel lonely when it comes to love and closeness.",
+            "hi": "प्यार और नज़दीकी के मामले में मैं अकेलापन महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_cs3",
+          "text": {
+            "en": "I worry that I will not be good enough for a partner.",
+            "hi": "मुझे चिंता रहती है कि मैं किसी साथी के लिए काफी अच्छा/अच्छी नहीं हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_cs4",
+          "text": {
+            "en": "I feel confident about intimacy when the time comes.",
+            "hi": "समय आने पर नज़दीकी को लेकर मुझे खुद पर भरोसा है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_cs5",
+          "text": {
+            "en": "I avoid dating or getting close to someone.",
+            "hi": "मैं किसी से मिलने-जुलने या करीब आने से बचता/बचती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_cs6",
+          "text": {
+            "en": "Pressure from family about marriage or relationships affects me.",
+            "hi": "शादी या रिश्ते को लेकर परिवार का दबाव मुझ पर असर डालता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_cs7",
+          "text": {
+            "en": "A past relationship still affects how I feel today.",
+            "hi": "कोई पुराना रिश्ता आज भी मेरी भावनाओं पर असर डालता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_cs8",
+          "text": {
+            "en": "I find it hard to trust people in close relationships.",
+            "hi": "करीबी रिश्तों में लोगों पर भरोसा करना मुझे मुश्किल लगता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_cs9",
+          "text": {
+            "en": "I can talk openly about my needs with people close to me.",
+            "hi": "मैं अपने करीबी लोगों से अपनी ज़रूरतों के बारे में खुलकर बात कर पाता/पाती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_cs10",
+          "text": {
+            "en": "I feel hopeful about my love life.",
+            "hi": "अपने प्रेम जीवन को लेकर मुझे उम्मीद है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": null
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": null
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_i6",
+        "is": [
+          "o_no_partner"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "You are in a steady place with yourself. The specific area you chose is where the work is.",
+            "hi": "आप खुद के साथ एक स्थिर जगह पर हैं। काम उस खास क्षेत्र पर है जो आपने चुना।"
+          },
+          {
+            "en": "You are mostly comfortable, with a few worries about love and closeness. These usually ease quickly once they are talked through.",
+            "hi": "आप ज़्यादातर सहज हैं, प्यार और नज़दीकी को लेकर कुछ चिंताएँ हैं। बात करने पर ये अक्सर जल्दी हल्की हो जाती हैं।"
+          },
+          {
+            "en": "Worry, loneliness or past experiences are shaping how you approach love and closeness. The pattern is clear enough to work on directly.",
+            "hi": "चिंता, अकेलापन या पुराने अनुभव यह तय कर रहे हैं कि आप प्यार और नज़दीकी को कैसे देखते हैं। यह पैटर्न इतना साफ है कि इस पर सीधे काम किया जा सकता है।"
+          },
+          {
+            "en": "Love and closeness feel heavy right now, and this is affecting how you see yourself. A safe, guided space helps most at exactly this stage.",
+            "hi": "अभी प्यार और नज़दीकी भारी लग रहे हैं, और इसका असर इस पर पड़ रहा है कि आप खुद को कैसे देखते हैं। ठीक इसी समय एक सुरक्षित, मार्गदर्शित जगह सबसे ज़्यादा मदद करती है।"
+          }
+        ],
+        "focus": []
+      }
+    },
+    {
+      "id": "s_a",
+      "title": {
+        "en": "Marriage & Communication",
+        "hi": "विवाह और बातचीत"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_a1",
+          "text": {
+            "en": "We go days without a real conversation.",
+            "hi": "कई दिन बिना किसी असली बातचीत के निकल जाते हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_a2",
+          "text": {
+            "en": "Family (parents, in-laws) involvement creates tension between us.",
+            "hi": "परिवार (माता-पिता, ससुराल) की दखल से हमारे बीच तनाव होता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_a3",
+          "text": {
+            "en": "When we argue, one of us shuts down or walks away.",
+            "hi": "झगड़े के समय हममें से कोई चुप हो जाता है या चला जाता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_a4",
+          "text": {
+            "en": "Old fights come up again and again.",
+            "hi": "पुराने झगड़े बार-बार उठते हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_a5",
+          "text": {
+            "en": "I feel I give more to this relationship than I get back.",
+            "hi": "मुझे लगता है मैं इस रिश्ते में जितना देता/देती हूँ, उतना मिलता नहीं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_a6",
+          "text": {
+            "en": "Decisions about money, children or home cause conflict.",
+            "hi": "पैसे, बच्चों या घर के फैसलों पर टकराव होता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_a7",
+          "text": {
+            "en": "I feel respected by my partner.",
+            "hi": "मेरा साथी मुझे सम्मान देता है, ऐसा मुझे लगता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_a8",
+          "text": {
+            "en": "We make time for each other without phones or family around.",
+            "hi": "हम एक-दूसरे के लिए फोन और परिवार से अलग समय निकालते हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "all": [
+          {
+            "question": "q_g1",
+            "includes": [
+              "o_a"
+            ]
+          },
+          {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Communication slips sometimes. Learning two or three repair habits usually changes the daily feel of the marriage.",
+            "hi": "बातचीत कभी-कभी फिसल जाती है। दो-तीन 'सुधार की आदतें' सीखने से शादी का रोज़ का माहौल बदल जाता है।"
+          },
+          {
+            "en": "Arguments repeat, and one of you tends to shut down. This is a learnable pattern — the goal is to argue less and resolve more.",
+            "hi": "झगड़े दोहराते हैं, और आप में से कोई एक चुप हो जाता है। यह सीखा जा सकने वाला पैटर्न है — लक्ष्य है कम लड़ना और ज़्यादा सुलझाना।"
+          },
+          {
+            "en": "Conversations have become unsafe or absent. Sessions will first rebuild basic safety in talking, then move to the real issues underneath.",
+            "hi": "बातचीत असुरक्षित या बंद हो गई है। सेशन पहले बात करने की बुनियादी सुरक्षा बनाएँगे, फिर नीचे छिपे असली मुद्दों पर जाएँगे।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Fair-fighting rules and repair after conflict",
+            "hi": "झगड़े के नियम और उसके बाद सुधार"
+          },
+          {
+            "en": "Handling family involvement as a team",
+            "hi": "परिवार की दखल को टीम की तरह संभालना"
+          },
+          {
+            "en": "Weekly connection time",
+            "hi": "हर हफ्ते जुड़ने का समय"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_b",
+      "title": {
+        "en": "Emotional Closeness & Desire",
+        "hi": "भावनात्मक नज़दीकी और इच्छा"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_b1",
+          "text": {
+            "en": "I rarely feel the desire for intimacy.",
+            "hi": "मुझे नज़दीकी की इच्छा बहुत कम होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_b2",
+          "text": {
+            "en": "My partner and I want intimacy at very different frequencies.",
+            "hi": "मैं और मेरा साथी नज़दीकी बहुत अलग-अलग बार चाहते हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_b3",
+          "text": {
+            "en": "Intimacy feels like a duty rather than something I enjoy.",
+            "hi": "नज़दीकी एक ज़िम्मेदारी जैसी लगती है, खुशी जैसी नहीं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_b4",
+          "text": {
+            "en": "We have not been intimate in the last 3 months.",
+            "hi": "पिछले 3 महीनों में हमारे बीच नज़दीकी नहीं हुई है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_b5",
+          "text": {
+            "en": "I feel loved even when we are not physically close.",
+            "hi": "शारीरिक नज़दीकी न होने पर भी मुझे प्यार महसूस होता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_b6",
+          "text": {
+            "en": "With time (or after children), closeness between us has reduced a lot.",
+            "hi": "समय के साथ (या बच्चों के बाद) हमारे बीच नज़दीकी बहुत कम हो गई है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_b7",
+          "text": {
+            "en": "I find it hard to tell my partner what I want.",
+            "hi": "मुझे अपने साथी को यह बताना मुश्किल लगता है कि मैं क्या चाहता/चाहती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_b8",
+          "text": {
+            "en": "Tiredness, body image or health worries reduce my interest.",
+            "hi": "थकान, अपने शरीर को लेकर सोच या सेहत की चिंता मेरी रुचि कम कर देती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "all": [
+          {
+            "question": "q_g1",
+            "includes": [
+              "o_b"
+            ]
+          },
+          {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Desire and closeness are a little out of sync. Small changes in how you connect outside the bedroom usually bring this back.",
+            "hi": "इच्छा और नज़दीकी थोड़ी बेमेल हैं। बेडरूम के बाहर जुड़ने के तरीके में छोटे बदलाव इसे अक्सर वापस ले आते हैं।"
+          },
+          {
+            "en": "Closeness has become rare or feels like a duty. Sessions work on emotional connection first, so that physical closeness returns naturally.",
+            "hi": "नज़दीकी दुर्लभ हो गई है या ज़िम्मेदारी जैसी लगती है। सेशन पहले भावनात्मक जुड़ाव पर काम करते हैं, ताकि शारीरिक नज़दीकी अपने आप लौटे।"
+          },
+          {
+            "en": "Intimacy has largely stopped, and it is affecting how loved you feel. This is common and workable — it needs a structured plan, not more pressure.",
+            "hi": "नज़दीकी लगभग रुक गई है, और इससे आपको प्यार महसूस होना प्रभावित हो रहा है। यह आम है और ठीक किया जा सकता है — इसे दबाव नहीं, संरचित योजना चाहिए।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Rebuilding emotional closeness",
+            "hi": "भावनात्मक नज़दीकी दोबारा बनाना"
+          },
+          {
+            "en": "Understanding each other's desire style",
+            "hi": "एक-दूसरे की इच्छा का तरीका समझना"
+          },
+          {
+            "en": "Removing pressure from intimacy",
+            "hi": "नज़दीकी से दबाव हटाना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_c",
+      "title": {
+        "en": "Male Performance & Confidence",
+        "hi": "पुरुष प्रदर्शन और आत्मविश्वास"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_m1",
+          "text": {
+            "en": "I worry about my performance before or during intimacy.",
+            "hi": "नज़दीकी से पहले या उस दौरान मुझे अपने प्रदर्शन की चिंता रहती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_m2",
+          "text": {
+            "en": "I finish sooner than I or my partner would like.",
+            "hi": "मैं जितना चाहता हूँ या मेरा साथी चाहता है, उससे जल्दी खत्म हो जाता हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_m3",
+          "text": {
+            "en": "I have difficulty getting or keeping firmness during intimacy.",
+            "hi": "नज़दीकी के दौरान मुझे कड़ापन पाने या बनाए रखने में दिक्कत होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_m4",
+          "text": {
+            "en": "I wake up with morning firmness at least a few times a week.",
+            "hi": "हफ्ते में कम से कम कुछ बार सुबह कड़ापन के साथ मेरी नींद खुलती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_m5",
+          "text": {
+            "en": "The problem happens mostly with my partner, much less when I am alone.",
+            "hi": "यह दिक्कत ज़्यादातर साथी के साथ होती है, अकेले में बहुत कम।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_m6",
+          "text": {
+            "en": "I avoid intimacy because I am afraid of failing.",
+            "hi": "असफल होने के डर से मैं नज़दीकी से बचता हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_m7",
+          "text": {
+            "en": "My partner's reaction to this has hurt my confidence.",
+            "hi": "इस पर मेरे साथी की प्रतिक्रिया ने मेरा आत्मविश्वास तोड़ा है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        },
+        {
+          "id": "q_m8",
+          "text": {
+            "en": "I take a very long time or cannot finish during intimacy.",
+            "hi": "नज़दीकी के दौरान मुझे बहुत समय लगता है या मैं खत्म नहीं कर पाता।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_m9",
+          "text": {
+            "en": "I compare myself to what I see online or in films.",
+            "hi": "मैं खुद की तुलना ऑनलाइन या फिल्मों में देखी चीज़ों से करता हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_m10",
+          "text": {
+            "en": "This problem started",
+            "hi": "यह दिक्कत शुरू हुई"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_suddenly",
+              "text": {
+                "en": "Suddenly, within a few weeks",
+                "hi": "अचानक, कुछ हफ्तों में"
+              },
+              "value": null,
+              "note": "Started suddenly within a few weeks — possible physical factor; suggest a check-up (workbook: medical flag)."
+            },
+            {
+              "id": "o_slowly",
+              "text": {
+                "en": "Slowly, over months",
+                "hi": "धीरे-धीरे, महीनों में"
+              },
+              "value": null
+            },
+            {
+              "id": "o_always",
+              "text": {
+                "en": "It has always been like this",
+                "hi": "हमेशा से ऐसा ही रहा है"
+              },
+              "value": null
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_g1",
+        "includes": [
+          "o_c"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Some performance worry is present. Worry itself is often the main driver, and it responds well to a few focused sessions.",
+            "hi": "प्रदर्शन की कुछ चिंता मौजूद है। चिंता खुद अक्सर मुख्य कारण होती है, और कुछ केंद्रित सेशन से यह अच्छी तरह सुधरती है।"
+          },
+          {
+            "en": "Performance anxiety is affecting your confidence and you may be avoiding intimacy. Your answers suggest a strong mind–body link, which is good news for therapy.",
+            "hi": "प्रदर्शन की चिंता आपके आत्मविश्वास पर असर डाल रही है और शायद आप नज़दीकी से बच रहे हैं। आपके जवाब मन और शरीर का मज़बूत संबंध दिखाते हैं, जो थेरेपी के लिए अच्छी खबर है।"
+          },
+          {
+            "en": "Fear of failing has taken over intimacy, and it is hurting your confidence beyond the bedroom. Sessions break the fear cycle step by step, with your partner's involvement where possible.",
+            "hi": "असफल होने का डर नज़दीकी पर हावी हो गया है, और यह बेडरूम के बाहर भी आपके आत्मविश्वास को चोट पहुँचा रहा है। सेशन डर के चक्र को कदम-दर-कदम तोड़ते हैं, जहाँ संभव हो साथी को शामिल करके।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Breaking the performance-fear cycle",
+            "hi": "प्रदर्शन-डर के चक्र को तोड़ना"
+          },
+          {
+            "en": "Confidence and body awareness",
+            "hi": "आत्मविश्वास और शरीर की समझ"
+          },
+          {
+            "en": "Partner communication around intimacy",
+            "hi": "नज़दीकी पर साथी से बातचीत"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_d",
+      "title": {
+        "en": "Female Discomfort or Fear",
+        "hi": "महिला असहजता या डर"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_f1",
+          "text": {
+            "en": "I feel pain or burning during intimacy.",
+            "hi": "नज़दीकी के दौरान मुझे दर्द या जलन होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_f2",
+          "text": {
+            "en": "My body tightens or closes up when intimacy is attempted.",
+            "hi": "नज़दीकी की कोशिश पर मेरा शरीर कस जाता है या बंद हो जाता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_f3",
+          "text": {
+            "en": "I feel fear or panic at the thought of intimacy.",
+            "hi": "नज़दीकी के ख्याल से ही मुझे डर या घबराहट होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_f4",
+          "text": {
+            "en": "We have not been able to complete intercourse.",
+            "hi": "हम संभोग पूरा नहीं कर पाए हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": 3
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        },
+        {
+          "id": "q_f5",
+          "text": {
+            "en": "Pressure from family about children makes this worse.",
+            "hi": "बच्चों को लेकर परिवार का दबाव इसे और बुरा बनाता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        },
+        {
+          "id": "q_f6",
+          "text": {
+            "en": "My partner is patient and understanding about this.",
+            "hi": "मेरा साथी इस बारे में धैर्य और समझदारी रखता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        },
+        {
+          "id": "q_f7",
+          "text": {
+            "en": "I avoid gynaecological check-ups or using tampons because of discomfort.",
+            "hi": "असहजता के कारण मैं स्त्री-रोग जाँच या टैम्पोन के इस्तेमाल से बचती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_f8",
+          "text": {
+            "en": "I have had a medical check-up for this.",
+            "hi": "मैंने इसके लिए डॉक्टर से जाँच करवाई है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": null,
+              "note": "No medical check-up so far for discomfort or pain — suggest one alongside sessions (workbook: MED_FEMALE)."
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": null,
+              "note": "No medical check-up so far for discomfort or pain — suggest one alongside sessions (workbook: MED_FEMALE)."
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_g1",
+        "includes": [
+          "o_d"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Some discomfort or hesitation is present. Early work on relaxation and pacing usually prevents it from growing into fear.",
+            "hi": "कुछ असहजता या झिझक मौजूद है। आराम और गति पर शुरुआती काम इसे डर में बदलने से रोकता है।"
+          },
+          {
+            "en": "Your body is responding to intimacy with tightening or pain, and fear is building. This is a well-understood pattern with a clear, gentle, step-by-step path.",
+            "hi": "आपका शरीर नज़दीकी पर कसाव या दर्द से प्रतिक्रिया कर रहा है, और डर बढ़ रहा है। यह एक अच्छी तरह समझा गया पैटर्न है जिसका एक साफ, कोमल, कदम-दर-कदम रास्ता है।"
+          },
+          {
+            "en": "Fear and pain have made intimacy feel impossible, and family pressure may be adding to it. Sessions move at your pace — nothing is rushed — and your partner is guided on how to support you.",
+            "hi": "डर और दर्द ने नज़दीकी को असंभव जैसा बना दिया है, और परिवार का दबाव इसे बढ़ा रहा हो सकता है। सेशन आपकी गति से चलते हैं — कुछ भी जल्दबाज़ी में नहीं — और आपके साथी को आपका साथ देने का तरीका सिखाया जाता है।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Relaxation and gradual, pain-free steps",
+            "hi": "आराम और धीरे-धीरे, बिना दर्द के कदम"
+          },
+          {
+            "en": "Managing fear and body tension",
+            "hi": "डर और शरीर के तनाव को संभालना"
+          },
+          {
+            "en": "Guiding your partner to support you",
+            "hi": "साथी को आपका साथ देने के लिए मार्गदर्शन"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_e",
+      "title": {
+        "en": "Porn & Habits That Feel Out of Control",
+        "hi": "पोर्न और बेकाबू आदतें"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_p1",
+          "text": {
+            "en": "I spend more time on porn or self-pleasure than I intend to.",
+            "hi": "मैं पोर्न या स्व-आनंद पर जितना चाहता/चाहती हूँ उससे ज़्यादा समय बिताता/बिताती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_p2",
+          "text": {
+            "en": "I have tried to reduce it and could not.",
+            "hi": "मैंने इसे कम करने की कोशिश की पर कर नहीं पाया/पाई।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_p3",
+          "text": {
+            "en": "It affects my interest or performance with my real partner.",
+            "hi": "यह मेरे असली साथी के साथ मेरी रुचि या प्रदर्शन पर असर डालता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        },
+        {
+          "id": "q_p4",
+          "text": {
+            "en": "I feel guilt or shame afterwards.",
+            "hi": "बाद में मुझे अपराधबोध या शर्म महसूस होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_p5",
+          "text": {
+            "en": "I use it to cope with stress, boredom or loneliness.",
+            "hi": "मैं इसका इस्तेमाल तनाव, ऊब या अकेलेपन से निपटने के लिए करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_p6",
+          "text": {
+            "en": "It has affected my work, sleep or studies.",
+            "hi": "इसने मेरे काम, नींद या पढ़ाई पर असर डाला है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_p7",
+          "text": {
+            "en": "My partner knows, and it has caused conflict between us.",
+            "hi": "मेरे साथी को पता है, और इससे हमारे बीच झगड़ा हुआ है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        },
+        {
+          "id": "q_p8",
+          "text": {
+            "en": "I need more intense content than before to feel the same.",
+            "hi": "पहले जैसा महसूस करने के लिए अब मुझे ज़्यादा तीव्र सामग्री चाहिए।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_g1",
+        "includes": [
+          "o_e"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "The habit is present but not yet controlling you. This is the best time to reset it before it affects your real relationship.",
+            "hi": "आदत मौजूद है पर अभी आप पर हावी नहीं है। इसे असली रिश्ते पर असर डालने से पहले बदलने का यही सबसे अच्छा समय है।"
+          },
+          {
+            "en": "You have tried to cut back and could not, and it is starting to affect your partner or your work. Sessions address the stress underneath, not just the habit.",
+            "hi": "आपने कम करने की कोशिश की पर कर नहीं पाए, और यह आपके साथी या काम पर असर डालने लगा है। सेशन सिर्फ आदत नहीं, उसके नीचे के तनाव पर काम करते हैं।"
+          },
+          {
+            "en": "The habit has escalated and is now shaping your intimacy, your mood and possibly your relationship. Recovery is very possible, but it needs a structured plan and accountability.",
+            "hi": "आदत बढ़ गई है और अब आपकी नज़दीकी, मूड और शायद रिश्ते को आकार दे रही है। इससे उबरना बहुत संभव है, पर इसे संरचित योजना और जवाबदेही चाहिए।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Understanding triggers and stress underneath the habit",
+            "hi": "आदत के नीचे के ट्रिगर और तनाव को समझना"
+          },
+          {
+            "en": "A realistic reset plan",
+            "hi": "एक व्यावहारिक रीसेट योजना"
+          },
+          {
+            "en": "Rebuilding real-partner intimacy",
+            "hi": "असली साथी के साथ नज़दीकी दोबारा बनाना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_f",
+      "title": {
+        "en": "Stress, Mood & Confidence",
+        "hi": "तनाव, मूड और आत्मविश्वास"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_s1",
+          "text": {
+            "en": "Over the last 2 weeks, I have felt down, low or hopeless.",
+            "hi": "पिछले 2 हफ्तों में मैंने उदास, नीचा या निराश महसूस किया है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_s2",
+          "text": {
+            "en": "I have had little interest or pleasure in things I usually enjoy.",
+            "hi": "जिन चीज़ों में मुझे आमतौर पर मज़ा आता है, उनमें रुचि कम हो गई है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_s3",
+          "text": {
+            "en": "I feel nervous, anxious or on edge.",
+            "hi": "मैं घबराया/घबराई हुई या बेचैन महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_s4",
+          "text": {
+            "en": "I cannot stop worrying.",
+            "hi": "मैं चिंता करना रोक नहीं पाता/पाती।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_s5",
+          "text": {
+            "en": "My sleep is disturbed.",
+            "hi": "मेरी नींद खराब रहती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_s6",
+          "text": {
+            "en": "I feel I am not good enough as a partner or as a person.",
+            "hi": "मुझे लगता है कि मैं एक साथी या इंसान के रूप में काफी अच्छा/अच्छी नहीं हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_s7",
+          "text": {
+            "en": "I get irritated with my partner quickly.",
+            "hi": "मैं अपने साथी पर जल्दी चिड़ जाता/जाती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        },
+        {
+          "id": "q_s8",
+          "text": {
+            "en": "I feel lonely even when I am with my partner.",
+            "hi": "साथी के साथ होते हुए भी मैं अकेला/अकेली महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ],
+          "show_when": {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        }
+      ],
+      "show_when": {
+        "question": "q_g1",
+        "includes": [
+          "o_f"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Stress is leaking into the relationship. A few tools for managing it usually ease the irritation and distance quickly.",
+            "hi": "तनाव रिश्ते में रिस रहा है। इसे संभालने के कुछ तरीके चिड़चिड़ापन और दूरी को जल्दी कम कर देते हैं।"
+          },
+          {
+            "en": "Low mood, worry or poor sleep are weighing on you and on the relationship. Sessions will work on you first, because a calmer you changes the relationship.",
+            "hi": "उदासी, चिंता या खराब नींद आप पर और रिश्ते पर बोझ बन रही है। सेशन पहले आप पर काम करेंगे, क्योंकि शांत 'आप' रिश्ते को बदल देते हैं।"
+          },
+          {
+            "en": "You are carrying a heavy emotional load right now, and feeling lonely even with your partner. Please take this seriously — structured support helps, and the plan below starts with you.",
+            "hi": "आप अभी भारी भावनात्मक बोझ उठा रहे हैं, और साथी के साथ भी अकेला महसूस कर रहे हैं। कृपया इसे गंभीरता से लें — संरचित सहारा मदद करता है, और नीचे की योजना आपसे शुरू होती है।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Tools for mood, worry and sleep",
+            "hi": "मूड, चिंता और नींद के लिए तरीके"
+          },
+          {
+            "en": "Self-worth as a partner",
+            "hi": "एक साथी के रूप में आत्म-सम्मान"
+          },
+          {
+            "en": "Reducing irritability at home",
+            "hi": "घर पर चिड़चिड़ापन कम करना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_g",
+      "title": {
+        "en": "Past Hurt & Broken Trust",
+        "hi": "पुराना दर्द और टूटा भरोसा"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_t1",
+          "text": {
+            "en": "Something from the past (a betrayal, broken trust or a hurtful experience) still affects me today. You do not need to describe it.",
+            "hi": "अतीत की कोई बात (धोखा, टूटा भरोसा या कोई दुखद अनुभव) आज भी मुझ पर असर करती है। आपको उसका विवरण देने की ज़रूरत नहीं है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": null
+            }
+          ]
+        },
+        {
+          "id": "q_t2",
+          "text": {
+            "en": "I get sudden painful memories or thoughts about it.",
+            "hi": "मुझे उसके बारे में अचानक दर्दनाक यादें या विचार आते हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_t3",
+          "text": {
+            "en": "I find it hard to trust again.",
+            "hi": "मुझे दोबारा भरोसा करना मुश्किल लगता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_t4",
+          "text": {
+            "en": "I avoid closeness because it brings back the hurt.",
+            "hi": "मैं नज़दीकी से बचता/बचती हूँ क्योंकि वह दर्द वापस ले आती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_t5",
+          "text": {
+            "en": "I carry anger that I cannot let go of.",
+            "hi": "मेरे अंदर एक गुस्सा है जिसे मैं छोड़ नहीं पाता/पाती।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_t6",
+          "text": {
+            "en": "We have never truly talked about what happened.",
+            "hi": "जो हुआ उस पर हमने कभी सच में बात नहीं की।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_t7",
+          "text": {
+            "en": "I feel safe in my current relationship.",
+            "hi": "मैं अपने वर्तमान रिश्ते में सुरक्षित महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_t8",
+          "text": {
+            "en": "I want to repair this relationship.",
+            "hi": "मैं इस रिश्ते को ठीक करना चाहता/चाहती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": null
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": null
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "all": [
+          {
+            "question": "q_g1",
+            "includes": [
+              "o_g"
+            ]
+          },
+          {
+            "question": "q_i6",
+            "is_not": [
+              "o_no_partner"
+            ]
+          }
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "A past hurt still echoes sometimes. Naming it in a safe space usually stops it from quietly steering the present.",
+            "hi": "कोई पुराना दर्द कभी-कभी गूँजता है। उसे सुरक्षित जगह पर नाम देना उसे चुपचाप वर्तमान को चलाने से रोकता है।"
+          },
+          {
+            "en": "Trust has been damaged and the hurt has not been fully talked through. Sessions give both of you a structured way to do that, with clear steps for rebuilding trust.",
+            "hi": "भरोसा टूटा है और दर्द पर पूरी बात नहीं हुई है। सेशन आप दोनों को यह करने का एक संरचित तरीका देते हैं, भरोसा दोबारा बनाने के साफ कदमों के साथ।"
+          },
+          {
+            "en": "The past hurt is shaping closeness, trust and anger today. Healing this takes time and a safe, steady process — it cannot be rushed, and it should not be done alone.",
+            "hi": "पुराना दर्द आज की नज़दीकी, भरोसे और गुस्से को आकार दे रहा है। इसे ठीक होने में समय और एक सुरक्षित, स्थिर प्रक्रिया लगती है — इसमें जल्दबाज़ी नहीं की जा सकती, और इसे अकेले नहीं करना चाहिए।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Safe space to process what happened",
+            "hi": "जो हुआ उसे संभालने की सुरक्षित जगह"
+          },
+          {
+            "en": "Rebuilding trust step by step",
+            "hi": "कदम-दर-कदम भरोसा दोबारा बनाना"
+          },
+          {
+            "en": "Letting go of carried anger",
+            "hi": "जमा हुए गुस्से को छोड़ना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_dose",
+      "title": {
+        "en": "A few last questions",
+        "hi": "कुछ आखिरी सवाल"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_d1",
+          "text": {
+            "en": "How long has this been troubling you?",
+            "hi": "यह समस्या आपको कब से परेशान कर रही है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_under_3_months",
+              "text": {
+                "en": "Less than 3 months",
+                "hi": "3 महीने से कम"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_3_12_months",
+              "text": {
+                "en": "3–12 months",
+                "hi": "3–12 महीने"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_1_3_years",
+              "text": {
+                "en": "1–3 years",
+                "hi": "1–3 साल"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_over_3_years",
+              "text": {
+                "en": "More than 3 years",
+                "hi": "3 साल से ज़्यादा"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_d2",
+          "text": {
+            "en": "How much does it affect your daily life — mood, work, sleep, or thoughts about the relationship?",
+            "hi": "यह आपकी रोज़ की ज़िंदगी — मूड, काम, नींद या रिश्ते के बारे में सोच — पर कितना असर डालता है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_not_at_all",
+              "text": {
+                "en": "Not at all",
+                "hi": "बिल्कुल नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_a_little",
+              "text": {
+                "en": "A little",
+                "hi": "थोड़ा"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_quite_a_lot",
+              "text": {
+                "en": "Quite a lot",
+                "hi": "काफी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_severely",
+              "text": {
+                "en": "Severely",
+                "hi": "बहुत ज़्यादा"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_d3",
+          "text": {
+            "en": "What have you tried so far?",
+            "hi": "अब तक आपने क्या-क्या कोशिश की है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_nothing_yet",
+              "text": {
+                "en": "Nothing yet",
+                "hi": "अभी तक कुछ नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_self_help",
+              "text": {
+                "en": "Self-help: videos, books, articles",
+                "hi": "खुद की कोशिश: वीडियो, किताबें"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_doctor_or_counsellor_once",
+              "text": {
+                "en": "Talked to a doctor or counsellor once",
+                "hi": "एक बार डॉक्टर या काउंसलर से बात की"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_many_things",
+              "text": {
+                "en": "Tried many things, nothing worked",
+                "hi": "बहुत कुछ आज़माया, कुछ काम नहीं आया"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_d4",
+          "text": {
+            "en": "I am ready to put in weekly effort for the next 2–3 months.",
+            "hi": "मैं अगले 2–3 महीनों तक हर हफ्ते मेहनत करने के लिए तैयार हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_not_sure",
+              "text": {
+                "en": "Not sure",
+                "hi": "पक्का नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_somewhat",
+              "text": {
+                "en": "Somewhat",
+                "hi": "कुछ हद तक"
+              },
+              "value": null
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": null
+            },
+            {
+              "id": "o_fully_committed",
+              "text": {
+                "en": "Fully committed",
+                "hi": "पूरी तरह तैयार"
+              },
+              "value": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s_flag",
+      "title": {
+        "en": "Your health",
+        "hi": "आपकी सेहत"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_r1",
+          "text": {
+            "en": "Do you have any of these? (choose all that apply)",
+            "hi": "क्या आपको इनमें से कुछ है? (जो लागू हों सब चुनें)"
+          },
+          "multiple": true,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_diabetes",
+              "text": {
+                "en": "Diabetes",
+                "hi": "डायबिटीज़"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication — some affect desire, mood or sleep; keep in view (workbook: MED_GENERAL)."
+            },
+            {
+              "id": "o_high_blood_pressure",
+              "text": {
+                "en": "High blood pressure",
+                "hi": "हाई ब्लड प्रेशर"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication — some affect desire, mood or sleep; keep in view (workbook: MED_GENERAL)."
+            },
+            {
+              "id": "o_thyroid",
+              "text": {
+                "en": "Thyroid",
+                "hi": "थायरॉइड"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication — some affect desire, mood or sleep; keep in view (workbook: MED_GENERAL)."
+            },
+            {
+              "id": "o_heart_condition",
+              "text": {
+                "en": "Heart condition",
+                "hi": "दिल की बीमारी"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication — some affect desire, mood or sleep; keep in view (workbook: MED_GENERAL)."
+            },
+            {
+              "id": "o_pcos",
+              "text": {
+                "en": "PCOS",
+                "hi": "PCOS"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication — some affect desire, mood or sleep; keep in view (workbook: MED_GENERAL)."
+            },
+            {
+              "id": "o_regular_medication",
+              "text": {
+                "en": "Regular medication for any condition",
+                "hi": "किसी बीमारी की नियमित दवा"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication — some affect desire, mood or sleep; keep in view (workbook: MED_GENERAL)."
+            },
+            {
+              "id": "o_none",
+              "text": {
+                "en": "None of these",
+                "hi": "इनमें से कोई नहीं"
+              },
+              "value": null
+            }
+          ]
+        },
+        {
+          "id": "q_r2",
+          "text": {
+            "en": "Did the problem start suddenly (within a few weeks) after an illness, surgery, new medicine or childbirth?",
+            "hi": "क्या यह दिक्कत किसी बीमारी, सर्जरी, नई दवा या बच्चे के जन्म के बाद अचानक (कुछ हफ्तों में) शुरू हुई?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": 3,
+              "note": "Started suddenly after illness, surgery, new medicine or childbirth — suggest a doctor check-up alongside sessions (workbook: medical flag)."
+            }
+          ]
+        },
+        {
+          "id": "q_r3",
+          "text": {
+            "en": "(Women) Do you have pain along with bleeding, unusual discharge, or pain even outside intimacy?",
+            "hi": "(महिलाएँ) क्या आपको दर्द के साथ रक्तस्राव, असामान्य स्राव, या नज़दीकी के बाहर भी दर्द होता है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": 3,
+              "note": "Pain with bleeding, unusual discharge, or pain outside intimacy — a gynaecologist should rule out a physical cause (workbook: MED_FEMALE)."
+            }
+          ]
+        },
+        {
+          "id": "q_r4",
+          "text": {
+            "en": "(Men) Do you have pain, a bend, or an injury in the genital area?",
+            "hi": "(पुरुष) क्या आपको जननांग क्षेत्र में दर्द, टेढ़ापन या चोट है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": 3,
+              "note": "Pain, a bend or an injury in the genital area — suggest a urologist/andrologist check-up (workbook: MED_MALE)."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@mfb/questionnaire",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The MFB questionnaire engine: validation, flow, scoring, report and counsellor view for any questionnaire JSON",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "prompt": "node scripts/prompt.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
+  }
+}

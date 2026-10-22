@@ -1,0 +1,2659 @@
+{
+  "title": {
+    "en": "MFB Mind Assessment",
+    "hi": "MFB माइंड असेसमेंट"
+  },
+  "subtitle": {
+    "en": "Prepared for your consultation with the My Fit Brain team",
+    "hi": "माई फ़िट ब्रेन टीम के साथ आपके परामर्श के लिए तैयार"
+  },
+  "closing": {
+    "en": "It is normal to feel unsure at this stage. Your consultation is a safe place to ask every question before anything begins. The plan above is a recommendation, not a commitment.",
+    "hi": "इस मोड़ पर असमंजस होना सामान्य है। आपका परामर्श एक सुरक्षित जगह है जहाँ कुछ भी शुरू होने से पहले आप हर सवाल पूछ सकते हैं। ऊपर की योजना एक सलाह है, बंधन नहीं।"
+  },
+  "disclaimer": {
+    "en": "This report is based on your own answers and is prepared to guide your consultation with the My Fit Brain team. It is a counselling assessment, not a medical diagnosis, and it does not promise a result. Your counsellor will confirm or adjust the plan with you in your consultation. Your answers are confidential.",
+    "hi": "यह रिपोर्ट आपके अपने जवाबों पर आधारित है और माई फ़िट ब्रेन टीम के साथ आपके परामर्श को दिशा देने के लिए बनाई गई है। यह एक काउंसलिंग असेसमेंट है, मेडिकल निदान नहीं, और यह किसी नतीजे का वादा नहीं करती। आपका काउंसलर परामर्श में आपके साथ योजना की पुष्टि या बदलाव करेगा। आपके जवाब गोपनीय हैं।"
+  },
+  "ranges": [
+    {
+      "up_to": 25,
+      "en": "Low",
+      "hi": "कम"
+    },
+    {
+      "up_to": 50,
+      "en": "Mild",
+      "hi": "हल्का"
+    },
+    {
+      "up_to": 75,
+      "en": "Moderate",
+      "hi": "मध्यम"
+    },
+    {
+      "up_to": 100,
+      "en": "High",
+      "hi": "ज़्यादा"
+    }
+  ],
+  "plan": [
+    {
+      "range": 1,
+      "name": {
+        "en": "Clarity Plan",
+        "hi": "स्पष्टता योजना"
+      },
+      "sessions": 4,
+      "pace": {
+        "en": "weekly, about 1 month",
+        "hi": "हर हफ्ते, लगभग 1 महीना"
+      }
+    },
+    {
+      "range": 2,
+      "name": {
+        "en": "Reset Plan",
+        "hi": "रीसेट योजना"
+      },
+      "sessions": 6,
+      "pace": {
+        "en": "weekly, about 6 weeks",
+        "hi": "हर हफ्ते, लगभग 6 हफ्ते"
+      }
+    },
+    {
+      "range": 3,
+      "name": {
+        "en": "Rebuild Plan",
+        "hi": "पुनर्निर्माण योजना"
+      },
+      "sessions": 8,
+      "pace": {
+        "en": "weekly, about 2 months",
+        "hi": "हर हफ्ते, लगभग 2 महीने"
+      }
+    },
+    {
+      "range": 4,
+      "name": {
+        "en": "Transformation Plan",
+        "hi": "परिवर्तन योजना"
+      },
+      "sessions": 12,
+      "pace": {
+        "en": "weekly then fortnightly, about 3 months",
+        "hi": "पहले हर हफ्ते फिर हर 15 दिन, लगभग 3 महीने"
+      }
+    }
+  ],
+  "sections": [
+    {
+      "id": "s_intake",
+      "title": {
+        "en": "About you",
+        "hi": "आपके बारे में"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_mi3",
+          "text": {
+            "en": "What best describes you right now?",
+            "hi": "अभी आपकी स्थिति क्या है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_student",
+              "text": {
+                "en": "Student",
+                "hi": "विद्यार्थी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_working",
+              "text": {
+                "en": "Working (job)",
+                "hi": "नौकरी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_self_employed",
+              "text": {
+                "en": "Self-employed / business",
+                "hi": "स्वरोज़गार / व्यवसाय"
+              },
+              "value": null
+            },
+            {
+              "id": "o_homemaker",
+              "text": {
+                "en": "Homemaker",
+                "hi": "गृहिणी / गृहस्थ"
+              },
+              "value": null
+            },
+            {
+              "id": "o_looking_for_work",
+              "text": {
+                "en": "Looking for work",
+                "hi": "काम की तलाश में"
+              },
+              "value": null
+            },
+            {
+              "id": "o_retired",
+              "text": {
+                "en": "Retired",
+                "hi": "सेवानिवृत्त"
+              },
+              "value": null
+            }
+          ]
+        },
+        {
+          "id": "q_mi4",
+          "text": {
+            "en": "Where do you live?",
+            "hi": "आप कहाँ रहते हैं?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_india",
+              "text": {
+                "en": "India",
+                "hi": "भारत"
+              },
+              "value": null
+            },
+            {
+              "id": "o_outside_india",
+              "text": {
+                "en": "Outside India",
+                "hi": "भारत के बाहर"
+              },
+              "value": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s_gate",
+      "title": {
+        "en": "What brings you here",
+        "hi": "आप यहाँ क्यों आए हैं"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_mg1",
+          "text": {
+            "en": "Where do you need support right now? (choose up to 2)",
+            "hi": "अभी आपको किस बात में सहारे की ज़रूरत है? (ज़्यादा से ज़्यादा 2 चुनें)"
+          },
+          "multiple": true,
+          "max_choices": 2,
+          "options": [
+            {
+              "id": "o_h",
+              "text": {
+                "en": "Worry, nervousness or panic",
+                "hi": "चिंता, घबराहट या पैनिक"
+              },
+              "value": null
+            },
+            {
+              "id": "o_l",
+              "text": {
+                "en": "Low mood, no energy or no motivation",
+                "hi": "उदासी, ऊर्जा या प्रेरणा की कमी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_w",
+              "text": {
+                "en": "Work stress or feeling burnt out",
+                "hi": "काम का तनाव या थकान"
+              },
+              "value": null
+            },
+            {
+              "id": "o_k",
+              "text": {
+                "en": "Studies, exams or career pressure",
+                "hi": "पढ़ाई, परीक्षा या करियर का दबाव"
+              },
+              "value": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s_mcore",
+      "title": {
+        "en": "Everyday Wellbeing",
+        "hi": "रोज़ की मानसिक सेहत"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_mc1",
+          "text": {
+            "en": "I feel calm and in control of my day.",
+            "hi": "मैं अपने दिन को लेकर शांत और नियंत्रण में महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_mc2",
+          "text": {
+            "en": "I sleep well and wake up feeling rested.",
+            "hi": "मैं अच्छी नींद लेता/लेती हूँ और उठकर तरोताज़ा महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_mc3",
+          "text": {
+            "en": "I feel tired even after resting.",
+            "hi": "आराम करने के बाद भी मैं थका/थकी हुआ महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_mc4",
+          "text": {
+            "en": "I find it hard to focus on what I am doing.",
+            "hi": "जो काम कर रहा/रही हूँ, उस पर ध्यान लगाना मुश्किल लगता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_mc5",
+          "text": {
+            "en": "I feel overwhelmed by everything I have to handle.",
+            "hi": "मुझे जो कुछ संभालना है, उससे मैं दबा हुआ/हुई महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_mc6",
+          "text": {
+            "en": "I still enjoy the things I usually like to do.",
+            "hi": "जो चीज़ें मुझे आमतौर पर पसंद हैं, उनमें मुझे अब भी मज़ा आता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_mc7",
+          "text": {
+            "en": "I have someone I can talk to about how I feel.",
+            "hi": "मेरे पास कोई है जिससे मैं अपनी भावनाओं के बारे में बात कर सकता/सकती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_mc8",
+          "text": {
+            "en": "I get irritated or angry more easily than before.",
+            "hi": "मैं पहले से ज़्यादा जल्दी चिढ़ जाता/जाती हूँ या गुस्सा हो जाता/जाती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_mc9",
+          "text": {
+            "en": "I feel good about myself.",
+            "hi": "मैं अपने बारे में अच्छा महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "q_mc10",
+          "text": {
+            "en": "I feel hopeful about the coming months.",
+            "hi": "आने वाले महीनों को लेकर मुझे उम्मीद है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": null
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": null
+            }
+          ]
+        }
+      ],
+      "report": {
+        "meaning": [
+          {
+            "en": "Your everyday wellbeing is steady. The specific area you chose is where the work is.",
+            "hi": "आपकी रोज़ की मानसिक सेहत स्थिर है। काम उस खास क्षेत्र पर है जो आपने चुना।"
+          },
+          {
+            "en": "You are coping on most days, with some tiredness, stress or low moments. These usually ease once you have a few clear tools.",
+            "hi": "ज़्यादातर दिन आप संभाल रहे हैं, कुछ थकान, तनाव या उदासी के पल हैं। कुछ साफ तरीके मिलने पर ये अक्सर हल्के हो जाते हैं।"
+          },
+          {
+            "en": "Stress, poor sleep or low energy are showing up regularly and affecting your days. The pattern is clear enough to work on directly.",
+            "hi": "तनाव, खराब नींद या कम ऊर्जा नियमित रूप से दिख रही है और आपके दिनों पर असर डाल रही है। यह पैटर्न इतना साफ है कि इस पर सीधे काम किया जा सकता है।"
+          },
+          {
+            "en": "You are carrying a lot right now, and it is affecting most parts of your day. This is exactly when structured support helps most.",
+            "hi": "आप अभी बहुत कुछ उठा रहे हैं, और इसका असर आपके दिन के ज़्यादातर हिस्सों पर पड़ रहा है। यही वह समय है जब संरचित सहारा सबसे ज़्यादा मदद करता है।"
+          }
+        ],
+        "focus": []
+      }
+    },
+    {
+      "id": "s_h",
+      "title": {
+        "en": "Anxiety & Worry",
+        "hi": "चिंता और घबराहट"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_h1",
+          "text": {
+            "en": "I feel nervous, anxious or on edge.",
+            "hi": "मैं घबराया/घबराई हुआ, बेचैन या तनाव में महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_h2",
+          "text": {
+            "en": "I cannot stop or control my worrying.",
+            "hi": "मैं अपनी चिंता को रोक या काबू नहीं कर पाता/पाती।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_h3",
+          "text": {
+            "en": "I worry about many different things at once.",
+            "hi": "मैं एक साथ कई अलग-अलग बातों की चिंता करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_h4",
+          "text": {
+            "en": "I get sudden waves of strong fear, with a racing heart, sweating or breathlessness.",
+            "hi": "मुझे अचानक तेज़ डर के दौरे आते हैं, जिनमें दिल तेज़ धड़कता है, पसीना आता है या साँस फूलती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_h5",
+          "text": {
+            "en": "I avoid places or situations because they make me anxious.",
+            "hi": "मैं कुछ जगहों या स्थितियों से बचता/बचती हूँ क्योंकि उनसे मुझे घबराहट होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_h6",
+          "text": {
+            "en": "I keep imagining the worst that could happen.",
+            "hi": "मैं बार-बार सोचता/सोचती हूँ कि सबसे बुरा क्या हो सकता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_h7",
+          "text": {
+            "en": "I worry a lot about my health even after a doctor says I am fine.",
+            "hi": "डॉक्टर के ठीक बताने के बाद भी मुझे अपनी सेहत की बहुत चिंता रहती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_h8",
+          "text": {
+            "en": "Worry makes it hard for me to relax or fall asleep.",
+            "hi": "चिंता के कारण मुझे आराम करना या सोना मुश्किल लगता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_mg1",
+        "includes": [
+          "o_h"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Worry shows up sometimes but does not run your day. A few calming and thinking tools usually keep it in check.",
+            "hi": "चिंता कभी-कभी आती है पर आपका दिन नहीं चलाती। शांत होने और सोचने के कुछ तरीके इसे अक्सर काबू में रखते हैं।"
+          },
+          {
+            "en": "Worry has become a regular pattern and you may be avoiding some situations. This is very workable — sessions teach your mind and body to settle.",
+            "hi": "चिंता एक नियमित पैटर्न बन गई है और शायद आप कुछ स्थितियों से बच रहे हैं। इस पर अच्छी तरह काम किया जा सकता है — सेशन आपके मन और शरीर को शांत होना सिखाते हैं।"
+          },
+          {
+            "en": "Worry or panic is taking up a lot of your day and making life smaller. Sessions work step by step, at your pace, so that fear stops making your choices.",
+            "hi": "चिंता या घबराहट आपके दिन का बड़ा हिस्सा ले रही है और ज़िंदगी को सीमित कर रही है। सेशन आपकी गति से, कदम-दर-कदम काम करते हैं, ताकि डर आपके फैसले लेना बंद करे।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Calming the body when worry or panic starts",
+            "hi": "चिंता या घबराहट शुरू होने पर शरीर को शांत करना"
+          },
+          {
+            "en": "Breaking the overthinking loop",
+            "hi": "ज़्यादा सोचने के चक्र को तोड़ना"
+          },
+          {
+            "en": "Facing avoided situations step by step",
+            "hi": "जिन स्थितियों से बचते हैं उनका कदम-दर-कदम सामना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_l",
+      "title": {
+        "en": "Low Mood & Energy",
+        "hi": "उदासी और कम ऊर्जा"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_l1",
+          "text": {
+            "en": "I feel down, low or hopeless.",
+            "hi": "मैं उदास, निराश या टूटा हुआ/हुई महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_l2",
+          "text": {
+            "en": "I have little interest or pleasure in doing things.",
+            "hi": "चीज़ें करने में मेरी रुचि या खुशी बहुत कम हो गई है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_l3",
+          "text": {
+            "en": "I have very little energy to get through the day.",
+            "hi": "दिन निकालने के लिए मेरे पास बहुत कम ऊर्जा होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_l4",
+          "text": {
+            "en": "I feel like a failure, or that I have let people down.",
+            "hi": "मुझे लगता है कि मैं असफल हूँ, या मैंने लोगों को निराश किया है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_l5",
+          "text": {
+            "en": "My appetite has changed a lot — eating much more or much less.",
+            "hi": "मेरी भूख बहुत बदल गई है — बहुत ज़्यादा या बहुत कम खाना।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_l6",
+          "text": {
+            "en": "I have pulled away from friends and family.",
+            "hi": "मैं दोस्तों और परिवार से दूर हो गया/गई हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_l7",
+          "text": {
+            "en": "Small daily tasks feel like a big effort.",
+            "hi": "रोज़ के छोटे काम भी बहुत भारी लगते हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_l8",
+          "text": {
+            "en": "I cry, or feel like crying, more than usual.",
+            "hi": "मैं आमतौर से ज़्यादा रोता/रोती हूँ, या रोने का मन करता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_mg1",
+        "includes": [
+          "o_l"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Your mood and energy dip at times. Small changes in routine and how you talk to yourself usually lift this.",
+            "hi": "आपका मूड और ऊर्जा कभी-कभी गिरती है। दिनचर्या और खुद से बात करने के तरीके में छोटे बदलाव इसे अक्सर ऊपर ले आते हैं।"
+          },
+          {
+            "en": "Low mood and low energy are making daily life feel heavy, and you may be pulling away from people. Sessions start small and rebuild energy step by step.",
+            "hi": "उदासी और कम ऊर्जा रोज़ की ज़िंदगी को भारी बना रही है, और शायद आप लोगों से दूर हो रहे हैं। सेशन छोटे कदमों से शुरू होकर धीरे-धीरे ऊर्जा वापस लाते हैं।"
+          },
+          {
+            "en": "You are feeling very low most of the time, and it is affecting how you see yourself. Please take this seriously — structured support helps, and your plan starts with you.",
+            "hi": "आप ज़्यादातर समय बहुत उदास महसूस कर रहे हैं, और इसका असर इस पर है कि आप खुद को कैसे देखते हैं। कृपया इसे गंभीरता से लें — संरचित सहारा मदद करता है, और आपकी योजना आपसे शुरू होती है।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Small daily steps to rebuild energy",
+            "hi": "ऊर्जा वापस लाने के छोटे रोज़ के कदम"
+          },
+          {
+            "en": "Working with self-critical thoughts",
+            "hi": "खुद को कोसने वाले विचारों पर काम"
+          },
+          {
+            "en": "Reconnecting with people and things you enjoy",
+            "hi": "लोगों और पसंदीदा चीज़ों से फिर जुड़ना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_w",
+      "title": {
+        "en": "Work Stress & Burnout",
+        "hi": "काम का तनाव और थकान"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_w1",
+          "text": {
+            "en": "I feel emotionally drained by my work.",
+            "hi": "काम से मैं भावनात्मक रूप से थका/थकी हुआ महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_w2",
+          "text": {
+            "en": "I dread starting my workday.",
+            "hi": "काम का दिन शुरू करने से पहले मुझे बोझ या घबराहट महसूस होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_w3",
+          "text": {
+            "en": "I work long hours and still feel behind.",
+            "hi": "मैं लंबे घंटे काम करता/करती हूँ, फिर भी पीछे महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_w4",
+          "text": {
+            "en": "I feel my effort at work is not valued.",
+            "hi": "मुझे लगता है कि काम पर मेरी मेहनत की कद्र नहीं होती।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_w5",
+          "text": {
+            "en": "I have started to feel detached or careless about my work.",
+            "hi": "मैं अपने काम से कटा हुआ/हुई या बेपरवाह महसूस करने लगा/लगी हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_w6",
+          "text": {
+            "en": "Work stress affects my health, sleep or family time.",
+            "hi": "काम का तनाव मेरी सेहत, नींद या परिवार के समय पर असर डालता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_w7",
+          "text": {
+            "en": "I find it hard to switch off from work, even at home.",
+            "hi": "घर पर भी काम से दिमाग हटाना मुश्किल लगता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_w8",
+          "text": {
+            "en": "I feel I can manage my workload.",
+            "hi": "मुझे लगता है मैं अपने काम का बोझ संभाल सकता/सकती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_mg1",
+        "includes": [
+          "o_w"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "Work is tiring you more than usual. Clear limits and better recovery time usually bring the balance back.",
+            "hi": "काम आपको आमतौर से ज़्यादा थका रहा है। साफ सीमाएँ और आराम का बेहतर समय अक्सर संतुलन वापस ले आते हैं।"
+          },
+          {
+            "en": "Work stress is spilling into your health, sleep or home life, and you are starting to feel detached. Sessions help you reset limits and recover energy.",
+            "hi": "काम का तनाव आपकी सेहत, नींद या घर की ज़िंदगी में आ रहा है, और आप कटा हुआ महसूस करने लगे हैं। सेशन सीमाएँ फिर से तय करने और ऊर्जा वापस पाने में मदद करते हैं।"
+          },
+          {
+            "en": "You are running on empty at work, and it is affecting most of your life. Recovery is very possible, but it needs a structured plan, not just a holiday.",
+            "hi": "आप काम पर पूरी तरह थक चुके हैं, और इसका असर ज़िंदगी के ज़्यादातर हिस्सों पर है। उबरना बहुत संभव है, पर इसके लिए सिर्फ छुट्टी नहीं, एक संरचित योजना चाहिए।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Setting limits and switching off from work",
+            "hi": "सीमाएँ तय करना और काम से दिमाग हटाना"
+          },
+          {
+            "en": "Rebuilding energy and recovery time",
+            "hi": "ऊर्जा और आराम का समय वापस बनाना"
+          },
+          {
+            "en": "Handling pressure and difficult conversations at work",
+            "hi": "काम पर दबाव और मुश्किल बातचीत संभालना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_k",
+      "title": {
+        "en": "Studies & Career Pressure",
+        "hi": "पढ़ाई और करियर का दबाव"
+      },
+      "scored": true,
+      "questions": [
+        {
+          "id": "q_k1",
+          "text": {
+            "en": "I feel heavy pressure to score well or succeed.",
+            "hi": "मुझ पर अच्छे नंबर लाने या सफल होने का भारी दबाव है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_k2",
+          "text": {
+            "en": "I compare myself with others and feel I am behind.",
+            "hi": "मैं खुद की तुलना दूसरों से करता/करती हूँ और पीछे महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_k3",
+          "text": {
+            "en": "I feel confused about my career or future direction.",
+            "hi": "मैं अपने करियर या भविष्य की दिशा को लेकर उलझन में हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_k4",
+          "text": {
+            "en": "My family's expectations weigh heavily on me.",
+            "hi": "परिवार की उम्मीदें मुझ पर भारी पड़ती हैं।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_k5",
+          "text": {
+            "en": "I keep putting things off, then feel guilty about it.",
+            "hi": "मैं काम टालता/टालती रहता/रहती हूँ, फिर उसके लिए अपराधबोध होता है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_k6",
+          "text": {
+            "en": "Exams, interviews or results make me panic.",
+            "hi": "परीक्षा, इंटरव्यू या रिज़ल्ट से मुझे बहुत घबराहट होती है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_k7",
+          "text": {
+            "en": "I feel worse about myself after time on social media.",
+            "hi": "सोशल मीडिया पर समय बिताने के बाद मैं अपने बारे में और बुरा महसूस करता/करती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_k8",
+          "text": {
+            "en": "I feel confident about my abilities.",
+            "hi": "मुझे अपनी काबिलियत पर भरोसा है।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": 3
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "show_when": {
+        "question": "q_mg1",
+        "includes": [
+          "o_k"
+        ]
+      },
+      "report": {
+        "meaning": [
+          {
+            "en": "",
+            "hi": null
+          },
+          {
+            "en": "You feel some pressure about studies or career. A clearer plan and a few coping tools usually make it lighter.",
+            "hi": "पढ़ाई या करियर को लेकर आप कुछ दबाव महसूस करते हैं। एक साफ योजना और कुछ तरीके इसे अक्सर हल्का कर देते हैं।"
+          },
+          {
+            "en": "Pressure, comparison or confusion about the future are weighing on you regularly. Sessions help you get clear and handle expectations calmly.",
+            "hi": "दबाव, तुलना या भविष्य को लेकर उलझन आप पर नियमित रूप से भारी पड़ रही है। सेशन आपको स्पष्टता पाने और उम्मीदों को शांति से संभालने में मदद करते हैं।"
+          },
+          {
+            "en": "Pressure about studies or career is taking over, and it may be affecting your sleep, confidence or health. You do not have to carry this alone — a steady plan helps.",
+            "hi": "पढ़ाई या करियर का दबाव हावी हो गया है, और शायद यह आपकी नींद, आत्मविश्वास या सेहत पर असर डाल रहा है। आपको यह अकेले नहीं उठाना है — एक स्थिर योजना मदद करती है।"
+          }
+        ],
+        "focus": [
+          {
+            "en": "Managing exam and result pressure",
+            "hi": "परीक्षा और रिज़ल्ट का दबाव संभालना"
+          },
+          {
+            "en": "Getting clear on career choices",
+            "hi": "करियर के विकल्पों पर स्पष्टता"
+          },
+          {
+            "en": "Handling family expectations and comparison",
+            "hi": "परिवार की उम्मीदें और तुलना संभालना"
+          }
+        ]
+      }
+    },
+    {
+      "id": "s_dose",
+      "title": {
+        "en": "A few last questions",
+        "hi": "कुछ आखिरी सवाल"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_md1",
+          "text": {
+            "en": "How long has this been troubling you?",
+            "hi": "यह समस्या आपको कब से परेशान कर रही है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_under_3_months",
+              "text": {
+                "en": "Less than 3 months",
+                "hi": "3 महीने से कम"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_3_12_months",
+              "text": {
+                "en": "3–12 months",
+                "hi": "3–12 महीने"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_1_3_years",
+              "text": {
+                "en": "1–3 years",
+                "hi": "1–3 साल"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_over_3_years",
+              "text": {
+                "en": "More than 3 years",
+                "hi": "3 साल से ज़्यादा"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_md2",
+          "text": {
+            "en": "How much does it affect your daily life — work, studies, sleep or relationships?",
+            "hi": "यह आपकी रोज़ की ज़िंदगी — काम, पढ़ाई, नींद या रिश्तों — पर कितना असर डालता है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_not_at_all",
+              "text": {
+                "en": "Not at all",
+                "hi": "बिल्कुल नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_a_little",
+              "text": {
+                "en": "A little",
+                "hi": "थोड़ा"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_quite_a_lot",
+              "text": {
+                "en": "Quite a lot",
+                "hi": "काफी"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_severely",
+              "text": {
+                "en": "Severely",
+                "hi": "बहुत ज़्यादा"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_md3",
+          "text": {
+            "en": "What have you tried so far?",
+            "hi": "अब तक आपने क्या-क्या कोशिश की है?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_nothing_yet",
+              "text": {
+                "en": "Nothing yet",
+                "hi": "अभी तक कुछ नहीं"
+              },
+              "value": 0
+            },
+            {
+              "id": "o_self_help",
+              "text": {
+                "en": "Self-help: videos, books, apps",
+                "hi": "खुद की कोशिश: वीडियो, किताबें, ऐप"
+              },
+              "value": 1
+            },
+            {
+              "id": "o_doctor_or_counsellor_once",
+              "text": {
+                "en": "Talked to a doctor or counsellor once",
+                "hi": "एक बार डॉक्टर या काउंसलर से बात की"
+              },
+              "value": 2
+            },
+            {
+              "id": "o_many_things",
+              "text": {
+                "en": "Tried many things, nothing worked",
+                "hi": "बहुत कुछ आज़माया, कुछ काम नहीं आया"
+              },
+              "value": 3
+            }
+          ]
+        },
+        {
+          "id": "q_md4",
+          "text": {
+            "en": "I am ready to put in weekly effort for the next 2–3 months.",
+            "hi": "मैं अगले 2–3 महीनों तक हर हफ्ते मेहनत करने के लिए तैयार हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_not_sure",
+              "text": {
+                "en": "Not sure",
+                "hi": "पक्का नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_somewhat",
+              "text": {
+                "en": "Somewhat",
+                "hi": "कुछ हद तक"
+              },
+              "value": null
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": null
+            },
+            {
+              "id": "o_fully_committed",
+              "text": {
+                "en": "Fully committed",
+                "hi": "पूरी तरह तैयार"
+              },
+              "value": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s_flag",
+      "title": {
+        "en": "Your health",
+        "hi": "आपकी सेहत"
+      },
+      "scored": false,
+      "questions": [
+        {
+          "id": "q_mr1",
+          "text": {
+            "en": "Do you have any of these? (choose all that apply)",
+            "hi": "क्या आपको इनमें से कुछ है? (जो लागू हों सब चुनें)"
+          },
+          "multiple": true,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_diabetes",
+              "text": {
+                "en": "Diabetes",
+                "hi": "डायबिटीज़"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication (for example thyroid) — can affect mood, energy or sleep (workbook: MED_MIND_GENERAL)."
+            },
+            {
+              "id": "o_high_blood_pressure",
+              "text": {
+                "en": "High blood pressure",
+                "hi": "हाई ब्लड प्रेशर"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication (for example thyroid) — can affect mood, energy or sleep (workbook: MED_MIND_GENERAL)."
+            },
+            {
+              "id": "o_thyroid",
+              "text": {
+                "en": "Thyroid",
+                "hi": "थायरॉइड"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication (for example thyroid) — can affect mood, energy or sleep (workbook: MED_MIND_GENERAL)."
+            },
+            {
+              "id": "o_heart_condition",
+              "text": {
+                "en": "Heart condition",
+                "hi": "दिल की बीमारी"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication (for example thyroid) — can affect mood, energy or sleep (workbook: MED_MIND_GENERAL)."
+            },
+            {
+              "id": "o_pcos",
+              "text": {
+                "en": "PCOS",
+                "hi": "PCOS"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication (for example thyroid) — can affect mood, energy or sleep (workbook: MED_MIND_GENERAL)."
+            },
+            {
+              "id": "o_regular_medication",
+              "text": {
+                "en": "Regular medication for any condition",
+                "hi": "किसी बीमारी की नियमित दवा"
+              },
+              "value": null,
+              "note": "Existing health condition or regular medication (for example thyroid) — can affect mood, energy or sleep (workbook: MED_MIND_GENERAL)."
+            },
+            {
+              "id": "o_none",
+              "text": {
+                "en": "None of these",
+                "hi": "इनमें से कोई नहीं"
+              },
+              "value": null
+            }
+          ]
+        },
+        {
+          "id": "q_mr2",
+          "text": {
+            "en": "Did this start suddenly (within a few weeks) after an illness, surgery, new medicine or childbirth?",
+            "hi": "क्या यह किसी बीमारी, सर्जरी, नई दवा या बच्चे के जन्म के बाद अचानक (कुछ हफ्तों में) शुरू हुआ?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": null,
+              "note": "Started suddenly after illness, surgery, new medicine or childbirth — tell the doctor about the change (workbook: MED_ONSET)."
+            }
+          ]
+        },
+        {
+          "id": "q_mr3",
+          "text": {
+            "en": "Have you had chest pain, fainting or breathlessness that a doctor has not checked yet?",
+            "hi": "क्या आपको सीने में दर्द, बेहोशी या साँस फूलने की ऐसी दिक्कत हुई है जिसकी डॉक्टर ने अभी तक जाँच नहीं की?"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_no",
+              "text": {
+                "en": "No",
+                "hi": "नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_yes",
+              "text": {
+                "en": "Yes",
+                "hi": "हाँ"
+              },
+              "value": null,
+              "note": "Chest pain, fainting or breathlessness not yet checked — see a doctor soon; rule out a physical cause (workbook: MED_PHYSICAL)."
+            }
+          ],
+          "show_when": {
+            "any": [
+              {
+                "question": "q_mg1",
+                "includes": [
+                  "o_h"
+                ]
+              },
+              {
+                "question": "q_h4",
+                "is": [
+                  "o_sometimes",
+                  "o_often"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "q_mr4",
+          "text": {
+            "en": "I use alcohol, smoking or other substances to cope with how I feel.",
+            "hi": "अपनी भावनाओं से निपटने के लिए मैं शराब, धूम्रपान या किसी और चीज़ का सहारा लेता/लेती हूँ।"
+          },
+          "multiple": false,
+          "max_choices": null,
+          "options": [
+            {
+              "id": "o_never",
+              "text": {
+                "en": "Never",
+                "hi": "कभी नहीं"
+              },
+              "value": null
+            },
+            {
+              "id": "o_rarely",
+              "text": {
+                "en": "Rarely",
+                "hi": "कभी-कभार"
+              },
+              "value": null
+            },
+            {
+              "id": "o_sometimes",
+              "text": {
+                "en": "Sometimes",
+                "hi": "कभी-कभी"
+              },
+              "value": null
+            },
+            {
+              "id": "o_often",
+              "text": {
+                "en": "Often",
+                "hi": "अक्सर"
+              },
+              "value": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
