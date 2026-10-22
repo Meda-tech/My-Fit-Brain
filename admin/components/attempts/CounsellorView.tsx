@@ -1,236 +1,170 @@
-import type { AssessmentResult } from '@mfb/engine';
-import type { VersionConfig } from '@mfb/questionbank';
-import { Card, Pill } from '../brand';
-import type { AttemptAnswer, AttemptEvent } from '../../lib/services/attempts';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
+import type { CounsellorView as ViewData } from '@mfb/questionnaire';
+import { Card, Notice, Pill } from '../brand';
+import type { AttemptAlert } from '../../lib/services/attempts';
 import { formatDateTime } from './AttemptStatusPill';
 
-// Staff-only details of an attempt. Never shown to clients; the client report is separate.
+// Staff-only details of an attempt. Never shown to clients. Coordinators see the alerts only.
 
-const h2 = 'text-[20px] font-semibold text-teal';
 const h3 = 'mb-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-muted';
 const th = 'whitespace-nowrap px-3 py-2 font-semibold';
 const td = 'px-3 py-2 align-top';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="border-t border-sand pt-5">
+    <section className="border-t border-sand pt-5 first:border-t-0 first:pt-0">
       <h3 className={h3}>{title}</h3>
       {children}
     </section>
   );
 }
 
-export function CounsellorView({
-  result,
-  config,
-  answers,
-  events,
-  eventsOnly = false,
-}: {
-  result: AssessmentResult | null;
-  config: VersionConfig | null;
-  answers: AttemptAnswer[];
-  events: AttemptEvent[];
-  /** Coordinators: safety events only, no scores or answers. */
-  eventsOnly?: boolean;
-}) {
-  const moduleName = (code: string) => config?.modules.find((m) => m.code === code)?.name_en ?? code;
-  const question = (qid: string) => config?.questions.find((q) => q.qid === qid);
-  const optionLabel = (qid: string, code: string) =>
-    question(qid)?.options.find((o) => o.option_code === code)?.label_en ?? code;
-  const showValue = (qid: string, v: string | string[]) =>
-    (Array.isArray(v) ? v : [v]).map((c) => `${optionLabel(qid, c)} (${c})`).join(', ');
+const ALERT_TITLES: Record<AttemptAlert['kind'], string> = { crisis: 'Crisis: thoughts of self-harm', home_safety: 'Home safety: feels unsafe at home' };
 
-  const safetyEvents = (
-    <Section title="Safety events">
-      {events.length === 0 ? (
-        <p className="text-[14px] text-ink-muted">None.</p>
-      ) : (
-        <ul className="space-y-1 text-[14px] text-ink">
-          {events.map((e) => (
-            <li key={e.id}>
-              <strong>{e.kind}</strong> <span className="font-mono text-[12px]">{e.flag_key}</span> · {formatDateTime(e.created_at)} ·{' '}
-              {e.handled_at ? `handled ${formatDateTime(e.handled_at)}` : 'not yet handled'}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Section>
+export function AlertsList({ alerts }: { alerts: AttemptAlert[] }) {
+  if (alerts.length === 0) return <p className="text-[14px] text-ink-muted">No safety alerts.</p>;
+  return (
+    <ul className="space-y-2">
+      {alerts.map((a) => (
+        <li key={a.id}>
+          <Notice variant={a.kind === 'crisis' ? 'error' : 'medical'} icon={<ShieldAlert size={18} strokeWidth={2} />} title={ALERT_TITLES[a.kind]}>
+            Raised {formatDateTime(a.created_at)}
+            {a.handled_at ? ` · handled ${formatDateTime(a.handled_at)}` : ' · not yet handled'}
+            {a.kind === 'crisis' ? '. Call the client within 4 working hours (after 8 PM: by 10 AM next day). Tele-MANAS 14416 / 1-800-891-4416.' : '. Individual sessions only; discuss safe next steps privately. Emergency 112, Women Helpline 181.'}
+          </Notice>
+        </li>
+      ))}
+    </ul>
   );
+}
 
-  if (eventsOnly) {
-    return <Card className="space-y-5 p-5 sm:p-6 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0">{safetyEvents}</Card>;
-  }
-
+export function CounsellorView({ view, alerts }: { view: ViewData | null; alerts: AttemptAlert[] }) {
   return (
     <Card className="space-y-5 p-5 sm:p-6">
-      <div>
-        <h2 className={h2}>Counsellor view</h2>
-        <p className="mt-1 text-[14px] text-ink-muted">For the care team only. Clients never see this panel.</p>
-      </div>
+      <Section title="Alerts and notes">
+        <AlertsList alerts={alerts} />
+        {view && view.notes.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {view.notes.map((n, i) => (
+              <li key={i} className="flex items-start gap-2 rounded-input bg-cream px-3 py-2 text-[14px] text-ink">
+                <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-coral-deep" aria-hidden />
+                <span>
+                  <span className="font-semibold">{n.note}</span>
+                  <span className="block text-[13px] text-ink-muted">
+                    {n.number ? `${n.number} ` : ''}
+                    {n.question} — {n.answer}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
-      {result ? (
+      {!view ? (
+        <Section title="Result">
+          <p className="text-[14px] text-ink-muted">No result yet. The client has not finished this assessment.</p>
+        </Section>
+      ) : (
         <>
-          <Section title="Modules">
+          <Section title="Plan and main area">
+            <p className="text-[15px] text-ink">
+              {view.main ? (
+                <>
+                  Main area: <strong>{view.main.title}</strong>
+                  {view.main.score !== null ? ` — ${view.main.score}% · ${view.main.range}` : ''}
+                </>
+              ) : (
+                'No main area (no scored section had enough answers).'
+              )}
+            </p>
+            <p className="mt-1 text-[15px] text-ink">
+              {view.plan ? (
+                <>
+                  Plan: <strong>{view.plan.name}</strong> — {view.plan.sessions} sessions, {view.plan.pace}
+                </>
+              ) : (
+                'No plan row for this result.'
+              )}
+            </p>
+          </Section>
+
+          <Section title="Sections">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-[14px]">
                 <thead>
                   <tr className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
-                    <th className={th}>Module</th>
+                    <th className={th}>Section</th>
                     <th className={th}>Score</th>
-                    <th className={th}>%</th>
-                    <th className={th}>Band</th>
-                    <th className={th}>Items</th>
+                    <th className={th}>Range</th>
+                    <th className={th}>Answered</th>
+                    <th className={th}>Skipped</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand">
-                  {Object.entries(result.modules).map(([code, m]) => (
-                    <tr key={code}>
+                  {view.sections.map((s) => (
+                    <tr key={s.id}>
                       <td className={td}>
-                        {moduleName(code)} <span className="font-mono text-[12px] text-ink-muted">{code}</span>
-                        {code === result.primary && <Pill className="ml-2">primary</Pill>}
-                        {code === result.second && <Pill tone="quiet" className="ml-2">second</Pill>}
+                        {s.title}
+                        {view.main?.title === s.title && s.scored && <Pill className="ml-2">main</Pill>}
+                        {!s.scored && <Pill tone="quiet" className="ml-2">not scored</Pill>}
                       </td>
+                      <td className={td}>{s.score === null ? (s.scored ? 'Not enough answers' : '—') : `${s.score}%`}</td>
+                      <td className={td}>{s.range ?? '—'}</td>
                       <td className={td}>
-                        {m.sum} / {m.max}
+                        {s.answered} / {s.shownQuestions}
                       </td>
-                      <td className={td}>{m.percent ?? '—'}</td>
-                      <td className={td}>{m.band ?? '—'}</td>
-                      <td className={td}>
-                        {m.scoredItems} scored / {m.shownItems} shown
-                      </td>
+                      <td className={td}>{s.skipped}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <p className="mt-2 text-[13px] text-ink-muted">
-              Mode {result.mode} · path {result.path ?? '—'} · core {result.coreModule} · chosen{' '}
-              {result.chosenModules.join(', ') || '—'} · layout {result.layout}
-            </p>
           </Section>
 
-          <Section title="Points and tier">
-            {result.points ? (
-              <ul className="space-y-1 text-[14px] text-ink-soft">
-                {result.points.breakdown.map((p) => (
-                  <li key={p.key}>
-                    <span className="font-mono text-[12px] text-ink-muted">{p.key}</span> {p.label}: {p.points}
-                  </li>
-                ))}
-                <li className="font-semibold text-ink">Total: {result.points.total}</li>
-              </ul>
+          <Section title="Notable answers (highest first)">
+            {view.notable.length === 0 ? (
+              <p className="text-[14px] text-ink-muted">No answers with a value.</p>
             ) : (
-              <p className="text-[14px] text-ink-muted">No points in this mode.</p>
-            )}
-            <p className="mt-3 text-[14px] text-ink">
-              Tier before overrides: <strong>{result.tierBeforeOverrides ?? '—'}</strong> · final tier:{' '}
-              <strong>{result.tier ?? '—'}</strong>
-            </p>
-            {result.overridesApplied.length > 0 && (
-              <ul className="mt-1 text-[14px] text-ink-soft">
-                {result.overridesApplied.map((o) => (
-                  <li key={o.key}>
-                    Override <span className="font-mono text-[12px]">{o.key}</span>: {o.from} → {o.to}
+              <ul className="divide-y divide-sand text-[14px]">
+                {view.notable.map((n, i) => (
+                  <li key={i} className="flex items-start justify-between gap-4 py-2">
+                    <span className="text-ink">
+                      <span className="mr-2 text-ink-muted">{n.number}</span>
+                      {n.question} — <strong>{n.answer}</strong>
+                    </span>
+                    <span className="shrink-0 font-mono text-[12px] text-ink-muted">{n.percent}%</span>
                   </li>
                 ))}
               </ul>
             )}
           </Section>
 
-          <Section title="Format">
-            {result.format ? (
-              <p className="text-[14px] text-ink">
-                {result.format.type}
-                {result.format.split ? ` (${result.format.split.individual} individual + ${result.format.split.couple} couple)` : ''} ·
-                decided by {result.format.source.kind} <span className="font-mono text-[12px]">{result.format.source.key}</span>
-              </p>
-            ) : (
-              <p className="text-[14px] text-ink-muted">No format.</p>
-            )}
+          <Section title="All answers">
+            <div className="space-y-4">
+              {view.answers.map((group) => (
+                <div key={group.section}>
+                  <p className="text-[14px] font-semibold text-teal">{group.section}</p>
+                  <ul className="mt-1 divide-y divide-sand text-[14px]">
+                    {group.items.map((a, i) => (
+                      <li key={i} className="flex items-start justify-between gap-4 py-1.5">
+                        <span className="text-ink-soft">
+                          <span className="mr-2 text-ink-muted">{a.number}</span>
+                          {a.question}
+                        </span>
+                        <span className="shrink-0 text-right text-ink">
+                          {a.answer}
+                          {a.skipped && <span className="ml-1 text-[12px] text-ink-muted">(not counted)</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </Section>
-
-          <Section title="Flags and tags">
-            {result.flags.length === 0 && result.counsellor.tags.length === 0 ? (
-              <p className="text-[14px] text-ink-muted">None.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {result.flags.map((f) => (
-                  <Pill key={f.key}>{f.key}</Pill>
-                ))}
-                {result.counsellor.tags
-                  .filter((tag) => !result.flags.some((f) => f.key === tag))
-                  .map((tag) => (
-                    <Pill key={tag} tone="quiet">
-                      {tag}
-                    </Pill>
-                  ))}
-              </div>
-            )}
-            {result.notify.length > 0 && (
-              <p className="mt-2 text-[13px] text-ink-muted">
-                Notify: {result.notify.map((n) => `${n.flag} → ${n.recipients.join(', ')}`).join(' · ')}
-              </p>
-            )}
-          </Section>
-
-          <Section title="Readiness">
-            <p className="text-[14px] text-ink">
-              {result.counsellor.readiness
-                ? `${question(result.counsellor.readiness.qid)?.text_en ?? result.counsellor.readiness.qid}: ${optionLabel(
-                    result.counsellor.readiness.qid,
-                    result.counsellor.readiness.answer
-                  )}`
-                : '—'}
-            </p>
-          </Section>
-
-          {result.warnings.length > 0 && (
-            <Section title="Engine warnings">
-              <ul className="text-[13px] text-ink-soft">
-                {result.warnings.map((w, i) => (
-                  <li key={i}>
-                    <span className="font-mono">{w.code}</span> {w.message}
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          )}
         </>
-      ) : (
-        <p className="text-[14px] text-ink-muted">No result yet. The client has not finished this assessment.</p>
       )}
-
-      {safetyEvents}
-
-      <Section title="Answers">
-        {answers.length === 0 ? (
-          <p className="text-[14px] text-ink-muted">No answers yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[14px]">
-              <thead>
-                <tr className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
-                  <th className={th}>ID</th>
-                  <th className={th}>Question</th>
-                  <th className={th}>Answer</th>
-                  <th className={th}>From</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sand">
-                {answers.map((a) => (
-                  <tr key={a.qid}>
-                    <td className={`${td} font-mono text-[12px] text-ink-muted`}>{a.qid}</td>
-                    <td className={`${td} text-ink-soft`}>{question(a.qid)?.text_en ?? '—'}</td>
-                    <td className={`${td} text-ink`}>{showValue(a.qid, a.value)}</td>
-                    <td className={`${td} text-ink-muted`}>{a.source === 'profile' ? 'Registration' : 'Client'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Section>
     </Card>
   );
 }

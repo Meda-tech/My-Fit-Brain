@@ -17,9 +17,9 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Shared workspace packages (TypeScript source, no build step).
-  transpilePackages: ["@mfb/questionbank", "@mfb/engine", "@mfb/report"],
-  // Server-only libraries (Excel parser, report PDF renderer); keep them out of the bundle.
-  serverExternalPackages: ["exceljs", "@react-pdf/renderer"],
+  transpilePackages: ["@mfb/questionnaire"],
+  // Server-only library (report PDF renderer); keep it out of the bundle.
+  serverExternalPackages: ["@react-pdf/renderer"],
   // The report PDF route reads the brand fonts and PNG logos from disk (lib/report-pdf/assets.ts).
   // Both are copies inside the app: paths outside the app folder are not traced into the deployment.
   outputFileTracingRoot: path.join(__dirname, ".."),
@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.29.64", "192.168.29.*", "localhost"],
   experimental: {
     serverActions: {
-      // Question bank Excel upload (the import action also enforces 5 MB).
+      // Questionnaire JSON import (pasted text).
       bodySizeLimit: "6mb",
       allowedOrigins: [
         // Both app origins, from NEXT_PUBLIC_CLIENTS_URL / NEXT_PUBLIC_ADMIN_URL.

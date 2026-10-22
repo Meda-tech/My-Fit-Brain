@@ -32,7 +32,18 @@ function appDir(): string {
 }
 
 export interface PdfAssets {
-  fonts: Record<string, string>;
+  /** Font file paths; the Devanagari ones are null until Noto Sans Devanagari is added to app/fonts. */
+  fonts: {
+    poppinsRegular: string;
+    poppinsMedium: string;
+    poppinsSemiBold: string;
+    poppinsBold: string;
+    dmSansRegular: string;
+    dmSansMedium: string;
+    dmSansBold: string;
+    devanagariRegular: string | null;
+    devanagariBold: string | null;
+  };
   logo: { endorsed: Buffer; horizontal: Buffer; seal: Buffer };
 }
 
@@ -45,6 +56,10 @@ export function pdfAssets(): PdfAssets {
     const p = path.join(app, 'app', 'fonts', file);
     if (!fs.existsSync(p)) throw new Error(`Report PDF: font missing at ${p}`);
     return p;
+  };
+  const optionalFont = (file: string) => {
+    const p = path.join(app, 'app', 'fonts', file);
+    return fs.existsSync(p) ? p : null;
   };
   const png = (name: string) => {
     const p = path.join(app, 'assets', 'report-pdf', `MFB_${name}_FullColour.png`);
@@ -60,6 +75,9 @@ export function pdfAssets(): PdfAssets {
       dmSansRegular: font('DMSans-Regular.ttf'),
       dmSansMedium: font('DMSans-Medium.ttf'),
       dmSansBold: font('DMSans-Bold.ttf'),
+      // Hindi reports: add NotoSansDevanagari-Regular.ttf and -Bold.ttf (OFL) to app/fonts to enable.
+      devanagariRegular: optionalFont('NotoSansDevanagari-Regular.ttf'),
+      devanagariBold: optionalFont('NotoSansDevanagari-Bold.ttf'),
     },
     logo: {
       endorsed: png('Endorsed_FoundedBy'),

@@ -83,7 +83,7 @@ export function AdminShellClient({
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/clients', label: 'Clients', icon: Users },
-    { href: '/question-bank', label: 'Question bank', icon: BookOpen },
+    { href: '/questionnaires', label: 'Questionnaires', icon: BookOpen },
     // Payments: super admins and coordinators only (RLS: can_view_payments()).
     ...(role === 'super_admin' || role === 'coordinator' ? [{ href: '/payments', label: 'Payments', icon: CreditCard }] : []),
     ...(isSuperAdmin ? [{ href: '/coordinators', label: 'Team', icon: ShieldCheck }] : []),

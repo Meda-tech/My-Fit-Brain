@@ -5,7 +5,6 @@ const LABELS: Record<AttemptListRow['status'], string> = {
   paid: 'Paid, not started',
   in_progress: 'In progress',
   completed: 'Completed',
-  stopped: 'Stopped',
 };
 
 export function AttemptStatusPill({ status }: { status: AttemptListRow['status'] }) {

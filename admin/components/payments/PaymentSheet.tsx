@@ -125,7 +125,7 @@ function SheetBody({
                 </Link>
               </Row>
               <Row label="Status">{ATTEMPT_STATUS_LABELS[p.attempt.status] ?? p.attempt.status}</Row>
-              <Row label="Version">{p.attempt.version_label ?? '—'}</Row>
+              <Row label="Version">{p.attempt.version_number ?? '—'}</Row>
               <Row label="Started">{formatDateTime(p.attempt.started_at)}</Row>
               <Row label="Completed">{formatDateTime(p.attempt.completed_at)}</Row>
             </>

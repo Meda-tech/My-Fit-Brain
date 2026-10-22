@@ -24,9 +24,7 @@ export function AttemptsList({ attempts }: { attempts: AttemptListRow[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-[14px] font-semibold text-ink">{a.report_id}</p>
                   <p className="mt-0.5 text-[14px] text-ink-soft">
-                    {a.test_name} · version {a.version_label}
-                    {a.kind === 'progress' ? ' · progress' : ''}
-                    {a.payment_mode === 'stub' ? ' · test payment' : ''}
+                    {a.questionnaire_name} · version {a.version_number ?? '—'}
                   </p>
                   <p className="mt-0.5 text-[13px] text-ink-muted">
                     Paid {formatDateTime(a.paid_at)}

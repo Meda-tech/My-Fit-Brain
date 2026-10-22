@@ -9,9 +9,6 @@ export interface Profile {
   full_name: string;
   role: StaffRole;
   is_active: boolean;
-  /** Question bank rights (Task 03 migration). Undefined before that migration is applied. */
-  can_edit_content?: boolean;
-  can_approve_content?: boolean;
   created_at: string;
   updated_at: string;
 }

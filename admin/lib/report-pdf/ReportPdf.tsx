@@ -1,16 +1,21 @@
 import 'server-only';
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
-import type { Lang, ReportArea, ReportDocument, ReportSection } from '@mfb/report';
+import type { Report } from '@mfb/questionnaire';
 import { colour, pdfAssets } from './assets';
 
-// The report PDF, laid out on brand/MFB_Assessment_Report_Template_A4.pdf: a cover page (endorsed
-// logo, bindu dot, test name, Prepared for / Date / Report ID, founder seal, teal disclaimer band) and
-// content pages (logo header with test and client name, numbered teal sections, mist cards with bars,
-// "Space to speak." footer). Every sentence comes from the stored report document; only the labels
-// below are UI words. Generated on request and never stored.
+// The report PDF, laid out on brand/MFB_Assessment_Report_Template_A4.pdf: a cover page (endorsed logo,
+// bindu dot, title, Prepared for / Date / Report ID, founder seal, teal disclaimer band) and content
+// pages (logo header, numbered teal sections, mist cards with bars, "Space to speak." footer). Five
+// parts, the same for every questionnaire; parts with no content are left out. Every sentence comes
+// from the stored report; only the labels below are UI words. Generated on request and never stored.
 
 const FOOTER_LINE = 'My Fit Brain · A unit of MeDa Partners Pvt Ltd · System Designed by MeDa Partners Pvt Ltd';
 const BRAND_LINE = 'Space to speak.';
+
+const LABELS = {
+  en: { preparedFor: 'PREPARED FOR', date: 'DATE', reportId: 'REPORT ID', sessions: 'sessions', notEnough: 'Not enough answers' },
+  hi: { preparedFor: 'किसके लिए', date: 'तारीख', reportId: 'रिपोर्ट ID', sessions: 'सेशन', notEnough: 'पर्याप्त जवाब नहीं' },
+};
 
 let fontsReady = false;
 function registerFonts() {
@@ -33,6 +38,13 @@ function registerFonts() {
       { src: f.dmSansBold, fontWeight: 700 },
     ],
   });
+  // Hindi reports need a Devanagari font; registered when the files are present (assets.ts).
+  if (f.devanagariRegular) {
+    Font.register({
+      family: 'Devanagari',
+      fonts: [{ src: f.devanagariRegular, fontWeight: 400 }, ...(f.devanagariBold ? [{ src: f.devanagariBold, fontWeight: 700 }] : [])],
+    });
+  }
   // Never split words across lines.
   Font.registerHyphenationCallback((word) => [word]);
   fontsReady = true;
@@ -42,94 +54,89 @@ function registerFonts() {
 const M = 57;
 
 const s = StyleSheet.create({
-  // Cover
-  cover: { backgroundColor: colour.cream, fontFamily: 'DM Sans', color: colour.ink },
+  cover: { backgroundColor: colour.cream, color: colour.ink },
   coverLogo: { position: 'absolute', left: M - 14, top: 58, width: 200 },
   coverBody: { position: 'absolute', left: M, right: M, top: 262 },
   bindu: { width: 22, height: 22, borderRadius: 11, backgroundColor: colour.coral, marginBottom: 22 },
-  coverTitle: { fontFamily: 'Poppins', fontWeight: 600, fontSize: 32, lineHeight: 1.2, color: colour.teal },
-  coverSubtitle: { marginTop: 22, fontSize: 13.5, color: colour['ink-soft'] },
-  fields: { position: 'absolute', left: M, top: 456, width: 312 },
+  coverTitle: { fontWeight: 600, fontSize: 32, lineHeight: 1.2, color: colour.teal },
+  coverSubtitle: { marginTop: 14, fontSize: 13.5, lineHeight: 1.5, color: colour['ink-soft'] },
+  coverDesigned: { marginTop: 10, fontSize: 11, color: colour['ink-muted'] },
+  fields: { position: 'absolute', left: M, top: 470, width: 312 },
   field: { borderBottomWidth: 1, borderBottomColor: colour.sand, paddingBottom: 9, marginBottom: 18 },
   fieldLabel: { fontSize: 8.5, letterSpacing: 1, color: colour['ink-muted'], marginBottom: 5 },
   fieldValue: { fontSize: 12, color: colour.ink },
   seal: { position: 'absolute', right: M - 6, top: 486, width: 134, height: 134 },
-  band: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 96, backgroundColor: colour.teal, paddingHorizontal: M, paddingTop: 28 },
-  bandText: { fontSize: 8.5, lineHeight: 1.6, color: colour.white, maxWidth: 420 },
+  band: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 96, backgroundColor: colour.teal, paddingHorizontal: M, paddingTop: 24 },
+  bandText: { fontSize: 8.5, lineHeight: 1.6, color: colour.white, maxWidth: 440 },
 
-  // Content pages
-  page: { backgroundColor: colour.white, fontFamily: 'DM Sans', color: colour.ink, paddingTop: 116, paddingBottom: 78, paddingHorizontal: M },
+  page: { backgroundColor: colour.white, color: colour.ink, paddingTop: 116, paddingBottom: 78, paddingHorizontal: M },
   header: { position: 'absolute', top: 40, left: M, right: M, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colour.sand, paddingBottom: 14 },
   headerLogo: { width: 112, marginLeft: -8 },
   headerText: { fontSize: 8.5, color: colour['ink-muted'] },
   footer: { position: 'absolute', bottom: 30, left: M, right: M, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colour.sand, paddingTop: 10 },
   footerBrand: { fontFamily: 'Poppins', fontSize: 8.5, color: colour['coral-deep'] },
-  footerText: { fontSize: 7.5, color: colour['ink-muted'] },
+  footerText: { fontFamily: 'DM Sans', fontSize: 7.5, color: colour['ink-muted'] },
 
-  h2: { fontFamily: 'Poppins', fontWeight: 600, fontSize: 17, color: colour.teal, marginBottom: 10 },
+  h2: { fontWeight: 600, fontSize: 17, color: colour.teal, marginBottom: 10 },
   section: { marginBottom: 22 },
   body: { fontSize: 10.5, lineHeight: 1.6, color: colour['ink-soft'] },
-  note: { fontSize: 8.5, lineHeight: 1.5, color: colour['ink-muted'], marginTop: 6 },
 
   card: { backgroundColor: colour.mist, borderRadius: 9, paddingVertical: 15, paddingHorizontal: 19, marginBottom: 11 },
-  areaLabel: { fontSize: 8.5, letterSpacing: 1, color: colour['ink-muted'], marginBottom: 9 },
+  areaLabel: { fontSize: 10, fontWeight: 600, color: colour.ink, marginBottom: 9 },
   track: { height: 8, borderRadius: 4, backgroundColor: colour.sand, marginBottom: 8 },
   fill: { height: 8, borderRadius: 4, backgroundColor: colour.teal },
   areaCaption: { fontSize: 9, color: colour['ink-soft'] },
+  areaMeaning: { fontSize: 10, lineHeight: 1.55, color: colour['ink-soft'], marginTop: 7 },
 
   bulletRow: { flexDirection: 'row', marginBottom: 5 },
   bullet: { width: 4, height: 4, borderRadius: 2, backgroundColor: colour.coral, marginTop: 6, marginRight: 9 },
   bulletText: { flex: 1, fontSize: 10.5, lineHeight: 1.6, color: colour['ink-soft'] },
 
-  callout: { backgroundColor: colour.cream, borderLeftWidth: 3, borderLeftColor: colour.teal, borderTopRightRadius: 6, borderBottomRightRadius: 6, padding: 13, marginBottom: 9 },
-  calloutText: { fontSize: 10, lineHeight: 1.6, color: colour['ink-soft'] },
-  crisis: { backgroundColor: colour.mist, borderLeftWidth: 3, borderLeftColor: colour.teal, borderTopRightRadius: 9, borderBottomRightRadius: 9, padding: 16, marginBottom: 22 },
-  crisisText: { fontSize: 11, lineHeight: 1.6, color: colour.ink },
+  support: { backgroundColor: colour.mist, borderLeftWidth: 3, borderLeftColor: colour.teal, borderTopRightRadius: 9, borderBottomRightRadius: 9, padding: 16, marginBottom: 22 },
+  supportText: { fontSize: 11, lineHeight: 1.6, color: colour.ink },
   plan: { backgroundColor: colour.mist, borderRadius: 9, padding: 16 },
-  planText: { fontFamily: 'Poppins', fontWeight: 500, fontSize: 11, lineHeight: 1.55, color: colour.ink },
+  planText: { fontWeight: 500, fontSize: 11.5, lineHeight: 1.55, color: colour.ink },
+  planNote: { fontSize: 10, lineHeight: 1.5, color: colour['ink-soft'], marginTop: 8 },
 });
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
+function formatDate(iso: string, lang: 'en' | 'hi'): string {
+  return new Date(iso).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
 }
 
 export interface ReportPdfProps {
-  doc: ReportDocument;
-  clientName: string;
-  testName: string;
+  report: Report;
 }
 
-export function ReportPdf({ doc, clientName, testName }: ReportPdfProps) {
+export function ReportPdf({ report: r }: ReportPdfProps) {
   registerFonts();
-  const { logo } = pdfAssets();
-  const lang: Lang = doc.sections.en ? 'en' : (doc.languages[0] ?? 'en');
-  const r = doc.sections[lang] as ReportSection;
+  const { logo, fonts } = pdfAssets();
+  const lang = r.lang;
+  const t = LABELS[lang];
+  // Hindi text uses the Devanagari font when available; headings fall back to it too (Poppins has no Devanagari).
+  const hindi = lang === 'hi' && !!fonts.devanagariRegular;
+  const bodyFont = hindi ? 'Devanagari' : 'DM Sans';
+  const headFont = hindi ? 'Devanagari' : 'Poppins';
+  const body = { fontFamily: bodyFont };
+  const head = { fontFamily: headFont };
 
-  // Numbered sections in the order of the developer spec (section 7). Crisis layout: plan and focus
-  // are already null in the stored document.
-  // keep: short sections that must not split from their heading across pages.
-  const sections: { heading: string | null; body: React.ReactNode; keep?: boolean }[] = [];
-  sections.push({
-    heading: r.snapshot.heading,
-    body: (
-      <>
-        {r.snapshot.areas.map((a) => (
-          <AreaCard key={a.module} area={a} />
-        ))}
-        {r.snapshot.note && <Text style={s.note}>{r.snapshot.note}</Text>}
-      </>
-    ),
-  });
-  if (r.strengths.items.length) sections.push({ heading: r.strengths.heading, body: <Bullets items={r.strengths.items} /> });
-  if (r.stuck.items.length) sections.push({ heading: r.stuck.heading, body: <Bullets items={r.stuck.items} /> });
-  if (r.means.items.length) {
+  const sections: { heading: string; body: React.ReactNode; keep?: boolean }[] = [];
+  if (r.snapshot.areas.length) {
     sections.push({
-      heading: r.means.heading,
-      body: r.means.items.map((t, i) => (
-        <Text key={i} style={[s.body, { marginBottom: 7 }]}>
-          {t}
-        </Text>
-      )),
+      heading: r.snapshot.heading,
+      body: (
+        <>
+          {r.snapshot.areas.map((a, i) => (
+            <View key={i} style={s.card} wrap={false}>
+              <Text style={[s.areaLabel, head]}>{a.title}</Text>
+              <View style={s.track}>
+                <View style={[s.fill, { width: `${Math.max(0, Math.min(100, a.percent ?? 0))}%` }]} />
+              </View>
+              <Text style={[s.areaCaption, body]}>{a.percent === null ? t.notEnough : `${a.percent}% · ${a.range}`}</Text>
+              {a.meaning && <Text style={[s.areaMeaning, body]}>{a.meaning}</Text>}
+            </View>
+          ))}
+        </>
+      ),
     });
   }
   if (r.plan) {
@@ -137,141 +144,97 @@ export function ReportPdf({ doc, clientName, testName }: ReportPdfProps) {
       heading: r.plan.heading,
       keep: true,
       body: (
-        <>
-          {r.plan.line && (
-            <View style={s.plan} wrap={false}>
-              <Text style={s.planText}>{r.plan.line}</Text>
-            </View>
-          )}
-          {r.plan.extra.map((t, i) => (
-            <Text key={i} style={[s.body, { marginTop: 8 }]}>
-              {t}
-            </Text>
-          ))}
-        </>
+        <View style={s.plan} wrap={false}>
+          <Text style={[s.planText, head]}>
+            {r.plan.name}: {r.plan.sessions} {t.sessions}, {r.plan.pace}
+          </Text>
+          <Text style={[s.planNote, body]}>{r.plan.note}</Text>
+        </View>
       ),
     });
   }
-  if (r.focus?.items.length) sections.push({ heading: r.focus.heading, body: <Bullets items={r.focus.items} /> });
-  const medical = r.blocks.filter((b) => b.kind === 'medical');
-  const other = r.blocks.filter((b) => b.kind !== 'medical');
-  if (other.length) sections.push({ heading: null, body: <Callouts texts={other.map((b) => b.text)} /> });
-  if (medical.length) sections.push({ heading: r.medicalHeading, body: <Callouts texts={medical.map((b) => b.text)} /> });
-  if (r.next.heading || r.next.text) {
-    sections.push({ heading: r.next.heading, keep: true, body: r.next.text ? <Text style={s.body}>{r.next.text}</Text> : null });
+  if (r.focus) {
+    sections.push({
+      heading: r.focus.heading,
+      body: (
+        <View>
+          <Text style={[s.body, body, { marginBottom: 6, fontWeight: 500 }]}>{r.focus.title}</Text>
+          {r.focus.lines.map((line, i) => (
+            <View key={i} style={s.bulletRow} wrap={false}>
+              <View style={s.bullet} />
+              <Text style={[s.bulletText, body]}>{line}</Text>
+            </View>
+          ))}
+        </View>
+      ),
+    });
   }
-  if (r.nri) sections.push({ heading: null, keep: true, body: <Text style={s.body}>{r.nri}</Text> });
+  if (r.closing) sections.push({ heading: r.closing.heading, keep: true, body: <Text style={[s.body, body]}>{r.closing.text}</Text> });
 
   let n = 0;
-  const date = formatDate(doc.completedAt);
+  const date = formatDate(r.date, lang);
 
   return (
-    <Document title={doc.reportId ?? 'Report'} author="My Fit Brain" creator="My Fit Brain" producer="My Fit Brain">
-      {/* Cover */}
-      <Page size="A4" style={s.cover}>
+    <Document title={r.reportId} author="My Fit Brain" creator="My Fit Brain" producer="My Fit Brain">
+      <Page size="A4" style={[s.cover, body]}>
         {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt */}
         <Image style={s.coverLogo} src={{ data: logo.endorsed, format: 'png' }} />
         <View style={s.coverBody}>
           <View style={s.bindu} />
-          <Text style={s.coverTitle}>{testName}</Text>
-          {r.designedBy && <Text style={s.coverSubtitle}>{r.designedBy}</Text>}
+          <Text style={[s.coverTitle, head]}>{r.title}</Text>
+          {r.subtitle && <Text style={[s.coverSubtitle, body]}>{r.subtitle}</Text>}
+          <Text style={[s.coverDesigned, body]}>{r.designedBy}</Text>
         </View>
         <View style={s.fields}>
-          <Field label="PREPARED FOR" value={clientName} />
-          <Field label="DATE" value={date} />
-          <Field label="REPORT ID" value={doc.reportId ?? '—'} />
+          <Field label={t.preparedFor} value={r.clientName} font={bodyFont} />
+          <Field label={t.date} value={date} font={bodyFont} />
+          <Field label={t.reportId} value={r.reportId} font="DM Sans" />
         </View>
         {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt */}
         <Image style={s.seal} src={{ data: logo.seal, format: 'png' }} />
-        <View style={s.band}>{r.disclaimer && <Text style={s.bandText}>{r.disclaimer}</Text>}</View>
+        <View style={s.band}>
+          <Text style={[s.bandText, body]}>{r.disclaimer}</Text>
+        </View>
       </Page>
 
-      {/* Content */}
-      <Page size="A4" style={s.page}>
+      <Page size="A4" style={[s.page, body]}>
         <View style={s.header} fixed>
           {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image has no alt */}
           <Image style={s.headerLogo} src={{ data: logo.horizontal, format: 'png' }} />
-          <Text style={s.headerText}>
-            {testName} · {clientName}
+          <Text style={[s.headerText, body]}>
+            {r.title} · {r.clientName}
           </Text>
         </View>
 
-        {doc.layout === 'crisis' && r.crisis && (
-          <View style={s.crisis} wrap={false}>
-            <Text style={s.crisisText}>{r.crisis}</Text>
+        {r.support && (
+          <View style={s.support} wrap={false}>
+            <Text style={[s.supportText, body]}>{r.support}</Text>
           </View>
         )}
 
-        {sections.map((sec, i) => {
-          const numbered = sec.heading ? `${++n}. ${sec.heading}` : null;
-          return (
-            <View key={i} style={s.section} wrap={!sec.keep}>
-              {numbered && (
-                <Text style={s.h2} minPresenceAhead={110}>
-                  {numbered}
-                </Text>
-              )}
-              {sec.body}
-            </View>
-          );
-        })}
+        {sections.map((sec, i) => (
+          <View key={i} style={s.section} wrap={!sec.keep}>
+            <Text style={[s.h2, head]} minPresenceAhead={110}>
+              {++n}. {sec.heading}
+            </Text>
+            {sec.body}
+          </View>
+        ))}
 
         <View style={s.footer} fixed>
           <Text style={s.footerBrand}>{BRAND_LINE}</Text>
-          <Text
-            style={s.footerText}
-            render={({ pageNumber, totalPages }) => `${FOOTER_LINE}   ·   ${pageNumber} / ${totalPages}`}
-          />
+          <Text style={s.footerText} render={({ pageNumber, totalPages }) => `${FOOTER_LINE}   ·   ${pageNumber} / ${totalPages}`} />
         </View>
       </Page>
     </Document>
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value, font }: { label: string; value: string; font: string }) {
   return (
     <View style={s.field}>
-      <Text style={s.fieldLabel}>{label}</Text>
-      <Text style={s.fieldValue}>{value}</Text>
-    </View>
-  );
-}
-
-function AreaCard({ area }: { area: ReportArea }) {
-  const pct = Math.max(0, Math.min(100, area.percent ?? 0));
-  const caption = [area.percent !== null ? `${area.percent}%` : null, area.bandName].filter(Boolean).join(' · ');
-  return (
-    <View style={s.card} wrap={false}>
-      <Text style={s.areaLabel}>{(area.name ?? area.module).toUpperCase()}</Text>
-      <View style={s.track}>
-        <View style={[s.fill, { width: `${pct}%` }]} />
-      </View>
-      {caption && <Text style={s.areaCaption}>{caption}</Text>}
-    </View>
-  );
-}
-
-function Bullets({ items }: { items: string[] }) {
-  return (
-    <View>
-      {items.map((t, i) => (
-        <View key={i} style={s.bulletRow} wrap={false}>
-          <View style={s.bullet} />
-          <Text style={s.bulletText}>{t}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function Callouts({ texts }: { texts: string[] }) {
-  return (
-    <View>
-      {texts.map((t, i) => (
-        <View key={i} style={s.callout} wrap={false}>
-          <Text style={s.calloutText}>{t}</Text>
-        </View>
-      ))}
+      <Text style={[s.fieldLabel, { fontFamily: font }]}>{label}</Text>
+      <Text style={[s.fieldValue, { fontFamily: font }]}>{value}</Text>
     </View>
   );
 }

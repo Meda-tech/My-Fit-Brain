@@ -27,8 +27,8 @@ export interface PaymentClient {
 export interface PaymentAttempt {
   id: string;
   report_id: string | null;
-  status: 'paid' | 'in_progress' | 'completed' | 'stopped';
-  version_label: string | null;
+  status: 'paid' | 'in_progress' | 'completed';
+  version_number: number | null;
   consent_at: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -74,29 +74,29 @@ export const PAGE_SIZE = 50;
 const COLUMNS = `
   id, status, amount_paise, currency, method, provider_order_id, provider_payment_id, failure_code,
   failure_reason, paid_at, created_at, updated_at, test_code,
-  qb_tests(name_en),
+  questionnaires(name_en),
   clients(id, full_name, phone, email, gender, age, city, state),
-  attempts(id, report_id, status, consent_at, started_at, completed_at, qb_versions(version_label))
+  attempts(id, report_id, status, consent_at, started_at, completed_at, questionnaire_versions(number))
 `;
 
 type RawRow = Omit<PaymentListRow, 'test_name' | 'client' | 'attempt'> & {
-  qb_tests: { name_en: string } | null;
+  questionnaires: { name_en: string } | null;
   clients: PaymentClient | null;
-  attempts: (Omit<PaymentAttempt, 'version_label'> & { qb_versions: { version_label: string } | null }) | null;
+  attempts: (Omit<PaymentAttempt, 'version_number'> & { questionnaire_versions: { number: number } | null }) | null;
 };
 
 function toRow(r: RawRow): PaymentListRow {
-  const { qb_tests, clients, attempts, ...rest } = r;
+  const { questionnaires, clients, attempts, ...rest } = r;
   return {
     ...rest,
-    test_name: qb_tests?.name_en ?? r.test_code,
+    test_name: questionnaires?.name_en ?? r.test_code,
     client: clients,
     attempt: attempts
       ? {
           id: attempts.id,
           report_id: attempts.report_id,
           status: attempts.status,
-          version_label: attempts.qb_versions?.version_label ?? null,
+          version_number: attempts.questionnaire_versions?.number ?? null,
           consent_at: attempts.consent_at,
           started_at: attempts.started_at,
           completed_at: attempts.completed_at,

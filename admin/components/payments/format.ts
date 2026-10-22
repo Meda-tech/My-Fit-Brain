@@ -36,5 +36,4 @@ export const ATTEMPT_STATUS_LABELS: Record<string, string> = {
   paid: 'Paid, not started',
   in_progress: 'In progress',
   completed: 'Completed',
-  stopped: 'Stopped',
 };
