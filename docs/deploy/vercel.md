@@ -1,7 +1,7 @@
 # Deploying to Vercel
 
-One GitHub repository holds everything: the two apps (`clients/`, `admin/`) and the shared packages
-(`packages/questionbank`, `packages/engine`, `packages/report`). It uses **npm workspaces**: one
+One GitHub repository holds everything: the two apps (`clients/`, `admin/`) and the shared package
+(`packages/questionnaire`). It uses **npm workspaces**: one
 `package-lock.json` at the repo root, and the apps import the packages as `@mfb/...`.
 
 On Vercel this becomes **two projects connected to the same repository**, one per app. Each project
@@ -17,9 +17,8 @@ GitHub repo ──┬── Vercel project "mfb-clients"  Root Directory: client
 
 ## 1. Before the first deploy
 
-1. **Database.** The current Supabase project already has every migration and the question bank. For a
-   **new** Supabase project follow `docs/deploy/new-supabase-project.md`: the question-bank load files
-   must run between certain migrations, so do not simply run every migration first.
+1. **Database.** The current Supabase project already has every migration. For a **new** Supabase project
+   follow `docs/deploy/new-supabase-project.md` (exact SQL order, then import the two starting drafts).
 
 2. **GitHub.** Push the repository (private). `.gitignore` keeps out `node_modules/`, `.next/`, every
    `.env*` file except the `.env.example` templates, build output, logs and local tooling. Check before
@@ -160,7 +159,7 @@ No code changes.
 
 | Symptom | Cause and fix |
 |---|---|
-| `Cannot find module '@mfb/engine'` (or questionbank/report) during build | Install Command is not `cd .. && npm ci`, or "Include files outside the Root Directory" is off. |
+| `Cannot find module '@mfb/questionnaire'` during build | Install Command is not `cd .. && npm ci`, or "Include files outside the Root Directory" is off. |
 | `npm ci` fails: lockfile out of sync | Run `npm install` at the repo root locally, commit `package-lock.json`. |
 | Pages work but every request is slow | Function region far from the Supabase region (section 2). |
 | Payment page says "Payments are not available right now" | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` missing in `mfb-clients`; redeploy after adding. |

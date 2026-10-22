@@ -1,4 +1,9 @@
-# Question bank decisions
+# Question bank decisions (history)
+
+> **Task 11 (2026-10-22) replaced the question bank with the simple questionnaire system** (`docs/questionnaires/README.md`).
+> The decisions below describe the retired `qb_*` versions and are kept as history only; the files and
+> packages they name no longer exist. The starting drafts `docs/questionnaires/intimacy.json` and `mind.json`
+> were converted from the workbooks named here.
 
 > Decided by the product owner on 2026-10-15 in place of clinical sign-off. Any change is made as a new
 > question-bank version.
