@@ -84,7 +84,7 @@ export const translations = {
         generic: 'Something went wrong. Please try again.',
       },
     },
-    // Option labels (question bank I2 / I3). Keys are the stored English values.
+    // Option labels (registration gender / relationship status). Keys are the stored English values.
     options: {
       gender: {
         Male: 'Male',
@@ -101,13 +101,12 @@ export const translations = {
         Widowed: 'Widowed',
       } satisfies Record<RelationshipStatus, string>,
     },
-    // AGE_STOP text from the question bank (Flags & Safety tab).
+    // AGE_STOP text (developer spec, Flags & Safety).
     ageStop: {
       body: 'This assessment is for adults aged 18 and above. If you are under 18 and need support, please talk to a parent, a teacher or a school counsellor. You can also call Tele-MANAS (free, 24x7): 14416.',
       close: 'Close',
     },
-    // Assessment flow (Task 06). UI words only: questions, options and report text come from the
-    // question-bank version.
+    // Assessment flow. UI words only: questions, options and report text come from the questionnaire version.
     assess: {
       startTitle: 'Start an assessment',
       start: 'Start',
@@ -146,7 +145,7 @@ export const translations = {
       finishButton: 'Submit my answers',
       preparing: 'Saving your answers...',
       completedTitle: 'Thank you',
-      completedBody: 'Your assessment is complete and your answers are saved. Our team will contact you to arrange your consultation.',
+      completedBody: 'Your answers are saved. Your counsellor will go through your results with you in your consultation.',
       backHome: 'Back to home',
       viewDetails: 'View details',
       completedLine: 'You completed this assessment on {date}.',
@@ -330,7 +329,7 @@ export const translations = {
       finishButton: 'मेरे जवाब सबमिट करें',
       preparing: 'आपके जवाब सेव हो रहे हैं...',
       completedTitle: 'धन्यवाद',
-      completedBody: 'आपका असेसमेंट पूरा हो गया है और आपके जवाब सेव हो गए हैं। परामर्श तय करने के लिए हमारी टीम आपसे संपर्क करेगी।',
+      completedBody: 'आपके जवाब सेव हो गए हैं। आपका काउंसलर परामर्श में आपके साथ आपके नतीजों पर बात करेगा।',
       backHome: 'होम पर जाएं',
       viewDetails: 'विवरण देखें',
       completedLine: 'आपने यह असेसमेंट {date} को पूरा किया।',

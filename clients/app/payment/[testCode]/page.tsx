@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { requireClient } from '../../../lib/auth';
-import { testName } from '../../../lib/assessment/server';
+import { questionnaireName } from '../../../lib/assessment/server';
 import { paymentsConfigured } from '../../../lib/payments/server';
 import { formatPrice } from '../../../lib/payments/service';
 import { PageChrome } from '../../../components/PageChrome';
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function PaymentPage({ params }: { params: Promise<{ testCode: string }> }) {
   const { client } = await requireClient();
   const { testCode } = await params;
-  const name = await testName(testCode);
+  const name = await questionnaireName(testCode);
   if (!name) notFound();
 
   return (

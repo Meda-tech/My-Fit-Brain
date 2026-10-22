@@ -42,7 +42,7 @@ export interface PaymentStore {
   linkAttempt(id: string, attemptId: string): Promise<void>;
   hasEvent(eventId: string): Promise<boolean>;
   recordEvent(event: { provider_event_id: string; event: string; provider_order_id: string | null; provider_payment_id: string | null }): Promise<void>;
-  /** The client's profile for creating the attempt (gender, age, relationship status). */
+  /** The client for creating the attempt (id and name). */
   clientProfile(clientId: string): Promise<ClientProfile | null>;
 }
 
@@ -99,7 +99,7 @@ export function supabasePaymentStore(db: SupabaseClient): PaymentStore {
       check(r, 'record payment event');
     },
     async clientProfile(clientId) {
-      const r = await db.from('clients').select('id, gender, age, marital_status').eq('id', clientId).maybeSingle();
+      const r = await db.from('clients').select('id, full_name').eq('id', clientId).maybeSingle();
       return check(r, 'client') as ClientProfile | null;
     },
   };

@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
   // Monorepo: trace server files from the repo root (packages/ live outside this app).
   outputFileTracingRoot: path.join(__dirname, ".."),
   // Shared workspace packages (TypeScript source, no build step).
-  transpilePackages: ["@mfb/questionbank", "@mfb/engine", "@mfb/report"],
+  transpilePackages: ["@mfb/questionnaire"],
   // Dev only: phone testing over the local network.
   allowedDevOrigins: ["192.168.29.64", "192.168.29.*", "localhost"],
   experimental: {

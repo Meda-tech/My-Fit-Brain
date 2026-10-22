@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, Info, Lock } from 'lucide-react';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
-import type { LocalPair } from '../../../lib/assessment/types';
+import { pick, type Text } from '@mfb/questionnaire';
 import { Button, ButtonLink, Card, Logo, Notice } from '../../../components/brand';
 
 // Razorpay Standard Checkout. The server creates the order (/api/payments/order) and verifies the
@@ -58,7 +58,7 @@ export function PaymentView({
   prefill,
 }: {
   testCode: string;
-  name: LocalPair;
+  name: Text;
   price: string;
   enabled: boolean;
   prefill: { name: string; email: string; contact: string };
@@ -66,7 +66,7 @@ export function PaymentView({
   const router = useRouter();
   const { lang } = useLanguage();
   const t = translations[lang].assess;
-  const title = (lang === 'hi' ? name.hi : name.en) ?? name.en ?? name.hi;
+  const title = pick(name, lang);
   const [status, setStatus] = useState<Status>(enabled ? 'idle' : 'closed');
   const verifying = useRef(false);
 

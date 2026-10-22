@@ -7,7 +7,7 @@ import { useLanguage } from '../components/LanguageProvider';
 import { PageChrome } from '../components/PageChrome';
 import { BinduDot, ButtonLink, Card, Pill } from '../components/brand';
 import type { AttemptSummary, TestCard } from '../lib/assessment/server';
-import type { LocalPair } from '../lib/assessment/types';
+import { pick, type Text } from '@mfb/questionnaire';
 
 interface ClientHomeViewProps {
   firstName: string;
@@ -22,13 +22,12 @@ function formatDate(iso: string, lang: 'en' | 'hi'): string {
 export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewProps) {
   const { lang } = useLanguage();
   const t = translations[lang];
-  const local = (p: LocalPair | null) => (p ? (lang === 'hi' ? p.hi ?? p.en : p.en ?? p.hi) : null);
+  const local = (p: Text | null) => (p ? pick(p, lang) : null);
 
   const statusLabel: Record<AttemptSummary['status'], string> = {
     paid: t.assess.statusReady,
     in_progress: t.assess.statusInProgress,
     completed: t.assess.statusCompleted,
-    stopped: t.assess.statusStopped,
   };
 
   return (

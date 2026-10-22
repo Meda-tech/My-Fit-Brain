@@ -1,19 +1,18 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import type { Answers } from '@mfb/engine';
-import { currentClient, forgetAttempt, serviceDeps } from '../../lib/assessment/server';
+import { currentClient, serviceDeps } from '../../lib/assessment/server';
 import * as service from '../../lib/assessment/service';
-import { AssessmentError, type AnswerValue, type Interrupt, type Step } from '../../lib/assessment/types';
+import { AssessmentError, type Interrupt, type Step } from '../../lib/assessment/types';
+import { LANG_COOKIE, parseLang } from '../../lib/lang-cookie';
 
 // Server actions for the assessment screens. Each one resolves the signed-in client; the service checks
 // that the attempt is theirs and uses its pinned version. Errors come back as codes, never stack traces.
-// Answers are buffered in the browser and sent as a draft with every call (see service.ts, Questions).
 
 export type ActionError = { ok: false; code: string };
 
-function failure(err: unknown, attemptId?: string): ActionError {
-  if (attemptId) forgetAttempt(attemptId);
+function failure(err: unknown): ActionError {
   if (err instanceof AssessmentError) return { ok: false, code: err.code };
   console.error('Assessment action failed:', err);
   return { ok: false, code: 'ERROR' };
@@ -28,38 +27,35 @@ export async function giveConsentAction(formData: FormData): Promise<void> {
 
 export async function answerAction(
   attemptId: string,
-  draft: Answers,
-  qid: string,
-  value: AnswerValue,
-  flush: boolean
-): Promise<{ ok: true; step: Step; interrupt: Interrupt | null; answers: Answers; saved: boolean } | ActionError> {
+  questionId: string,
+  chosen: string[]
+): Promise<{ ok: true; step: Step; interrupt: Interrupt | null } | ActionError> {
   try {
     const client = await currentClient();
-    const r = await service.answer(serviceDeps({ cached: true }), client, attemptId, draft, qid, value, { flush });
+    const r = await service.answer(serviceDeps(), client, attemptId, questionId, chosen);
     return { ok: true, ...r };
   } catch (err) {
-    return failure(err, attemptId);
+    return failure(err);
   }
 }
 
-export async function backAction(attemptId: string, draft: Answers, fromQid: string | null): Promise<{ ok: true; step: Step } | ActionError> {
+export async function backAction(attemptId: string, fromQuestionId: string | null): Promise<{ ok: true; step: Step } | ActionError> {
   try {
     const client = await currentClient();
-    return { ok: true, step: await service.back(serviceDeps({ cached: true }), client, attemptId, draft, fromQid) };
+    return { ok: true, step: await service.back(serviceDeps(), client, attemptId, fromQuestionId) };
   } catch (err) {
-    return failure(err, attemptId);
+    return failure(err);
   }
 }
 
-export async function submitAction(
-  attemptId: string,
-  draft: Answers
-): Promise<{ ok: true; status: 'completed' | 'stopped' } | ActionError> {
+/** Submits in the language the client is using right now (the report is built in that language). */
+export async function submitAction(attemptId: string): Promise<{ ok: true } | ActionError> {
   try {
     const client = await currentClient();
-    const r = await service.submit(serviceDeps(), client, attemptId, draft);
-    return { ok: true, status: r.status };
+    const lang = parseLang((await cookies()).get(LANG_COOKIE)?.value);
+    await service.submit(serviceDeps(), client, attemptId, lang);
+    return { ok: true };
   } catch (err) {
-    return failure(err, attemptId);
+    return failure(err);
   }
 }

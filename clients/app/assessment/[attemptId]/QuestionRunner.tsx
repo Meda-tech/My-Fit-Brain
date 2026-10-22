@@ -3,27 +3,16 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, ArrowRight, Check, Phone } from 'lucide-react';
+import { CRISIS_HELPLINES, pick, type Text } from '@mfb/questionnaire';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
-import { CRISIS_HELPLINES } from '../../../lib/assessment/helplines';
-import type { Answers } from '@mfb/engine';
-import type { AnswerValue, Interrupt, QuestionView, Step } from '../../../lib/assessment/types';
+import type { Interrupt, QuestionView, Step } from '../../../lib/assessment/types';
 import { Button, Card, Notice, buttonClasses, cn } from '../../../components/brand';
 import { answerAction, backAction, submitAction } from '../actions';
-import { pickText } from './AssessmentShell';
 
-/** Answers are saved in batches of this size (and at once on a flag, at the end, or when the tab hides). */
-const SAVE_EVERY = 5;
+// One question per screen. Every answer is saved at once; the server sends back the next step.
 
-export function QuestionRunner({
-  attemptId,
-  initialStep,
-  initialAnswers,
-}: {
-  attemptId: string;
-  initialStep: Step;
-  initialAnswers: Answers;
-}) {
+export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; initialStep: Step }) {
   const router = useRouter();
   const { lang } = useLanguage();
   const t = translations[lang].assess;
@@ -33,81 +22,50 @@ export function QuestionRunner({
   const [pending, startTransition] = useTransition();
   const [preparing, setPreparing] = useState(false);
 
-  // The client's answers so far, and how many of them are not yet saved to the database.
-  const draft = useRef<Answers>(initialAnswers);
-  const unsaved = useRef(0);
-
-  // Save buffered answers when the tab is hidden or closed (keepalive lets the request finish).
-  useEffect(() => {
-    const flush = () => {
-      if (unsaved.current === 0) return;
-      unsaved.current = 0;
-      void fetch('/api/assessment/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptId, answers: draft.current }),
-        keepalive: true,
-      }).catch(() => undefined);
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') flush();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pagehide', flush);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('pagehide', flush);
-    };
-  }, [attemptId]);
-
-  // A stale draft (e.g. answers changed in another tab) reloads the saved answers.
+  // A question that is no longer part of the assessment (e.g. answered in another tab) reloads the page.
   const fail = (code: string) => {
-    if (code === 'STALE' || code === 'WRONG_STATUS' || code === 'NOT_VISIBLE') {
-      unsaved.current = 0;
+    if (code === 'WRONG_STATUS' || code === 'NOT_VISIBLE') {
       window.location.reload();
       return;
     }
     setError(t.error);
   };
 
-  const answer = (qid: string, value: AnswerValue) =>
+  const answer = (questionId: string, chosen: string[]) =>
     startTransition(async () => {
       setError(null);
-      const r = await answerAction(attemptId, draft.current, qid, value, unsaved.current + 1 >= SAVE_EVERY);
+      const r = await answerAction(attemptId, questionId, chosen);
       if (!r.ok) return fail(r.code);
-      draft.current = r.answers;
-      unsaved.current = r.saved ? 0 : unsaved.current + 1;
       setStep(r.step);
       if (r.interrupt) setInterrupt(r.interrupt);
       window.history.replaceState(null, '', `/assessment/${attemptId}`);
     });
 
-  const back = (fromQid: string | null) =>
+  const back = (fromQuestionId: string | null) =>
     startTransition(async () => {
       setError(null);
-      const r = await backAction(attemptId, draft.current, fromQid);
+      const r = await backAction(attemptId, fromQuestionId);
       if (!r.ok) return fail(r.code);
       setStep(r.step);
-      if (r.step.kind === 'question') window.history.replaceState(null, '', `/assessment/${attemptId}?q=${r.step.question.qid}`);
+      if (r.step.kind === 'question') window.history.replaceState(null, '', `/assessment/${attemptId}?q=${r.step.question.id}`);
     });
 
   const finish = () =>
     startTransition(async () => {
       setError(null);
       setPreparing(true);
-      const r = await submitAction(attemptId, draft.current);
+      const r = await submitAction(attemptId);
       if (!r.ok) {
         setPreparing(false);
         return fail(r.code);
       }
-      unsaved.current = 0;
-      // The page shows the thank-you (or stop) screen for the closed attempt.
+      // The page shows the thank-you screen for the closed attempt.
       router.replace(`/assessment/${attemptId}`);
       router.refresh();
     });
 
   if (interrupt) {
-    return <CrisisScreen text={pickText(interrupt.text, lang)} onContinue={() => setInterrupt(null)} />;
+    return <CrisisScreen text={pick(interrupt.text, lang)} onContinue={() => setInterrupt(null)} />;
   }
 
   return (
@@ -120,11 +78,11 @@ export function QuestionRunner({
 
       {step.kind === 'question' ? (
         <QuestionCard
-          key={step.question.qid}
+          key={step.question.id}
           question={step.question}
           busy={pending}
-          onAnswer={(v) => answer(step.question.qid, v)}
-          onBack={() => back(step.question.qid)}
+          onAnswer={(chosen) => answer(step.question.id, chosen)}
+          onBack={() => back(step.question.id)}
         />
       ) : step.kind === 'finish' ? (
         <Card className="p-6 text-center sm:p-10">
@@ -163,15 +121,14 @@ function QuestionCard({
 }: {
   question: QuestionView;
   busy: boolean;
-  onAnswer: (value: AnswerValue) => void;
+  onAnswer: (chosen: string[]) => void;
   onBack: () => void;
 }) {
   const { lang } = useLanguage();
   const t = translations[lang].assess;
   const heading = useRef<HTMLHeadingElement>(null);
-  const multi = question.type === 'multi';
-  const [single, setSingle] = useState<string | null>(typeof question.saved === 'string' ? question.saved : null);
-  const [chosen, setChosen] = useState<string[]>(Array.isArray(question.saved) ? question.saved : []);
+  const [single, setSingle] = useState<string | null>(!question.multiple && question.saved ? question.saved[0] : null);
+  const [chosen, setChosen] = useState<string[]>(question.multiple ? (question.saved ?? []) : []);
 
   // New question: back to the top, focus on the question for keyboard and screen-reader users.
   useEffect(() => {
@@ -179,34 +136,39 @@ function QuestionCard({
     heading.current?.focus({ preventScroll: true });
   }, []);
 
-  const label = (o: QuestionView['options'][number]) => (lang === 'hi' ? o.label_hi || o.label_en : o.label_en);
+  const label = (text: Text) => pick(text, lang);
   const pct = question.total ? Math.round(((question.position - 1) / question.total) * 100) : 0;
-  const min = question.minChoices ?? 1;
   const max = question.maxChoices ?? question.options.length;
+  const main = question.options.filter((o) => !o.skip);
+  const skips = question.options.filter((o) => o.skip);
 
-
-  const ready = multi ? chosen.length >= min && chosen.length <= max : single !== null;
+  const ready = question.multiple ? chosen.length >= 1 && chosen.length <= max : single !== null;
   const submit = () => {
     if (!ready || busy) return;
-    onAnswer(multi ? chosen : (single as string));
+    onAnswer(question.multiple ? chosen : [single as string]);
   };
 
-  const toggle = (code: string, exclusive: boolean) => {
+  const toggle = (id: string) => {
     setChosen((cur) => {
-      if (cur.includes(code)) return cur.filter((c) => c !== code);
-      if (exclusive) return [code];
-      const withoutExclusive = cur.filter((c) => !question.options.find((o) => o.code === c)?.exclusive);
-      if (withoutExclusive.length >= max) return withoutExclusive;
-      return [...withoutExclusive, code];
+      if (cur.includes(id)) return cur.filter((c) => c !== id);
+      if (cur.length >= max) return cur;
+      return [...cur, id];
     });
   };
 
+  const optionClass = (on: boolean) =>
+    cn(
+      'flex min-h-14 w-full items-center justify-between gap-3 rounded-card border-2 bg-white px-5 py-3 text-left text-[17px] font-medium text-ink transition-colors active:scale-[0.99] disabled:opacity-60',
+      on ? 'border-teal bg-mist' : 'border-sand hover:border-teal'
+    );
+
   return (
-    <section aria-labelledby={`q-${question.qid}`}>
+    <section aria-labelledby={`q-${question.id}`}>
       {/* Progress */}
       <div className="mb-6">
-        <p className="mb-2 text-[13px] font-medium text-ink-muted">
-          {t.questionOf.replace('{n}', String(question.position)).replace('{m}', String(question.total))}
+        <p className="mb-2 flex items-center justify-between gap-3 text-[13px] font-medium text-ink-muted">
+          <span>{t.questionOf.replace('{n}', String(question.position)).replace('{m}', String(question.total))}</span>
+          <span className="truncate">{label(question.sectionTitle)}</span>
         </p>
         <div
           className="h-2 w-full overflow-hidden rounded-full bg-sand"
@@ -220,68 +182,71 @@ function QuestionCard({
         </div>
       </div>
 
-      <h1
-        id={`q-${question.qid}`}
-        ref={heading}
-        tabIndex={-1}
-        className="text-[22px] font-semibold leading-[1.35] text-ink outline-none sm:text-[26px]"
-      >
-        {lang === 'hi' ? question.text_hi || question.text_en : question.text_en}
+      <h1 id={`q-${question.id}`} ref={heading} tabIndex={-1} className="text-[22px] font-semibold leading-[1.35] text-ink outline-none sm:text-[26px]">
+        {label(question.text)}
       </h1>
 
-      {multi ? (
+      {question.multiple ? (
         <fieldset className="mt-6">
           <legend className="mb-3 text-[14px] text-ink-muted">
             {max < question.options.length ? t.chooseUpTo.replace('{n}', String(max)) : t.chooseAll}
           </legend>
           <div className="space-y-3">
             {question.options.map((o) => {
-              const on = chosen.includes(o.code);
-              const blocked = !on && !o.exclusive && chosen.filter((c) => !question.options.find((x) => x.code === c)?.exclusive).length >= max;
+              const on = chosen.includes(o.id);
+              const blocked = !on && chosen.length >= max;
               return (
                 <label
-                  key={o.code}
+                  key={o.id}
                   className={cn(
                     'flex min-h-14 cursor-pointer items-center gap-3 rounded-card border-2 bg-white px-4 py-3 text-[17px] text-ink transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-coral',
                     on ? 'border-teal bg-mist' : 'border-sand hover:border-teal',
                     blocked && 'cursor-not-allowed opacity-50'
                   )}
                 >
-                  <input
-                    type="checkbox"
-                    className="h-5 w-5 shrink-0 accent-teal"
-                    checked={on}
-                    disabled={busy || blocked}
-                    onChange={() => toggle(o.code, o.exclusive)}
-                  />
-                  <span>{label(o)}</span>
+                  <input type="checkbox" className="h-5 w-5 shrink-0 accent-teal" checked={on} disabled={busy || blocked} onChange={() => toggle(o.id)} />
+                  <span>{label(o.text)}</span>
                 </label>
               );
             })}
           </div>
         </fieldset>
       ) : (
-        <div role="radiogroup" aria-labelledby={`q-${question.qid}`} className="mt-6 space-y-3">
-          {question.options.map((o) => {
-            const on = single === o.code;
+        <div role="radiogroup" aria-labelledby={`q-${question.id}`} className="mt-6 space-y-3">
+          {main.map((o) => {
+            const on = single === o.id;
             return (
-              <button
-                key={o.code}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                disabled={busy}
-                onClick={() => setSingle(o.code)}
-                className={cn(
-                  'flex min-h-14 w-full items-center justify-between gap-3 rounded-card border-2 bg-white px-5 py-3 text-left text-[17px] font-medium text-ink transition-colors active:scale-[0.99] disabled:opacity-60',
-                  on ? 'border-teal bg-mist' : 'border-sand hover:border-teal'
-                )}
-              >
-                <span>{label(o)}</span>
+              <button key={o.id} type="button" role="radio" aria-checked={on} disabled={busy} onClick={() => setSingle(o.id)} className={optionClass(on)}>
+                <span>{label(o.text)}</span>
                 {on && <Check size={20} strokeWidth={2} className="shrink-0 text-teal" aria-hidden />}
               </button>
             );
           })}
+          {/* Answers that do not count ("Not applicable", "Unsure"): smaller secondary buttons. */}
+          {skips.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {skips.map((o) => {
+                const on = single === o.id;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    disabled={busy}
+                    onClick={() => setSingle(o.id)}
+                    className={cn(
+                      'inline-flex min-h-11 items-center gap-2 rounded-full border-2 px-4 text-[15px] font-medium transition-colors',
+                      on ? 'border-teal bg-mist text-teal' : 'border-sand bg-white text-ink-soft hover:border-teal'
+                    )}
+                  >
+                    {on && <Check size={16} strokeWidth={2} aria-hidden />}
+                    {label(o.text)}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -302,7 +267,7 @@ function QuestionCard({
   );
 }
 
-/** Full-screen, calm support screen after the self-harm question is answered yes. */
+/** Full-screen, calm support screen after the crisis question is answered yes. */
 function CrisisScreen({ text, onContinue }: { text: string; onContinue: () => void }) {
   const { lang } = useLanguage();
   const t = translations[lang].assess;

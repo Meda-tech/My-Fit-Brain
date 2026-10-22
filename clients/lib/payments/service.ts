@@ -56,7 +56,7 @@ export type Checkout =
 /** Step 1. An unfinished assessment of the same test is resumed instead of paid for again. */
 export async function createCheckout(deps: PaymentDeps, client: ClientProfile, testCode: string): Promise<Checkout> {
   const gateway = gatewayOf(deps);
-  const live = await deps.assessment.store.liveVersionId(testCode);
+  const live = await deps.assessment.store.liveVersion(testCode);
   if (!live) throw new AssessmentError('NO_LIVE_VERSION', 'This assessment is not available right now.');
   const open = await deps.assessment.store.findOpenAttempt(client.id, testCode);
   if (open) return { kind: 'open', attemptId: open.id };

@@ -1,97 +1,59 @@
-import type { QuestionType } from '@mfb/questionbank';
+import type { Lang, Text } from '@mfb/questionnaire';
 
 // Shapes shared by the assessment server layer and the screens.
 
-export type AttemptStatus = 'paid' | 'in_progress' | 'completed' | 'stopped';
-export type ReportLanguageChoice = 'en' | 'hi' | 'both';
-export type AnswerValue = string | string[];
-export type AnswerSource = 'client' | 'profile';
+export type AttemptStatus = 'paid' | 'in_progress' | 'completed';
 
 export interface AttemptRow {
   id: string;
-  report_id: string | null;
+  report_id: string;
   client_id: string;
-  test_code: string;
+  questionnaire_code: string;
   version_id: string;
-  kind: 'initial' | 'progress';
   status: AttemptStatus;
-  report_language: ReportLanguageChoice | null;
+  language: Lang;
+  payment_ref: string;
+  paid_at: string;
   consent_at: string | null;
-  payment_mode: 'stub' | 'live';
-  payment_ref: string | null;
-  paid_at: string | null;
   started_at: string | null;
   completed_at: string | null;
-  engine_version: string | null;
   created_at: string;
-}
-
-export interface AnswerRow {
-  qid: string;
-  value: AnswerValue;
-  source: AnswerSource;
-}
-
-export interface EventRow {
-  attempt_id: string;
-  kind: 'crisis' | 'safety' | 'age_stop';
-  flag_key: string;
-  notify: string[];
 }
 
 /** The signed-in client, as the server layer needs it. */
 export interface ClientProfile {
   id: string;
-  gender: string;
-  age: number;
-  marital_status: string;
+  full_name: string;
 }
 
 export interface QuestionView {
-  qid: string;
-  type: QuestionType;
-  text_en: string;
-  text_hi: string;
-  options: { code: string; label_en: string; label_hi: string; exclusive: boolean }[];
-  /** Multi-select only. */
-  minChoices?: number;
-  maxChoices?: number;
-  saved: AnswerValue | null;
-  /** 1-based position among the questions the client answers; total can change with routing. */
+  id: string;
+  text: Text;
+  sectionTitle: Text;
+  multiple: boolean;
+  maxChoices: number | null;
+  options: { id: string; text: Text; skip: boolean }[];
+  saved: string[] | null;
+  /** 1-based position among the questions shown right now; the total changes with routing. */
   position: number;
   total: number;
   canGoBack: boolean;
-}
-
-export interface LocalPair {
-  en: string | null;
-  hi: string | null;
 }
 
 export type Step =
   | { kind: 'consent' }
   | { kind: 'question'; question: QuestionView }
   | { kind: 'finish'; answered: number; total: number }
-  | { kind: 'completed' }
-  | { kind: 'stopped'; text: LocalPair | null };
+  | { kind: 'completed' };
 
+/** The support screen shown at once after the crisis question is answered yes. */
 export interface Interrupt {
-  flag: string;
-  text: LocalPair | null;
+  text: Text;
 }
 
 export class AssessmentError extends Error {
   constructor(
-    public readonly code:
-      | 'NOT_FOUND'
-      | 'STALE'
-      | 'PAYMENTS_DISABLED'
-      | 'NO_LIVE_VERSION'
-      | 'WRONG_STATUS'
-      | 'NOT_VISIBLE'
-      | 'INVALID_ANSWER'
-      | 'INCOMPLETE'
-      | 'BAD_PROFILE',
+    public readonly code: 'NOT_FOUND' | 'NO_LIVE_VERSION' | 'WRONG_STATUS' | 'NOT_VISIBLE' | 'INVALID_ANSWER' | 'INCOMPLETE' | 'BAD_DEFINITION',
     message: string
   ) {
     super(message);

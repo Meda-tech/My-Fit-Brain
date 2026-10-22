@@ -3,27 +3,19 @@
 import { useFormStatus } from 'react-dom';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
-import type { Answers } from '@mfb/engine';
-import type { LocalPair, Step } from '../../../lib/assessment/types';
+import type { Step } from '../../../lib/assessment/types';
 import { BinduDot, Button, Card } from '../../../components/brand';
 import { giveConsentAction } from '../actions';
 import { QuestionRunner } from './QuestionRunner';
 import { CompletedView, type CompletedDetails } from './CompletedView';
 
-export function pickText(pair: LocalPair | null | undefined, lang: 'en' | 'hi'): string {
-  if (!pair) return '';
-  return (lang === 'hi' ? pair.hi ?? pair.en : pair.en ?? pair.hi) ?? '';
-}
-
 export function AssessmentShell({
   attemptId,
   initialStep,
-  initialAnswers,
   completed = null,
 }: {
   attemptId: string;
   initialStep: Step;
-  initialAnswers: Answers;
   /** Details for a completed attempt. */
   completed?: CompletedDetails | null;
 }) {
@@ -44,25 +36,10 @@ export function AssessmentShell({
     );
   }
 
-  // Finished: confirmation, what happens next and the payment receipt (no report, D22).
+  // Finished: thank-you, what happens next and the payment receipt. The report is never shown here.
   if (initialStep.kind === 'completed') return <CompletedView details={completed} />;
 
-  if (initialStep.kind === 'stopped') {
-    return (
-      <Card className="p-6 text-center sm:p-10">
-        <p role="status" className="text-[17px] leading-7 text-ink-soft">
-          {pickText(initialStep.text, lang)}
-        </p>
-        <form action="/api/auth/signout" method="POST" className="mt-8">
-          <Button type="submit" fullWidth>
-            {t.stoppedClose}
-          </Button>
-        </form>
-      </Card>
-    );
-  }
-
-  return <QuestionRunner attemptId={attemptId} initialStep={initialStep} initialAnswers={initialAnswers} />;
+  return <QuestionRunner attemptId={attemptId} initialStep={initialStep} />;
 }
 
 function ConsentSubmit({ label, busy }: { label: string; busy: string }) {

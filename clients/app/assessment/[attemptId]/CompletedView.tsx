@@ -3,7 +3,7 @@
 import { CheckCircle2, Receipt } from 'lucide-react';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
-import type { LocalPair } from '../../../lib/assessment/types';
+import { pick, type Text } from '@mfb/questionnaire';
 import { ButtonLink, Card } from '../../../components/brand';
 
 // A finished assessment: confirmation, what happens next, and the client's own payment receipt.
@@ -11,8 +11,8 @@ import { ButtonLink, Card } from '../../../components/brand';
 // client's own receipt (CLAUDE.md).
 
 export interface CompletedDetails {
-  testName: LocalPair;
-  reportId: string | null;
+  testName: Text;
+  reportId: string;
   completedAt: string | null;
   receipt: { amount: string; method: string | null; paymentId: string; paidAt: string } | null;
 }
@@ -34,7 +34,7 @@ export function CompletedView({ details }: { details: CompletedDetails | null })
     new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
   const dateTime = (iso: string) =>
     new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
-  const name = details ? ((lang === 'hi' ? details.testName.hi : details.testName.en) ?? details.testName.en) : null;
+  const name = details ? pick(details.testName, lang) : null;
   const receipt = details?.receipt ?? null;
 
   return (
