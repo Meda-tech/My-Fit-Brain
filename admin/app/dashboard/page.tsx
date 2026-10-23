@@ -55,9 +55,11 @@ export default async function DashboardPage() {
   const staff = await requireStaff();
   const { profile, isSuperAdmin } = staff;
 
-  const clients = await listClients();
-  const team = isSuperAdmin ? await listTeam() : [];
-  const assessments = await attemptCounts();
+  const [clients, team, assessments] = await Promise.all([
+    listClients(),
+    isSuperAdmin ? listTeam() : Promise.resolve([]),
+    attemptCounts(),
+  ]);
 
   const myClientsCount = clients.filter(
     (c) => c.created_by_profile_id === profile.id

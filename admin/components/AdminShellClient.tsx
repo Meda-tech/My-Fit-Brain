@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -41,6 +41,20 @@ function initials(name: string): string {
 }
 
 type Tip = { label: string; top: number } | null;
+
+// Shown on the clicked nav item until the next page arrives, so a click never feels ignored.
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'ml-auto h-2 w-2 shrink-0 rounded-full bg-coral transition-opacity',
+        pending ? 'opacity-100 motion-safe:animate-pulse' : 'opacity-0'
+      )}
+    />
+  );
+}
 
 export function AdminShellClient({
   fullName,
@@ -168,6 +182,7 @@ export function AdminShellClient({
                   >
                     <Icon size={20} strokeWidth={2} aria-hidden className="shrink-0" />
                     <span className={labelClass}>{label}</span>
+                    <NavPending />
                   </Link>
                 </li>
               );
