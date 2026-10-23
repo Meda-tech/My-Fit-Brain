@@ -36,7 +36,7 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
       <div className="mb-6">
         <BinduDot className="mb-3" />
         <h1 className="wrap-break-word text-[28px] font-semibold leading-tight text-teal sm:text-[34px]">
-          {t.home.welcome} {firstName}
+          {t.home.welcome} ji {firstName}
         </h1>
       </div>
 
