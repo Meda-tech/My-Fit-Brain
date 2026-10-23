@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+// Loaded on every page (root layout), so the browser's install event is kept even on login.
+import './InstallAppButton';
 
 // Registers /sw.js in production only (dev uses hot reload and should not be cached).
 export function ServiceWorkerRegister() {

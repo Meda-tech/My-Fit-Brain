@@ -53,8 +53,12 @@ async function questionnaires(): Promise<Map<string, { name: Text; sort: number 
 /** Live questionnaires (as cards) and the client's own assessments. */
 export async function homeData(client: ClientProfile): Promise<{ tests: TestCard[]; attempts: AttemptSummary[] }> {
   const db = createAdminClient();
-  const names = await questionnaires();
-  const { data: live, error } = await db.from('questionnaire_versions').select('questionnaire_code, definition').eq('status', 'live');
+  // Three independent reads: run them together instead of one after another.
+  const [names, { data: live, error }, attempts] = await Promise.all([
+    questionnaires(),
+    db.from('questionnaire_versions').select('questionnaire_code, definition').eq('status', 'live'),
+    serviceDeps().store.listAttempts(client.id),
+  ]);
   if (error) throw new Error(`Could not read live versions: ${error.message}`);
 
   const tests = ((live ?? []) as { questionnaire_code: string; definition: unknown }[])
@@ -71,7 +75,6 @@ export async function homeData(client: ClientProfile): Promise<{ tests: TestCard
     .sort((a, b) => a.sort - b.sort)
     .map(({ code, name, subtitle }): TestCard => ({ code, name, subtitle }));
 
-  const attempts = await serviceDeps().store.listAttempts(client.id);
   return {
     tests,
     attempts: attempts.map((a) => ({

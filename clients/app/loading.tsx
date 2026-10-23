@@ -1,17 +1,20 @@
-import { Logo } from '../components/brand';
+import { PageChrome } from '../components/PageChrome';
+import { LoadingStatus, Skeleton, SkeletonCard } from '../components/Skeleton';
 
-// Shown while a page loads (e.g. home fetching the client record): app-style splash.
+// Home while it loads: the header and tab bar appear at once, grey shapes stand in for the content.
 export default function Loading() {
   return (
-    <div
-      role="status"
-      aria-label="Loading"
-      className="flex min-h-screen flex-col items-center justify-center gap-6 bg-cream"
-    >
-      <Logo variant="icon" tone="colour" width={64} priority className="motion-safe:animate-pulse" />
-      <span className="h-1 w-24 overflow-hidden rounded-full bg-sand">
-        <span className="block h-full w-1/3 rounded-full bg-teal motion-safe:animate-[mfb-loading_1.1s_ease-in-out_infinite]" />
-      </span>
-    </div>
+    <PageChrome>
+      <LoadingStatus />
+      <div className="mb-6">
+        <span aria-hidden className="mb-3 block h-2.5 w-2.5 rounded-full bg-coral" />
+        <Skeleton className="h-8 w-56" />
+      </div>
+      <Skeleton className="mb-3 h-6 w-44" />
+      <SkeletonCard className="mb-8" />
+      <Skeleton className="mb-3 h-6 w-40" />
+      <SkeletonCard lines={3} className="mb-4" />
+      <SkeletonCard lines={3} />
+    </PageChrome>
   );
 }

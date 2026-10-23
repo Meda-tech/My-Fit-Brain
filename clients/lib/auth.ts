@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createClient } from './supabase/server';
 import { createAdminClient } from './supabase/admin';
 import { redirect } from 'next/navigation';
@@ -15,21 +16,21 @@ export interface CurrentClientSession {
 /**
  * The signed-in user from the verified access token. getClaims() checks the token locally with the
  * project's signing keys (no Auth server call per request); with a legacy shared secret it asks the
- * Auth server, like getUser().
+ * Auth server, like getUser(). cache(): one check per request, however many callers ask.
  */
-export async function getAuthUser(): Promise<{ id: string; phone?: string } | null> {
+export const getAuthUser = cache(async (): Promise<{ id: string; phone?: string } | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   const claims = data?.claims;
   if (error || !claims?.sub) return null;
   const phone = typeof claims.phone === 'string' && claims.phone ? claims.phone : undefined;
   return { id: claims.sub, phone };
-}
+});
 
 /**
- * Returns current authenticated Supabase user and their linked client record.
+ * Returns current authenticated Supabase user and their linked client record (once per request).
  */
-export async function getCurrentClient(): Promise<CurrentClientSession | null> {
+export const getCurrentClient = cache(async (): Promise<CurrentClientSession | null> => {
   const user = await getAuthUser();
   if (!user) {
     return null;
@@ -91,7 +92,7 @@ export async function getCurrentClient(): Promise<CurrentClientSession | null> {
     },
     client: (client as ClientRecord) || null,
   };
-}
+});
 
 /**
  * Enforces authenticated client session with complete client record.

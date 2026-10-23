@@ -183,6 +183,12 @@ export const translations = {
       home: 'Home',
       profile: 'Profile',
     },
+    install: {
+      button: 'Install app',
+      title: 'Install My Fit Brain',
+      iosSteps: 'Tap the Share button in Safari, then choose "Add to Home Screen".',
+      close: 'Close',
+    },
     profile: {
       title: 'My profile',
       email: 'Email',
@@ -366,6 +372,12 @@ export const translations = {
       label: 'मुख्य',
       home: 'होम',
       profile: 'प्रोफ़ाइल',
+    },
+    install: {
+      button: 'ऐप इंस्टॉल करें',
+      title: 'My Fit Brain इंस्टॉल करें',
+      iosSteps: 'Safari में शेयर बटन दबाएँ, फिर "Add to Home Screen" चुनें।',
+      close: 'बंद करें',
     },
     profile: {
       title: 'मेरी प्रोफ़ाइल',
