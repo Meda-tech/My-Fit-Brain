@@ -80,7 +80,7 @@ export default async function DashboardPage() {
         actions={
           <ButtonLink href="/clients/new" variant="primary">
             <UserPlus size={18} strokeWidth={2} aria-hidden />
-            <span>New client 22</span>
+            <span>New client</span>
           </ButtonLink>
         }
       />
