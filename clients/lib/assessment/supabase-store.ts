@@ -91,6 +91,21 @@ export function supabaseAttemptStore(db: SupabaseClient): AttemptStore {
       if (u) check(u, 'save answers');
       check(d, 'clear answers');
     },
+    async clientDetails(code) {
+      const r = await db.from('questionnaires').select('client_details').eq('code', code).maybeSingle();
+      return (check(r, 'client details') as { client_details: unknown } | null)?.client_details ?? [];
+    },
+    async getDetails(attemptId) {
+      const r = await db.from('attempt_details').select('detail_id, answer').eq('attempt_id', attemptId);
+      const rows = (check(r, 'client details answers') ?? []) as { detail_id: string; answer: string }[];
+      return Object.fromEntries(rows.map((x) => [x.detail_id, x.answer]));
+    },
+    async saveDetail(attemptId, row) {
+      const r = await db
+        .from('attempt_details')
+        .upsert({ attempt_id: attemptId, ...row, answered_at: new Date().toISOString() }, { onConflict: 'attempt_id,detail_id' });
+      check(r, 'save client details answer');
+    },
     async insertAlert(attemptId, kind) {
       const r = await db
         .from('attempt_alerts')

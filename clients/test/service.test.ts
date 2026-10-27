@@ -119,7 +119,7 @@ describe('answering', () => {
     const a = await paidAndStarted(deps);
     await service.answer(deps, client, a.id, 'q_i4', ['o_1_3_years']);
     await service.answer(deps, client, a.id, 'q_i5', ['o_india']);
-    const back = await service.back(deps, client, a.id, 'q_i6');
+    const back = await service.back(deps, client, a.id, { kind: 'question', id: 'q_i6' });
     expect(back.kind === 'question' && back.question.id).toBe('q_i5');
     expect(back.kind === 'question' && back.question.saved).toEqual(['o_india']);
   });
@@ -165,5 +165,68 @@ describe('submit', () => {
     expect((await service.submit(deps, client, a.id, 'en')).status).toBe('completed');
     expect((await service.openRunner(deps, client, a.id)).kind).toBe('completed');
     await expect(service.answer(deps, client, a.id, 'q_i4', ['o_1_3_years'])).rejects.toBeInstanceOf(AssessmentError);
+  });
+});
+
+describe('client details', () => {
+  const list = [
+    { id: 'd_health', text: { en: 'Do you have any health problem?', hi: 'क्या आपको कोई स्वास्थ्य समस्या है?' } },
+    { id: 'd_goal', text: { en: 'What would you like to change first?', hi: 'आप सबसे पहले क्या बदलना चाहेंगे?' } },
+  ];
+  const plain = (s: Extract<Step, { kind: 'question' }>) =>
+    s.question.id === CRISIS_QUESTION_ID || s.question.id === HOME_SAFETY_QUESTION_ID ? [NO] : [s.question.options[0].id];
+
+  it('asks the typed questions after the safety questions, then finishes', async () => {
+    const { store, deps } = setup();
+    store.setClientDetails('IA', list);
+    const a = await paidAndStarted(deps);
+    const first = await answerAll(deps, a.id, plain);
+    expect(first.kind).toBe('detail');
+    if (first.kind !== 'detail') return;
+    expect(first.detail.id).toBe('d_health');
+    expect(first.detail.total).toBe(first.detail.position + 1);
+    // Typed answers are required and checked; a detail never opens before the questions are done.
+    await expect(service.answerDetail(deps, client, a.id, 'd_health', '   ')).rejects.toMatchObject({ code: 'INVALID_ANSWER' });
+    await expect(service.answerDetail(deps, client, a.id, 'd_health', 'x'.repeat(1001))).rejects.toMatchObject({ code: 'INVALID_ANSWER' });
+    await expect(service.answerDetail(deps, client, a.id, 'd_nope', 'Hello')).rejects.toMatchObject({ code: 'NOT_VISIBLE' });
+    await expect(service.submit(deps, client, a.id, 'en')).rejects.toMatchObject({ code: 'INCOMPLETE' });
+
+    const second = await service.answerDetail(deps, client, a.id, 'd_health', '  Sugar, since 2020.  ');
+    expect(second.step.kind === 'detail' && second.step.detail.id).toBe('d_goal');
+    const done = await service.answerDetail(deps, client, a.id, 'd_goal', 'Feel closer to my partner.');
+    expect(done.step.kind).toBe('finish');
+    expect(store.details.get(a.id)).toEqual([
+      { detail_id: 'd_health', question: list[0].text, answer: 'Sugar, since 2020.', sort: 0 },
+      { detail_id: 'd_goal', question: list[1].text, answer: 'Feel closer to my partner.', sort: 1 },
+    ]);
+    expect((await service.submit(deps, client, a.id, 'en')).status).toBe('completed');
+    await expect(service.answerDetail(deps, client, a.id, 'd_goal', 'Changed')).rejects.toMatchObject({ code: 'WRONG_STATUS' });
+  });
+
+  it('goes back through the typed questions to the last safety question', async () => {
+    const { store, deps } = setup();
+    store.setClientDetails('IA', list);
+    const a = await paidAndStarted(deps);
+    await answerAll(deps, a.id, plain);
+    await service.answerDetail(deps, client, a.id, 'd_health', 'None');
+    await service.answerDetail(deps, client, a.id, 'd_goal', 'Sleep better');
+    const fromFinish = await service.back(deps, client, a.id, null);
+    expect(fromFinish.kind === 'detail' && fromFinish.detail.saved).toBe('Sleep better');
+    const fromGoal = await service.back(deps, client, a.id, { kind: 'detail', id: 'd_goal' });
+    expect(fromGoal.kind === 'detail' && fromGoal.detail.id).toBe('d_health');
+    const fromHealth = await service.back(deps, client, a.id, { kind: 'detail', id: 'd_health' });
+    expect(fromHealth.kind === 'question' && fromHealth.question.id).toBe(HOME_SAFETY_QUESTION_ID);
+  });
+
+  it('uses the current list: a question added later is asked, old answers keep their text', async () => {
+    const { store, deps } = setup();
+    store.setClientDetails('IA', [list[0]]);
+    const a = await paidAndStarted(deps);
+    await answerAll(deps, a.id, plain);
+    await service.answerDetail(deps, client, a.id, 'd_health', 'None');
+    store.setClientDetails('IA', [{ id: 'd_health', text: { en: 'Edited question', hi: null } }, list[1]]);
+    const step = await service.openRunner(deps, client, a.id);
+    expect(step.kind === 'detail' && step.detail.id).toBe('d_goal');
+    expect(store.details.get(a.id)![0].question.en).toBe('Do you have any health problem?');
   });
 });

@@ -1,4 +1,4 @@
-import type { Answers, Lang } from '@mfb/questionnaire';
+import type { Answers, Lang, Text } from '@mfb/questionnaire';
 import type { AttemptRow } from './types';
 
 // Persistence used by the assessment service. The Supabase implementation (service role) lives in
@@ -28,6 +28,15 @@ export interface StoredResult {
 
 export type AlertKind = 'crisis' | 'home_safety';
 
+/** One typed client-details answer, with the question as it was asked. */
+export interface DetailAnswer {
+  detail_id: string;
+  question: Text;
+  answer: string;
+  /** The question's place in the list when it was answered. */
+  sort: number;
+}
+
 export interface AttemptStore {
   /** The live version of a questionnaire, or null. */
   liveVersion(code: string): Promise<LiveVersion | null>;
@@ -47,6 +56,12 @@ export interface AttemptStore {
   getAnswers(attemptId: string): Promise<Answers>;
   /** Makes the stored answers exactly these: upserts them and deletes every other answer of the attempt. */
   replaceAnswers(attemptId: string, answers: Answers): Promise<void>;
+  /** The questionnaire's current client-details list, as stored (questionnaires.client_details). */
+  clientDetails(code: string): Promise<unknown>;
+  /** Typed client-details answers of an attempt: detail id → answer. */
+  getDetails(attemptId: string): Promise<Record<string, string>>;
+  /** Saves (or replaces) one typed answer. */
+  saveDetail(attemptId: string, row: DetailAnswer): Promise<void>;
   /** Inserts once per (attempt, kind); returns false when it already existed. */
   insertAlert(attemptId: string, kind: AlertKind): Promise<boolean>;
   getResult(attemptId: string): Promise<StoredResult | null>;

@@ -1,5 +1,5 @@
 import type { Answers } from '@mfb/questionnaire';
-import type { AlertKind, AttemptStore, LiveVersion, NewPaidAttempt, StoredResult } from '../lib/assessment/store';
+import type { AlertKind, AttemptStore, DetailAnswer, LiveVersion, NewPaidAttempt, StoredResult } from '../lib/assessment/store';
 import type { AttemptRow } from '../lib/assessment/types';
 
 // In-memory AttemptStore for tests. It enforces the same rules as the database triggers that matter to
@@ -15,6 +15,9 @@ export class MemoryStore implements AttemptStore {
   alerts: { attemptId: string; kind: AlertKind }[] = [];
   results = new Map<string, StoredResult & { engineVersion: string }>();
   versions = new Map<string, { code: string; number: number; definition: unknown; live: boolean }>();
+  /** questionnaires.client_details per code, and typed answers per attempt. */
+  clientDetailLists = new Map<string, unknown>();
+  details = new Map<string, DetailAnswer[]>();
   /** Report numbers issued (report_counters.last_number). */
   counter = 0;
   private ids = 0;
@@ -101,6 +104,20 @@ export class MemoryStore implements AttemptStore {
   async replaceAnswers(attemptId: string, answers: Answers) {
     this.locked(attemptId);
     this.answers.set(attemptId, structuredClone(answers));
+  }
+  setClientDetails(code: string, list: unknown) {
+    this.clientDetailLists.set(code, structuredClone(list));
+  }
+  async clientDetails(code: string) {
+    return structuredClone(this.clientDetailLists.get(code) ?? []);
+  }
+  async getDetails(attemptId: string) {
+    return Object.fromEntries((this.details.get(attemptId) ?? []).map((d) => [d.detail_id, d.answer]));
+  }
+  async saveDetail(attemptId: string, row: DetailAnswer) {
+    this.locked(attemptId);
+    const list = (this.details.get(attemptId) ?? []).filter((d) => d.detail_id !== row.detail_id);
+    this.details.set(attemptId, [...list, structuredClone(row)]);
   }
   async insertAlert(attemptId: string, kind: AlertKind) {
     if (this.alerts.some((a) => a.attemptId === attemptId && a.kind === kind)) return false;

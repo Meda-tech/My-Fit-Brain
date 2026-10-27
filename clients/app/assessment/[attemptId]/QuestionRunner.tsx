@@ -6,11 +6,12 @@ import { AlertCircle, ArrowLeft, ArrowRight, Check, Phone } from 'lucide-react';
 import { CRISIS_HELPLINES, pick, type Text } from '@mfb/questionnaire';
 import { useLanguage } from '../../../components/LanguageProvider';
 import { translations } from '../../../lib/i18n';
-import type { Interrupt, QuestionView, Step } from '../../../lib/assessment/types';
-import { Button, Card, Notice, buttonClasses, cn } from '../../../components/brand';
-import { answerAction, backAction, submitAction } from '../actions';
+import type { At, DetailView, Interrupt, QuestionView, Step } from '../../../lib/assessment/types';
+import { Button, Card, Notice, buttonClasses, cn, inputClasses } from '../../../components/brand';
+import { answerAction, answerDetailAction, backAction, submitAction } from '../actions';
 
-// One question per screen. Every answer is saved at once; the server sends back the next step.
+// One question per screen. Every answer is saved at once; the server sends back the next step. After the
+// safety questions come the client-details questions, where the client types the answer.
 
 export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; initialStep: Step }) {
   const router = useRouter();
@@ -41,13 +42,23 @@ export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; 
       window.history.replaceState(null, '', `/assessment/${attemptId}`);
     });
 
-  const back = (fromQuestionId: string | null) =>
+  const answerDetail = (detailId: string, text: string) =>
     startTransition(async () => {
       setError(null);
-      const r = await backAction(attemptId, fromQuestionId);
+      const r = await answerDetailAction(attemptId, detailId, text);
+      if (!r.ok) return fail(r.code);
+      setStep(r.step);
+      window.history.replaceState(null, '', `/assessment/${attemptId}`);
+    });
+
+  const back = (from: At) =>
+    startTransition(async () => {
+      setError(null);
+      const r = await backAction(attemptId, from);
       if (!r.ok) return fail(r.code);
       setStep(r.step);
       if (r.step.kind === 'question') window.history.replaceState(null, '', `/assessment/${attemptId}?q=${r.step.question.id}`);
+      if (r.step.kind === 'detail') window.history.replaceState(null, '', `/assessment/${attemptId}?d=${r.step.detail.id}`);
     });
 
   const finish = () =>
@@ -82,7 +93,15 @@ export function QuestionRunner({ attemptId, initialStep }: { attemptId: string; 
           question={step.question}
           busy={pending}
           onAnswer={(chosen) => answer(step.question.id, chosen)}
-          onBack={() => back(step.question.id)}
+          onBack={() => back({ kind: 'question', id: step.question.id })}
+        />
+      ) : step.kind === 'detail' ? (
+        <DetailCard
+          key={step.detail.id}
+          detail={step.detail}
+          busy={pending}
+          onAnswer={(text) => answerDetail(step.detail.id, text)}
+          onBack={() => back({ kind: 'detail', id: step.detail.id })}
         />
       ) : step.kind === 'finish' ? (
         <Card className="p-6 text-center sm:p-10">
@@ -137,7 +156,6 @@ function QuestionCard({
   }, []);
 
   const label = (text: Text) => pick(text, lang);
-  const pct = question.total ? Math.round(((question.position - 1) / question.total) * 100) : 0;
   const max = question.maxChoices ?? question.options.length;
   const main = question.options.filter((o) => !o.skip);
   const skips = question.options.filter((o) => o.skip);
@@ -164,23 +182,7 @@ function QuestionCard({
 
   return (
     <section aria-labelledby={`q-${question.id}`}>
-      {/* Progress */}
-      <div className="mb-6">
-        <p className="mb-2 flex items-center justify-between gap-3 text-[13px] font-medium text-ink-muted">
-          <span>{t.questionOf.replace('{n}', String(question.position)).replace('{m}', String(question.total))}</span>
-          <span className="truncate">{label(question.sectionTitle)}</span>
-        </p>
-        <div
-          className="h-2 w-full overflow-hidden rounded-full bg-sand"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={question.total}
-          aria-valuenow={question.position - 1}
-          aria-label={t.questionOf.replace('{n}', String(question.position)).replace('{m}', String(question.total))}
-        >
-          <div className="h-full rounded-full bg-teal transition-[width] duration-300" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
+      <Progress position={question.position} total={question.total} sectionTitle={question.sectionTitle} />
 
       <h1 id={`q-${question.id}`} ref={heading} tabIndex={-1} className="text-[22px] font-semibold leading-[1.35] text-ink outline-none sm:text-[26px]">
         {label(question.text)}
@@ -250,20 +252,105 @@ function QuestionCard({
         </div>
       )}
 
-      {/* Action bar: pinned to the bottom of the screen so Next is always in thumb reach. */}
-      <div className="sticky bottom-0 -mx-4 mt-6 flex items-center gap-3 border-t border-sand bg-cream/95 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0">
-        {question.canGoBack && (
-          <Button variant="secondary" onClick={onBack} disabled={busy} aria-label={t.back} className="shrink-0 px-4">
-            <ArrowLeft size={18} strokeWidth={2} aria-hidden />
-            <span className="hidden sm:inline">{t.back}</span>
-          </Button>
-        )}
-        <Button className="flex-1" disabled={!ready || busy} loading={busy} loadingText={t.saving} onClick={submit}>
-          {t.next}
-          <ArrowRight size={18} strokeWidth={2} aria-hidden />
-        </Button>
-      </div>
+      <ActionBar canGoBack={question.canGoBack} ready={ready} busy={busy} onBack={onBack} onNext={submit} />
     </section>
+  );
+}
+
+/** A client-details question: the client types the answer (required, up to maxLength characters). */
+function DetailCard({
+  detail,
+  busy,
+  onAnswer,
+  onBack,
+}: {
+  detail: DetailView;
+  busy: boolean;
+  onAnswer: (text: string) => void;
+  onBack: () => void;
+}) {
+  const { lang } = useLanguage();
+  const t = translations[lang].assess;
+  const heading = useRef<HTMLHeadingElement>(null);
+  const [text, setText] = useState(detail.saved ?? '');
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+    heading.current?.focus({ preventScroll: true });
+  }, []);
+
+  const ready = text.trim().length > 0 && text.length <= detail.maxLength;
+  const submit = () => {
+    if (!ready || busy) return;
+    onAnswer(text);
+  };
+
+  return (
+    <section aria-labelledby={`d-${detail.id}`}>
+      <Progress position={detail.position} total={detail.total} sectionTitle={detail.sectionTitle} />
+
+      <h1 id={`d-${detail.id}`} ref={heading} tabIndex={-1} className="text-[22px] font-semibold leading-[1.35] text-ink outline-none sm:text-[26px]">
+        {pick(detail.text, lang)}
+      </h1>
+
+      <div className="mt-6">
+        <textarea
+          aria-labelledby={`d-${detail.id}`}
+          aria-describedby={`d-${detail.id}-help`}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={detail.maxLength}
+          rows={6}
+          disabled={busy}
+          placeholder={t.typeAnswer}
+          className={cn(inputClasses, 'min-h-40 resize-y py-3 text-[17px] leading-6.5')}
+        />
+        <p id={`d-${detail.id}-help`} className="mt-2 flex items-start justify-between gap-3 text-[13px] text-ink-muted">
+          <span>{t.detailPrivate}</span>
+          <span className="shrink-0 tabular-nums">{t.charsLeft.replace('{n}', String(detail.maxLength - text.length))}</span>
+        </p>
+      </div>
+
+      <ActionBar canGoBack={detail.canGoBack} ready={ready} busy={busy} onBack={onBack} onNext={submit} />
+    </section>
+  );
+}
+
+function Progress({ position, total, sectionTitle }: { position: number; total: number; sectionTitle: Text }) {
+  const { lang } = useLanguage();
+  const t = translations[lang].assess;
+  const pct = total ? Math.round(((position - 1) / total) * 100) : 0;
+  const of = t.questionOf.replace('{n}', String(position)).replace('{m}', String(total));
+  return (
+    <div className="mb-6">
+      <p className="mb-2 flex items-center justify-between gap-3 text-[13px] font-medium text-ink-muted">
+        <span>{of}</span>
+        <span className="truncate">{pick(sectionTitle, lang)}</span>
+      </p>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-sand" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={position - 1} aria-label={of}>
+        <div className="h-full rounded-full bg-teal transition-[width] duration-300" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/** Pinned to the bottom of the screen so Next is always in thumb reach. */
+function ActionBar({ canGoBack, ready, busy, onBack, onNext }: { canGoBack: boolean; ready: boolean; busy: boolean; onBack: () => void; onNext: () => void }) {
+  const { lang } = useLanguage();
+  const t = translations[lang].assess;
+  return (
+    <div className="sticky bottom-0 -mx-4 mt-6 flex items-center gap-3 border-t border-sand bg-cream/95 px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pb-0">
+      {canGoBack && (
+        <Button variant="secondary" onClick={onBack} disabled={busy} aria-label={t.back} className="shrink-0 px-4">
+          <ArrowLeft size={18} strokeWidth={2} aria-hidden />
+          <span className="hidden sm:inline">{t.back}</span>
+        </Button>
+      )}
+      <Button className="flex-1" disabled={!ready || busy} loading={busy} loadingText={t.saving} onClick={onNext}>
+        {t.next}
+        <ArrowRight size={18} strokeWidth={2} aria-hidden />
+      </Button>
+    </div>
   );
 }
 
