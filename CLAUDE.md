@@ -142,6 +142,14 @@ Never invent questions, values or report text. If something is not covered, stop
 - **Versions:** `draft` → `live` → `retired`. One live and one draft per questionnaire. Published versions
   never change (trigger). Attempts pin the version they were paid on; publishing never touches a running
   assessment. Status changes only through the admin (`publish_questionnaire_version`).
+- **Client details** (typed answers, owner-approved 2026-10-27): a per-questionnaire list of open questions
+  asked after the safety questions, one per screen, answer required, up to 1,000 characters
+  (`DETAIL_MAX_LENGTH`). No options, values, rules, scoring or report text. The list lives in
+  `questionnaires.client_details`, **not** in a version: Admin → Questionnaires → Client details edits it at
+  any time (super admins, coordinators), and it applies at once, also to running assessments. Each answer
+  is stored in `attempt_details` with a copy of the question as it was asked. The JSON may carry an optional
+  `client_details` list; publishing a version that has one replaces the questionnaire's list, and Copy JSON
+  includes the current list.
 - Clients read questionnaire names and their own attempt rows; never definitions, answers or results (RLS).
 - Registration already asks age, gender and relationship status; questionnaires never ask them again. Age
   under 18 is stopped at registration.
@@ -151,12 +159,13 @@ Never invent questions, values or report text. If something is not covered, stop
 Phone OTP login → registration (name, gender, age, relationship status, city, state, email; under 18 →
 AGE_STOP, save nothing) → choose test (live questionnaires) → payment ₹3,500 → report ID assigned on payment
 success → one-line consent → one question per screen, in the order of the JSON → built-in safety questions →
-submit ("nothing can be changed after this") → thank-you screen ("Your counsellor will go through your
+client details (typed, required; the questionnaire's current list) → submit ("nothing can be changed after this") → thank-you screen ("Your counsellor will go through your
 results with you"). The client never sees a report in the app.
 
 - Every answer is saved at once (`attempt_answers`); the server decides the next question from the stored
   answers and the pinned version. Changing a routing answer clears answers to questions that are no longer
-  shown. Back reopens the previous visible question.
+  shown. Back reopens the previous visible question. Client details are saved at once too
+  (`attempt_details`); Back from the first one returns to the last safety question.
 - Single choice = cards; options with `value: null` ("Not applicable", "Unsure") = smaller secondary buttons;
   multiple choice = checkboxes with `max_choices`.
 - The report is built once at submit, in the language the client was using (EN / हिं toggle), and stored in
@@ -174,7 +183,9 @@ results with you"). The client never sees a report in the app.
   `questionnaire_versions`, `attempts` (pinned `version_id`, status paid / in_progress / completed,
   `language`, `report_id`), `attempt_answers` (`option_ids text[]`), `attempt_results` (result + report,
   written once), `attempt_alerts` (crisis / home_safety, one per attempt and kind). `report_counters` is the
-  gap-free report-number table (kept from before). Every new table has RLS; all writes go through the
+  gap-free report-number table (kept from before). Migration `20261027000000_client_details.sql` (checks
+  `docs/tasks/12-client-details-verify.sql`) adds `questionnaires.client_details` and `attempt_details`
+  (typed answer + question as asked; locked once completed; RLS `can_view_reports()`). Every new table has RLS; all writes go through the
   server (service role) in `clients/lib/assessment/` and `admin/lib/services/`.
 - Completed attempts and results are frozen by triggers; assessments and payments are never deleted.
 - Payments: Razorpay Standard Checkout (`clients/lib/payments/`, migration `20261020000000_payments.sql`).
@@ -200,7 +211,8 @@ results with you"). The client never sees a report in the app.
 - Client → attempt (`/attempts/<id>`): super admins and counsellors see the **counsellor view** (alerts and
   the notes triggered by the client's answers at the top; plan and main area; each section's score, range,
   answered / skipped counts; notable answers, highest first; all answers grouped by section) and **Download
-  PDF**. Coordinators see the safety alerts only (RLS `can_view_reports()` on answers and results).
+  PDF**, plus the client's typed **client details** below it (never in the PDF). Coordinators see the
+  safety alerts only (RLS `can_view_reports()` on answers, results and client details).
 - The counsellor view is computed from the pinned version, the stored answers and the stored result
   (`counsellorView` in `@mfb/questionnaire`); nothing is re-scored.
 - Report PDFs are never stored: built on request by `admin/app/attempts/[id]/pdf/route.ts` with
@@ -333,7 +345,10 @@ so copy the master file there before using a new combination.
 
 ## Data and privacy
 
-- Never collect or store free text from clients.
+- Never collect or store free text from clients, with one exception approved by the owner (2026-10-27): the
+  client-details answers at the end of an assessment (`attempt_details`, up to 1,000 characters, read only by
+  super admins and counsellors, never in the report, the PDF or any notification). Nothing reads these
+  texts automatically; a crisis can only be raised by the built-in safety question.
 - Scoring runs server-side only. The browser submits option ids; the server loads the pinned version,
   scores, and writes results.
 - Every attempt stores its questionnaire version.
@@ -394,4 +409,7 @@ existing migrations, `.env*` files.
 - Open (payments task): GST invoice numbering, its own gap-free series per financial year.
 - Open: Hindi PDF font files (`NotoSansDevanagari-*.ttf`) in `admin/app/fonts/`; Intimacy 2.0 workbook (the
   starting draft comes from v1.1).
+- Done: **Client details** (typed answers after the safety questions). Run
+  `20261027000000_client_details.sql`, checks `docs/tasks/12-client-details-verify.sql`; then set the list
+  in Admin → Questionnaires (or import + publish `intimacy.json`, which carries the six Intimacy questions).
 - Next: Task 07 — polish.
