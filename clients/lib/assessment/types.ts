@@ -40,11 +40,27 @@ export interface QuestionView {
   canGoBack: boolean;
 }
 
+/** A client-details question: the client types the answer (after the safety questions). */
+export interface DetailView {
+  id: string;
+  text: Text;
+  sectionTitle: Text;
+  saved: string | null;
+  maxLength: number;
+  position: number;
+  total: number;
+  canGoBack: boolean;
+}
+
 export type Step =
   | { kind: 'consent' }
   | { kind: 'question'; question: QuestionView }
+  | { kind: 'detail'; detail: DetailView }
   | { kind: 'finish'; answered: number; total: number }
   | { kind: 'completed' };
+
+/** Where the client is: an option question or a client-details question (null = the first open one). */
+export type At = { kind: 'question' | 'detail'; id: string } | null;
 
 /** The support screen shown at once after the crisis question is answered yes. */
 export interface Interrupt {

@@ -1,4 +1,4 @@
-import { parseDefinition, type Issue } from '@mfb/questionnaire';
+import { parseClientDetails, parseDefinition, type ClientDetail, type Issue } from '@mfb/questionnaire';
 import { requireStaff } from '../auth';
 import { createAdminClient } from '../supabase/admin';
 import { createClient } from '../supabase/server';
@@ -23,6 +23,8 @@ export interface QuestionnaireRow {
   name_hi: string | null;
   report_prefix: string;
   sort: number;
+  /** The current client-details list (not versioned; edited at any time). */
+  client_details: ClientDetail[];
 }
 
 export interface VersionRow {
@@ -59,7 +61,7 @@ export async function listQuestionnaires(): Promise<{ questionnaire: Questionnai
   await requireStaff();
   const supabase = await createClient();
   const [q, v] = await Promise.all([
-    supabase.from('questionnaires').select('code, name_en, name_hi, report_prefix, sort').order('sort'),
+    supabase.from('questionnaires').select('code, name_en, name_hi, report_prefix, sort, client_details').order('sort'),
     supabase.from('questionnaire_versions').select(VERSION_COLUMNS).order('number', { ascending: false }),
   ]);
   if (q.error) {
@@ -68,10 +70,13 @@ export async function listQuestionnaires(): Promise<{ questionnaire: Questionnai
   }
   if (v.error) throw new Error(`Could not read versions: ${v.error.message}`);
   const versions = ((v.data ?? []) as unknown as RawVersion[]).map(toVersion);
-  return ((q.data ?? []) as QuestionnaireRow[]).map((questionnaire) => ({
-    questionnaire,
-    versions: versions.filter((x) => x.questionnaire_code === questionnaire.code),
-  }));
+  return ((q.data ?? []) as (Omit<QuestionnaireRow, 'client_details'> & { client_details: unknown })[]).map((row) => {
+    const details = parseClientDetails(row.client_details);
+    return {
+      questionnaire: { ...row, client_details: details.ok ? details.details : [] },
+      versions: versions.filter((x) => x.questionnaire_code === row.code),
+    };
+  });
 }
 
 export async function getQuestionnaire(code: string): Promise<{ questionnaire: QuestionnaireRow; versions: VersionRow[] } | null> {
@@ -121,11 +126,39 @@ export async function importDefinition(code: string, json: string, profileId: st
   return { ok: true, versionId: (i.data as { id: string }).id, number, replaced: false, warnings: parsed.warnings };
 }
 
+/**
+ * Publishes the draft. When its JSON has "client_details", that list becomes the questionnaire's
+ * client-details list; a JSON without it keeps the current list.
+ */
 export async function publishVersion(versionId: string, profileId: string): Promise<void> {
   const { profile } = await requireStaff();
   if (!canEditQuestionnaires(profile.role)) throw new Error('Only super admins and coordinators can publish.');
-  const { error } = await createAdminClient().rpc('publish_questionnaire_version', { p_version_id: versionId, p_by: profileId });
+  const db = createAdminClient();
+  const { error } = await db.rpc('publish_questionnaire_version', { p_version_id: versionId, p_by: profileId });
   if (error) throw new Error(`Could not publish: ${error.message}`);
+
+  const { data, error: readError } = await db.from('questionnaire_versions').select('questionnaire_code, definition').eq('id', versionId).single();
+  if (readError) throw new Error(`Could not read the published version: ${readError.message}`);
+  const row = data as { questionnaire_code: string; definition: unknown };
+  const parsed = parseDefinition(row.definition);
+  if (parsed.ok && parsed.definition.client_details) {
+    const u = await db.from('questionnaires').update({ client_details: parsed.definition.client_details }).eq('code', row.questionnaire_code);
+    if (u.error) throw new Error(`Published, but the client details could not be updated: ${u.error.message}`);
+  }
+}
+
+/**
+ * Replaces the questionnaire's client-details list. It takes effect at once, also for clients who have
+ * not reached these questions yet; answers already given keep the question text as it was asked.
+ */
+export async function saveClientDetails(code: string, list: unknown): Promise<{ ok: true } | { ok: false; errors: Issue[] }> {
+  const { profile } = await requireStaff();
+  if (!canEditQuestionnaires(profile.role)) return { ok: false, errors: [{ where: 'Rights', message: 'Only super admins and coordinators can change client details.' }] };
+  const parsed = parseClientDetails(list, 'Client details');
+  if (!parsed.ok) return { ok: false, errors: parsed.errors };
+  const { error } = await createAdminClient().from('questionnaires').update({ client_details: parsed.details }).eq('code', code);
+  if (error) throw new Error(`Could not save the client details: ${error.message}`);
+  return { ok: true };
 }
 
 export async function createQuestionnaire(input: { code: string; name_en: string; name_hi: string; report_prefix: string }): Promise<string | null> {

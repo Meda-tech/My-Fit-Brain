@@ -28,6 +28,9 @@ THE FORMAT
           ] }
       ]
     }
+  ],
+  "client_details": [
+    { "id": "d_example", "text": { "en": "…", "hi": "…" } }
   ]
 }
 
@@ -48,6 +51,7 @@ RULES
 - "report.meaning": one line per range, in range order (what a Low / Mild / Moderate / High score in this section usually means). "report.focus": 1–3 lines on what sessions will work on when this is the person's main area. Only for scored sections.
 - "plan": optional. "range" is 1 for the first range, 2 for the second… The row whose range matches the main area's range is printed.
 - "note": only for a medical or safety concern an option reveals (e.g. pain, bleeding, sudden onset). Seen by the counsellor only, never by the client.
+- "client_details": optional. Questions the person answers by typing (for example "Are you taking any medicines? If yes, please mention the details."). They come at the very end, have only "id" (starting with d_) and "text", no options, values or rules, and are never scored or printed in the report. Use them only when the team gives you such open questions; copy their wording exactly. Every other question needs options.
 - Do NOT include questions about self-harm or feeling unsafe at home: the app adds them itself at the end of every questionnaire.
 - Do not ask for a name, phone, email, age, gender or anything that identifies the person; the app already has these.
 - Words to avoid everywhere: licensed, RCI-registered, clinically validated, cure, guaranteed, fix you, diagnosis names, "crazy", "mental", "victim", "before it's too late". No prices. Say "qualified counsellor", "consultation", "support", "screening".

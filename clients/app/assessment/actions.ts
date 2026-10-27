@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { currentClient, serviceDeps } from '../../lib/assessment/server';
 import * as service from '../../lib/assessment/service';
-import { AssessmentError, type Interrupt, type Step } from '../../lib/assessment/types';
+import { AssessmentError, type At, type Interrupt, type Step } from '../../lib/assessment/types';
 import { LANG_COOKIE, parseLang } from '../../lib/lang-cookie';
 
 // Server actions for the assessment screens. Each one resolves the signed-in client; the service checks
@@ -39,10 +39,24 @@ export async function answerAction(
   }
 }
 
-export async function backAction(attemptId: string, fromQuestionId: string | null): Promise<{ ok: true; step: Step } | ActionError> {
+export async function answerDetailAction(
+  attemptId: string,
+  detailId: string,
+  text: string
+): Promise<{ ok: true; step: Step; interrupt: Interrupt | null } | ActionError> {
   try {
     const client = await currentClient();
-    return { ok: true, step: await service.back(serviceDeps(), client, attemptId, fromQuestionId) };
+    const r = await service.answerDetail(serviceDeps(), client, attemptId, detailId, text);
+    return { ok: true, ...r };
+  } catch (err) {
+    return failure(err);
+  }
+}
+
+export async function backAction(attemptId: string, from: At): Promise<{ ok: true; step: Step } | ActionError> {
+  try {
+    const client = await currentClient();
+    return { ok: true, step: await service.back(serviceDeps(), client, attemptId, from) };
   } catch (err) {
     return failure(err);
   }

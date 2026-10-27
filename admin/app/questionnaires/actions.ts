@@ -1,9 +1,10 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { Issue } from '@mfb/questionnaire';
 import { requireStaff } from '../../lib/auth';
-import { createQuestionnaire, importDefinition, publishVersion } from '../../lib/services/questionnaires';
+import { createQuestionnaire, importDefinition, publishVersion, saveClientDetails } from '../../lib/services/questionnaires';
 
 export interface FormState {
   error: string | null;
@@ -29,6 +30,13 @@ export async function importJsonAction(_prev: FormState, formData: FormData): Pr
   const outcome = await importDefinition(code, json, profile.id);
   if (!outcome.ok) return { error: 'The JSON could not be imported. Fix these and try again:', errors: outcome.errors };
   redirect(`/questionnaires/${code}?v=${outcome.versionId}&imported=${outcome.replaced ? 'replaced' : 'new'}`);
+}
+
+export async function saveClientDetailsAction(code: string, list: { id: string; text: { en: string; hi: string | null } }[]): Promise<FormState> {
+  const outcome = await saveClientDetails(code, list);
+  if (!outcome.ok) return { error: 'The client details could not be saved. Fix these and try again:', errors: outcome.errors };
+  revalidatePath(`/questionnaires/${code}`);
+  return { error: null };
 }
 
 export async function publishAction(formData: FormData): Promise<void> {

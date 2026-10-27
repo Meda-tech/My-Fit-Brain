@@ -1,9 +1,11 @@
 import { DEFAULT_DISCLAIMER, DEFAULT_RANGES, SAFETY_SECTION_ID } from './defaults';
+import { parseClientDetails } from './details';
 import { questionsRead, sectionsRead } from './rules';
-import type { Definition, Issue, Option, PlanRow, Question, Range, Rule, Section, SectionReport, Text } from './types';
+import type { ClientDetail, Definition, Issue, Option, PlanRow, Question, Range, Rule, Section, SectionReport, Text } from './types';
 
 // Light validation. Only four things block an import: invalid JSON, no questions, duplicate ids, and a
-// rule pointing to an id that does not exist. Everything else is a warning in plain English.
+// rule pointing to an id that does not exist (plus a question without options, and a client-details
+// question without an id or English text). Everything else is a warning in plain English.
 
 export type ParseResult =
   | { ok: true; definition: Definition; warnings: Issue[] }
@@ -201,8 +203,17 @@ export function parseDefinition(input: unknown): ParseResult {
     }
   }
 
+  // --- client details (typed answers after the safety questions; optional)
+  let clientDetails: ClientDetail[] | null = null;
+  if (raw.client_details != null) {
+    const d = parseClientDetails(raw.client_details);
+    warnings.push(...d.warnings);
+    if (d.ok) clientDetails = d.details;
+    else errors.push(...d.errors);
+  }
+
   if (errors.length) return { ok: false, errors, warnings };
-  return { ok: true, definition: { title, subtitle, closing, disclaimer, ranges, plan, sections }, warnings };
+  return { ok: true, definition: { title, subtitle, closing, disclaimer, ranges, plan, sections, client_details: clientDetails }, warnings };
 }
 
 // ---------------------------------------------------------------------------------------------

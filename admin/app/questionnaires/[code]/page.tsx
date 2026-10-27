@@ -12,6 +12,7 @@ import { CopyButton } from '../CopyButton';
 import { ImportJsonForm } from '../ImportJsonForm';
 import { StatusPill } from '../StatusPill';
 import { QuestionnaireView } from './QuestionnaireView';
+import { ClientDetailsEditor } from './ClientDetailsEditor';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,13 @@ export default async function QuestionnairePage({
   const shownId = v ?? draft?.id ?? live?.id ?? versions[0]?.id ?? null;
   const shown = shownId ? await getVersion(shownId) : null;
   const parsed = shown ? parseDefinition(shown.definition) : null;
-  const json = shown ? JSON.stringify(shown.definition, null, 2) : '';
+  // Copy JSON carries the current client-details list, so an edited JSON round-trips without losing it.
+  const copy =
+    shown && typeof shown.definition === 'object' && shown.definition !== null && !Array.isArray(shown.definition)
+      ? { ...shown.definition, client_details: q.client_details }
+      : shown?.definition;
+  const json = shown ? JSON.stringify(copy, null, 2) : '';
+  const jsonDetails = parsed?.ok ? parsed.definition.client_details : null;
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
@@ -104,6 +111,16 @@ export default async function QuestionnairePage({
           <ImportJsonForm code={q.code} hasDraft={!!draft} />
         </Card>
       )}
+
+      <div className="mb-6">
+        <ClientDetailsEditor key={JSON.stringify(q.client_details)} code={q.code} details={q.client_details} canEdit={canEdit} />
+        {shown?.status === 'draft' && jsonDetails && (
+          <Notice variant="info" className="mt-3">
+            This draft&apos;s JSON has {jsonDetails.length} client-details question{jsonDetails.length === 1 ? '' : 's'}. Publishing it replaces the list
+            above with them.
+          </Notice>
+        )}
+      </div>
 
       {shown && parsed && (parsed.ok ? <QuestionnaireView definition={parsed.definition} warnings={parsed.warnings} /> : (
         <Notice variant="error" title="This version cannot be read">

@@ -18,6 +18,7 @@ export {
   pick,
 } from './defaults';
 export { parseDefinition, type ParseResult } from './validate';
+export { parseClientDetails, checkDetailAnswer, DETAIL_MAX_LENGTH, CLIENT_DETAILS_TITLE, type DetailsResult } from './details';
 export { evalRule, questionsRead, sectionsRead } from './rules';
 export { withSafety, visibleSections, visibleQuestions, nextQuestion, findQuestion, checkAnswer, prune, type VisibleSection, type NextStep } from './flow';
 export { score, scoreSection, valuedAnswer, valueRange, rangeOf, planFor } from './score';

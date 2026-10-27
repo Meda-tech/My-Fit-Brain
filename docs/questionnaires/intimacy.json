@@ -4553,5 +4553,49 @@
         }
       ]
     }
+  ],
+  "client_details": [
+    {
+      "id": "d_medical",
+      "text": {
+        "en": "Do you have any medical condition or health problem? If yes, please explain.",
+        "hi": "क्या आपको कोई बीमारी या स्वास्थ्य संबंधी समस्या है? अगर हाँ, तो उसके बारे में थोड़ा बताएं।"
+      }
+    },
+    {
+      "id": "d_medicines",
+      "text": {
+        "en": "Are you currently taking any medicines or undergoing any medical treatment? If yes, please mention the details.",
+        "hi": "क्या आप अभी कोई दवाई ले रहे हैं या किसी बीमारी का इलाज करवा रहे हैं? अगर हाँ, तो उसकी जानकारी दें।"
+      }
+    },
+    {
+      "id": "d_past_help",
+      "text": {
+        "en": "Have you consulted any doctor or taken treatment for your sexual problem before? If yes, what was your experience?",
+        "hi": "क्या आपने अपनी यौन समस्या के लिए पहले किसी डॉक्टर से सलाह ली है या कोई इलाज करवाया है? अगर हाँ, तो आपका अनुभव कैसा रहा?"
+      }
+    },
+    {
+      "id": "d_relationship",
+      "text": {
+        "en": "How is your sexual problem affecting your married life or relationship with your partner?",
+        "hi": "आपकी यौन समस्या का आपकी शादीशुदा ज़िंदगी या पार्टनर के साथ रिश्ते पर क्या असर पड़ रहा है?"
+      }
+    },
+    {
+      "id": "d_wellbeing",
+      "text": {
+        "en": "How is this problem affecting your confidence, happiness, or mental peace?",
+        "hi": "इस समस्या की वजह से आपके आत्मविश्वास, खुशी या मानसिक शांति पर क्या असर पड़ रहा है?"
+      }
+    },
+    {
+      "id": "d_first_change",
+      "text": {
+        "en": "If you start treatment with us, what is the first improvement you would like to see in your sexual life?",
+        "hi": "अगर आप हमारे साथ इलाज शुरू करते हैं, तो अपनी यौन ज़िंदगी में सबसे पहले कौन-सा बदलाव देखना चाहेंगे?"
+      }
+    }
   ]
 }
