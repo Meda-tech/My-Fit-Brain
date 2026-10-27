@@ -4,8 +4,11 @@ import {
   HOME_SAFETY_QUESTION_ID,
   YES,
   NO,
+  DETAIL_MAX_LENGTH,
   buildReport,
   checkAnswer,
+  checkDetailAnswer,
+  parseClientDetails,
   counsellorView,
   describeShowWhen,
   nextQuestion,
@@ -130,6 +133,35 @@ describe('parseDefinition', () => {
     expect(r.warnings.some((w) => w.message.includes('comes later'))).toBe(true);
     expect(r.warnings.some((w) => w.message.includes('do not reach 100'))).toBe(true);
     expect(r.definition.ranges).toHaveLength(4);
+  });
+
+  it('reads the optional client details: null when absent, blocked only for duplicate or missing ids and text', () => {
+    const none = parseDefinition(raw);
+    expect(none.ok && none.definition.client_details).toBeNull();
+    const withDetails = { ...structuredClone(raw), client_details: [{ id: 'd_meds', text: { en: ' Any medicines? ', hi: 'कोई दवाई?' } }, { id: 'd_goal', text: 'Your goal?' }] };
+    const r = parseDefinition(withDetails);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.definition.client_details).toEqual([
+      { id: 'd_meds', text: { en: 'Any medicines?', hi: 'कोई दवाई?' } },
+      { id: 'd_goal', text: { en: 'Your goal?', hi: null } },
+    ]);
+    expect(r.warnings.some((w) => w.where === 'client_details, question 2' && w.message.includes('No Hindi'))).toBe(true);
+    expect(parseDefinition({ ...structuredClone(raw), client_details: [{ id: 'd_a', text: { en: 'A' } }, { id: 'd_a', text: { en: 'B' } }] }).ok).toBe(false);
+    expect(parseDefinition({ ...structuredClone(raw), client_details: [{ id: 'd_a', text: { en: ' ' } }] }).ok).toBe(false);
+    expect(parseDefinition({ ...structuredClone(raw), client_details: 'nope' }).ok).toBe(false);
+    expect(parseClientDetails([]).ok).toBe(true);
+  });
+});
+
+describe('client detail answers', () => {
+  it('trims, requires text, caps the length and drops control characters', () => {
+    expect(checkDetailAnswer('  Sugar since 2020 \r\n and BP ')).toEqual({ ok: true, answer: 'Sugar since 2020 \n and BP' });
+    expect(checkDetailAnswer('a\u0000b')).toEqual({ ok: true, answer: 'ab' });
+    expect(checkDetailAnswer('   ').ok).toBe(false);
+    expect(checkDetailAnswer(42).ok).toBe(false);
+    expect(checkDetailAnswer('x'.repeat(DETAIL_MAX_LENGTH)).ok).toBe(true);
+    expect(checkDetailAnswer('x'.repeat(DETAIL_MAX_LENGTH + 1)).ok).toBe(false);
   });
 });
 

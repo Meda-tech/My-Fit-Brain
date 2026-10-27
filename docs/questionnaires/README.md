@@ -30,7 +30,8 @@ the report and the counsellor view. Nothing in code belongs to one questionnaire
           "show_when": { … },                                                     // optional
           "options": [ { "id": "o_sa", "text": {…}, "value": 1 },
                        { "id": "o_na", "text": {…}, "value": null },              // skipped in scores
-                       { "id": "o_x",  "text": {…}, "value": 5, "note": "Suggest a doctor check-up." } ] } ] } ]
+                       { "id": "o_x",  "text": {…}, "value": 5, "note": "Suggest a doctor check-up." } ] } ] } ],
+  "client_details": [ { "id": "d_medicines", "text": { "en": "…", "hi": "…" } }, … ]   // optional
 }
 ```
 
@@ -67,17 +68,35 @@ A safety section is added at the end of every questionnaire: the crisis question
 Tele-MANAS at once, team alert, report shows a support message first and hides the plan and focus) and the
 home-safety question (Yes → team alert). Age under 18 is already stopped at registration.
 
+### Client details (typed answers, after the safety questions)
+
+Open questions where the client types the answer, e.g. "Are you taking any medicines? If yes, please mention
+the details." They come after the two safety questions, one per screen. Each answer is required and at most
+1,000 characters. They have no options, values or rules, are never scored and never appear in the report or
+the PDF. Counsellors and super admins read them on the assessment page.
+
+- **Where the list lives:** on the questionnaire (`questionnaires.client_details`), not on a version, so it
+  can change at any time without a new version: Admin → Questionnaires → (test) → **Client details** →
+  add, edit, reorder, remove → Save. The change applies at once, also to clients who have not reached these
+  questions yet.
+- **Old answers never change:** each answer (`attempt_details`) keeps a copy of the question as it was asked.
+- **In the JSON (optional):** `client_details` as above (ids start with `d_`). Publishing a version that has
+  it replaces the questionnaire's list; a version without it keeps the current list. Copy JSON includes the
+  current list. `intimacy.json` carries the six Intimacy questions.
+
 ### Validation
 
 Import is blocked only for: invalid JSON, no questions, duplicate ids, a rule pointing to an id that does not
-exist (and a question without options). Everything else is a warning in plain English: missing Hindi,
+exist (and a question without options; a client-details question without an id or English text). Everything
+else is a warning in plain English: missing Hindi,
 missing report lines, no plan, a rule reading a later question, ranges not reaching 100 (defaults used).
 
 ## Flows
 
 - **Admin:** Questionnaires → Copy AI prompt → paste into any AI with the questions → paste the JSON into
   Import JSON (creates or replaces the draft) → read the page → Publish (the previous live version retires).
-- **Client:** pays → consent → answers (one screen per question, saved as they go) → thank-you screen.
+- **Client:** pays → consent → answers (one screen per question, saved as they go) → safety questions →
+  client details (typed) → submit → thank-you screen.
   No report in the app.
 - **Counsellor:** opens the attempt in the admin → counsellor view → Download PDF (built on request, never
   stored; file name = report ID) → sends it on WhatsApp when the client asks.

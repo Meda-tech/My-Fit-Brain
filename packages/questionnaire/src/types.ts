@@ -69,6 +69,15 @@ export interface PlanRow {
   pace: Text;
 }
 
+/**
+ * A client-details question, asked after the safety questions. The client types the answer. No value,
+ * no rules, not scored and never in the report: the care team reads it in the counsellor view.
+ */
+export interface ClientDetail {
+  id: string;
+  text: Text;
+}
+
 /** A questionnaire after parsing: defaults filled, safety section not yet added (see withSafety). */
 export interface Definition {
   title: Text;
@@ -78,6 +87,11 @@ export interface Definition {
   ranges: Range[];
   plan: PlanRow[];
   sections: Section[];
+  /**
+   * The JSON's client-details list, or null when the JSON has none. Publishing a version that has one
+   * replaces the questionnaire's list; after that the admin edits the list directly (it is not versioned).
+   */
+  client_details: ClientDetail[] | null;
 }
 
 /** Chosen option ids per question id (a single-choice answer is a one-item list). */
