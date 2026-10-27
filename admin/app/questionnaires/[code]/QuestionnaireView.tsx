@@ -1,11 +1,10 @@
-import Link from 'next/link';
 import { AlertTriangle, ChevronRight, ShieldCheck } from 'lucide-react';
-import { describeShowWhen, SAFETY_SECTION, type Definition, type Issue, type Text } from '@mfb/questionnaire';
+import { describeShowWhen, SAFETY_SECTION, type Definition, type Issue, type Section, type Text } from '@mfb/questionnaire';
 import { Card, Notice, Pill } from '../../../components/brand';
 
-// One version of a questionnaire in plain words, split into the parts shown as tabs on the page:
-// overview, sections (what the client sees, in order, what opens what, values, counsellor notes),
-// the built-in safety questions and the report settings. No ids or technical words.
+// One version of a questionnaire in plain words, split into the two tabs shown on the page: the
+// overview (title, warnings, every section collapsed in the order the client sees it, then the built-in
+// safety questions) and the report settings. No ids or technical words.
 
 function T({ text, className = '' }: { text: Text; className?: string }) {
   return (
@@ -20,9 +19,7 @@ function T({ text, className = '' }: { text: Text; className?: string }) {
   );
 }
 
-const sectionAnchor = (id: string) => `section-${id}`;
-
-export function Warnings({ warnings }: { warnings: Issue[] }) {
+function Warnings({ warnings }: { warnings: Issue[] }) {
   if (warnings.length === 0) return null;
   return (
     <Notice variant="info" icon={<AlertTriangle size={18} strokeWidth={2} />} title={`${warnings.length} thing${warnings.length === 1 ? '' : 's'} to check (nothing blocks publishing)`}>
@@ -37,8 +34,8 @@ export function Warnings({ warnings }: { warnings: Issue[] }) {
   );
 }
 
-/** Title, warnings and a map of the sections; each row opens that section in the Sections tab. */
-export function OverviewView({ definition: def, warnings, sectionsHref }: { definition: Definition; warnings: Issue[]; sectionsHref: string }) {
+/** Title, warnings, then every section (collapsed; click to open its questions), then safety. */
+export function OverviewView({ definition: def, warnings }: { definition: Definition; warnings: Issue[] }) {
   const questions = def.sections.reduce((n, s) => n + s.questions.length, 0);
   return (
     <div className="space-y-6">
@@ -59,15 +56,17 @@ export function OverviewView({ definition: def, warnings, sectionsHref }: { defi
         </p>
       </Card>
 
-      <Card className="p-2 sm:p-3">
-        <h2 className="px-3 pb-1 pt-3 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-muted">Sections, in the order the client sees them</h2>
-        <ol className="divide-y divide-sand">
+      <div>
+        <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-muted">Sections, in the order the client sees them</h2>
+        <Card className="divide-y divide-sand overflow-hidden">
           {def.sections.map((s, si) => (
-            <li key={s.id}>
-              <Link href={`${sectionsHref}#${sectionAnchor(s.id)}`} className="flex min-h-11 items-center gap-3 rounded-input px-3 py-3 transition-colors hover:bg-mist">
-                <span className="w-6 shrink-0 text-[14px] text-ink-muted">{si + 1}.</span>
+            <details key={s.id} className="group">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-3 transition-colors hover:bg-mist sm:px-5 [&::-webkit-details-marker]:hidden">
+                <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-teal transition-transform group-open:rotate-90" aria-hidden />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium text-ink">{s.title.en}</span>
+                  <span className="block text-[16px] font-medium text-ink">
+                    {si + 1}. {s.title.en}
+                  </span>
                   <span className="block text-[13px] text-ink-muted">
                     {s.questions.length} question{s.questions.length === 1 ? '' : 's'} · {describeShowWhen(def, s.show_when)}
                   </span>
@@ -75,89 +74,66 @@ export function OverviewView({ definition: def, warnings, sectionsHref }: { defi
                 <Pill tone={s.scored ? 'mist' : 'quiet'} className="shrink-0">
                   {s.scored ? 'Scored' : 'Not scored'}
                 </Pill>
-                <ChevronRight size={18} strokeWidth={2} className="shrink-0 text-teal" aria-hidden />
-              </Link>
-            </li>
+              </summary>
+              <div className="border-t border-sand px-4 pb-5 pt-4 sm:px-5">
+                {s.title.hi && (
+                  <p lang="hi" className="mb-3 text-[15px] text-ink-soft">
+                    {s.title.hi}
+                  </p>
+                )}
+                <SectionQuestions definition={def} section={s} number={si + 1} />
+              </div>
+            </details>
           ))}
-        </ol>
-      </Card>
+        </Card>
+      </div>
+
+      <SafetyView />
     </div>
   );
 }
 
-/** Every section with its questions. A sticky bar of section names jumps to each one. */
-export function SectionsView({ definition: def }: { definition: Definition }) {
+function SectionQuestions({ definition: def, section: s, number }: { definition: Definition; section: Section; number: number }) {
   return (
-    <div>
-      <nav
-        aria-label="Jump to a section"
-        className="sticky top-14 z-10 -mx-4 mb-6 flex gap-2 overflow-x-auto border-b border-sand bg-cream/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10"
-      >
-        {def.sections.map((s, si) => (
-          <a
-            key={s.id}
-            href={`#${sectionAnchor(s.id)}`}
-            className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full border border-sand bg-white px-4 text-[14px] font-medium text-ink-soft transition-colors hover:border-teal hover:text-teal"
-          >
-            {si + 1}. {s.title.en}
-          </a>
-        ))}
-      </nav>
-
-      <div className="space-y-6">
-        {def.sections.map((s, si) => (
-          <Card key={s.id} id={sectionAnchor(s.id)} className="scroll-mt-32 p-5 sm:p-6 lg:scroll-mt-20">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <h2 className="text-[20px] font-semibold leading-[1.3] text-teal">
-                {si + 1}. <T text={s.title} />
-              </h2>
-              <Pill tone={s.scored ? 'mist' : 'quiet'}>{s.scored ? 'Scored' : 'Not scored'}</Pill>
-            </div>
-            <p className="mt-1 text-[14px] text-ink-muted">{describeShowWhen(def, s.show_when)}</p>
-
-            <ol className="mt-4 divide-y divide-sand">
-              {s.questions.map((q, qi) => (
-                <li key={q.id} className="py-4 first:pt-0 last:pb-0">
-                  <p className="text-[16px] font-medium text-ink">
-                    <span className="mr-2 text-ink-muted">
-                      {si + 1}.{qi + 1}
+    <ol className="divide-y divide-sand">
+      {s.questions.map((q, qi) => (
+        <li key={q.id} className="py-4 first:pt-0 last:pb-0">
+          <p className="text-[16px] font-medium text-ink">
+            <span className="mr-2 text-ink-muted">
+              {number}.{qi + 1}
+            </span>
+            <T text={q.text} />
+          </p>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            {q.multiple ? (q.max_choices ? `Choose up to ${q.max_choices}` : 'Choose all that apply') : 'Choose one'}
+            {q.show_when ? ` · ${describeShowWhen(def, q.show_when)}` : ''}
+          </p>
+          <ul className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {q.options.map((o) => (
+              <li key={o.id} className="flex items-start justify-between gap-3 rounded-input bg-cream px-3 py-2 text-[14px]">
+                <span className="min-w-0">
+                  <T text={o.text} />
+                  {o.note && (
+                    <span className="mt-1 flex items-start gap-1.5 text-[13px] text-coral-deep">
+                      <AlertTriangle size={14} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
+                      <span>Counsellor note: {o.note}</span>
                     </span>
-                    <T text={q.text} />
-                  </p>
-                  <p className="mt-1 text-[13px] text-ink-muted">
-                    {q.multiple ? (q.max_choices ? `Choose up to ${q.max_choices}` : 'Choose all that apply') : 'Choose one'}
-                    {q.show_when ? ` · ${describeShowWhen(def, q.show_when)}` : ''}
-                  </p>
-                  <ul className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                    {q.options.map((o) => (
-                      <li key={o.id} className="flex items-start justify-between gap-3 rounded-input bg-cream px-3 py-2 text-[14px]">
-                        <span className="min-w-0">
-                          <T text={o.text} />
-                          {o.note && (
-                            <span className="mt-1 flex items-start gap-1.5 text-[13px] text-coral-deep">
-                              <AlertTriangle size={14} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
-                              <span>Counsellor note: {o.note}</span>
-                            </span>
-                          )}
-                        </span>
-                        <span className="shrink-0 font-mono text-[12px] text-ink-muted" title="Value: higher = more difficulty">
-                          {o.value === null ? 'not counted' : o.value}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ol>
-          </Card>
-        ))}
-      </div>
-    </div>
+                  )}
+                </span>
+                <span className="shrink-0 font-mono text-[12px] text-ink-muted" title="Value: higher = more difficulty">
+                  {o.value === null ? 'not counted' : o.value}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ol>
   );
 }
 
 /** The two questions the engine adds at the end of every questionnaire. */
-export function SafetyView() {
+function SafetyView() {
   return (
     <Card className="border-teal/30 p-5 sm:p-6">
       <div className="flex items-center gap-2">

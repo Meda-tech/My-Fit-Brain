@@ -10,19 +10,17 @@ import { canEditQuestionnaires, formatDateTime, getQuestionnaire, getVersion } f
 import { publishAction } from '../actions';
 import { CopyButton } from '../CopyButton';
 import { StatusPill } from '../StatusPill';
-import { OverviewView, ReportView, SafetyView, SectionsView } from './QuestionnaireView';
+import { OverviewView, ReportView } from './QuestionnaireView';
 import { ClientDetailsEditor } from './ClientDetailsEditor';
 import { VersionBar } from './VersionBar';
 
 export const dynamic = 'force-dynamic';
 
 // Two areas: the versions (questions, rules, report: fixed once published) and the client details (one
-// list for the questionnaire, edited at any time). A version is read one part at a time through tabs.
+// list for the questionnaire, edited at any time). A version is read in two tabs: overview and report.
 
 const VIEWS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'sections', label: 'Sections' },
-  { id: 'safety', label: 'Safety' },
   { id: 'report', label: 'Report' },
 ] as const;
 type View = (typeof VIEWS)[number]['id'] | 'details';
@@ -131,84 +129,77 @@ export default async function QuestionnairePage({
               href: href({ v: x.id, view: versionView }),
               active: x.id === shown?.id,
             }))}
-          />
+          >
+            {!shown && <p className="text-[15px] text-ink-muted">No version yet. Use New version to import the first one.</p>}
 
-          {!shown && <p className="text-[15px] text-ink-muted">No version yet. Use New version to import the first one.</p>}
-
-          {shown && (
-            <>
-              {/* The open version: what it is, and what can be done with it */}
-              <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="flex flex-wrap items-center gap-2 text-[15px] text-ink-soft">
-                  <span className="font-semibold text-ink">Version {shown.number}</span>
-                  <StatusPill status={shown.status} />
-                  <span>
-                    {shown.status === 'draft' ? `created ${formatDateTime(shown.created_at)}` : `published ${formatDateTime(shown.published_at)}`}
-                  </span>
-                </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <CopyButton text={json} label="Copy JSON" />
-                  {canEdit && shown.status === 'draft' && parsed?.ok && (
-                    <form action={publishAction}>
-                      <input type="hidden" name="code" value={q.code} />
-                      <input type="hidden" name="versionId" value={shown.id} />
-                      <Button type="submit" variant="primary">
-                        <Rocket size={18} strokeWidth={2} aria-hidden />
-                        <span>Publish</span>
-                      </Button>
-                    </form>
-                  )}
-                </div>
-              </div>
-
-              {parsed && !parsed.ok ? (
-                <Notice variant="error" title="This version cannot be read">
-                  <ul className="mt-1 list-disc pl-5 text-[14px]">
-                    {parsed.errors.map((e, i) => (
-                      <li key={i}>
-                        <span className="font-semibold">{e.where}:</span> {e.message}
-                      </li>
-                    ))}
-                  </ul>
-                </Notice>
-              ) : (
-                parsed && (
-                  <>
-                    <nav aria-label="Parts of this version" className="mb-6 flex gap-1 overflow-x-auto border-b border-sand">
-                      {VIEWS.map((x) => (
-                        <Link
-                          key={x.id}
-                          href={href({ v: shown.id, view: x.id })}
-                          aria-current={versionView === x.id ? 'page' : undefined}
-                          className={tabClasses(versionView === x.id)}
-                        >
-                          {x.label}
-                          {x.id === 'overview' && parsed.warnings.length > 0 && (
-                            <span className="rounded-full bg-mist px-2 text-[12px] font-semibold text-teal">{parsed.warnings.length} to check</span>
-                          )}
-                          {x.id === 'sections' && <span className="text-[13px] font-normal text-ink-muted">{parsed.definition.sections.length}</span>}
-                        </Link>
-                      ))}
-                    </nav>
-
-                    {versionView === 'overview' && (
-                      <div className="space-y-6">
-                        {draftDetailsNotice}
-                        <OverviewView
-                          definition={parsed.definition}
-                          warnings={parsed.warnings}
-                          sectionsHref={href({ v: shown.id, view: 'sections' })}
-                        />
-                      </div>
+            {shown && (
+              <>
+                {/* The open version: what it is, and what can be done with it */}
+                <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="flex flex-wrap items-center gap-2 text-[15px] text-ink-soft">
+                    <span className="font-semibold text-ink">Version {shown.number}</span>
+                    <StatusPill status={shown.status} />
+                    <span>
+                      {shown.status === 'draft' ? `created ${formatDateTime(shown.created_at)}` : `published ${formatDateTime(shown.published_at)}`}
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <CopyButton text={json} label="Copy JSON" />
+                    {canEdit && shown.status === 'draft' && parsed?.ok && (
+                      <form action={publishAction}>
+                        <input type="hidden" name="code" value={q.code} />
+                        <input type="hidden" name="versionId" value={shown.id} />
+                        <Button type="submit" variant="primary">
+                          <Rocket size={18} strokeWidth={2} aria-hidden />
+                          <span>Publish</span>
+                        </Button>
+                      </form>
                     )}
-                    {versionView === 'sections' && <SectionsView definition={parsed.definition} />}
-                    {versionView === 'safety' && <SafetyView />}
-                    {versionView === 'report' && <ReportView definition={parsed.definition} />}
-                  </>
-                )
-              )}
-            </>
-          )}
+                  </div>
+                </div>
+
+                {parsed && !parsed.ok ? (
+                  <Notice variant="error" title="This version cannot be read">
+                    <ul className="mt-1 list-disc pl-5 text-[14px]">
+                      {parsed.errors.map((e, i) => (
+                        <li key={i}>
+                          <span className="font-semibold">{e.where}:</span> {e.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </Notice>
+                ) : (
+                  parsed && (
+                    <>
+                      <nav aria-label="Parts of this version" className="mb-6 flex gap-1 overflow-x-auto border-b border-sand">
+                        {VIEWS.map((x) => (
+                          <Link
+                            key={x.id}
+                            href={href({ v: shown.id, view: x.id })}
+                            aria-current={versionView === x.id ? 'page' : undefined}
+                            className={tabClasses(versionView === x.id)}
+                          >
+                            {x.label}
+                            {x.id === 'overview' && parsed.warnings.length > 0 && (
+                              <span className="rounded-full bg-mist px-2 text-[12px] font-semibold text-teal">{parsed.warnings.length} to check</span>
+                            )}
+                          </Link>
+                        ))}
+                      </nav>
+
+                      {versionView === 'overview' && (
+                        <div className="space-y-6">
+                          {draftDetailsNotice}
+                          <OverviewView definition={parsed.definition} warnings={parsed.warnings} />
+                        </div>
+                      )}
+                      {versionView === 'report' && <ReportView definition={parsed.definition} />}
+                    </>
+                  )
+                )}
+              </>
+            )}
+          </VersionBar>
         </>
       )}
     </AdminShell>
