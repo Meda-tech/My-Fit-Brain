@@ -1,4 +1,4 @@
-import { parseDefinition, withSafety, type Answers, type Definition, type Report, type Result } from '@mfb/questionnaire';
+import { parseDefinition, withSafety, type Answers, type Definition, type Report, type Result, type Text } from '@mfb/questionnaire';
 import { createClient } from '../supabase/server';
 import { requireStaff } from '../auth';
 
@@ -48,6 +48,15 @@ export interface AttemptDetail {
   report: Report | null;
   /** The pinned version, parsed (with the safety section); null when not readable. */
   definition: Definition | null;
+  /** Typed client-details answers with the question as it was asked. Report roles only; null for coordinators. */
+  details: DetailAnswer[] | null;
+}
+
+export interface DetailAnswer {
+  detail_id: string;
+  question: Text;
+  answer: string;
+  answered_at: string;
 }
 
 const ATTEMPT_COLUMNS =
@@ -84,13 +93,16 @@ export async function getAttemptDetail(id: string): Promise<AttemptDetail | null
   const raw = data as unknown as RawAttempt & { clients?: { full_name?: string | null } | null };
 
   const none = { data: null, error: null };
-  const [answers, alerts, result, version] = await Promise.all([
+  const [answers, alerts, result, version, details] = await Promise.all([
     withReport ? supabase.from('attempt_answers').select('question_id, option_ids').eq('attempt_id', id) : none,
     supabase.from('attempt_alerts').select('id, kind, created_at, handled_at').eq('attempt_id', id).order('created_at'),
     withReport ? supabase.from('attempt_results').select('result, report').eq('attempt_id', id).maybeSingle() : none,
     withReport ? supabase.from('questionnaire_versions').select('definition').eq('id', raw.version_id).maybeSingle() : none,
+    withReport
+      ? supabase.from('attempt_details').select('detail_id, question, answer, answered_at').eq('attempt_id', id).order('sort').order('answered_at')
+      : none,
   ]);
-  for (const r of [answers, alerts, result, version]) {
+  for (const r of [answers, alerts, result, version, details]) {
     if (r.error) throw new Error(`Could not read assessment data: ${r.error.message}`);
   }
 
@@ -110,6 +122,7 @@ export async function getAttemptDetail(id: string): Promise<AttemptDetail | null
     result: ((result.data as { result?: Result } | null)?.result as Result | undefined) ?? null,
     report: ((result.data as { report?: Report } | null)?.report as Report | undefined) ?? null,
     definition,
+    details: withReport ? ((details.data ?? []) as DetailAnswer[]) : null,
   };
 }
 

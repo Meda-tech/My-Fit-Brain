@@ -7,6 +7,7 @@ import { PageHeader } from '../../../components/PageHeader';
 import { AttemptStatusPill, formatDateTime } from '../../../components/attempts/AttemptStatusPill';
 import { AlertsList, CounsellorView } from '../../../components/attempts/CounsellorView';
 import { DownloadPdfButton } from '../../../components/attempts/DownloadPdfButton';
+import { ClientDetailsAnswers } from '../../../components/attempts/ClientDetailsAnswers';
 import { canViewReports, getAttemptDetail } from '../../../lib/services/attempts';
 import { Card, Notice, Pill } from '../../../components/brand';
 
@@ -51,6 +52,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
             </Notice>
           )}
           <CounsellorView view={view} alerts={detail.alerts} />
+          {detail.details && <ClientDetailsAnswers details={detail.details} />}
         </div>
       ) : (
         <div className="max-w-202 space-y-6">
