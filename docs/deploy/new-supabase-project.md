@@ -25,7 +25,9 @@ transaction: if something fails, nothing from that file is saved; fix the cause 
 | 12 | `supabase/migrations/20261026000001_questionnaires.sql` | questionnaires, versions, attempts, answers, results, alerts; seeds IA and MA |
 
 Skip `20261016100000` and `20261017000000` (old question-bank files; the reset removes what they made anyway).
-Any migration added later goes after 12, in file-name order.
+| 13 | `supabase/migrations/20261027000000_client_details.sql` | client-details list per questionnaire and the typed answers (`attempt_details`) |
+
+Any migration added later goes after 13, in file-name order.
 
 **Checks** (read-only), after the matching step: `docs/tasks/02-verify.sql` (after 3),
 `08-payments-verify.sql` (after 7), `08c-payments-access-verify.sql` (after 9), `09-sms-hook-verify.sql`
