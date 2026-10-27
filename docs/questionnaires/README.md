@@ -93,8 +93,11 @@ missing report lines, no plan, a rule reading a later question, ranges not reach
 
 ## Flows
 
-- **Admin:** Questionnaires → Copy AI prompt → paste into any AI with the questions → paste the JSON into
-  Import JSON (creates or replaces the draft) → read the page → Publish (the previous live version retires).
+- **Admin:** Questionnaires → (test) → New version → Copy AI prompt → paste into any AI with the questions →
+  answer the AI's questions (it asks about anything unclear or missing, such as the plan or report lines,
+  before it writes) → paste the complete JSON into the import box (creates or replaces the draft) → read the
+  Overview and Report tabs → Publish (the previous live version retires). The prompt asks for the plan and
+  the report lines every time; the import itself still only warns when they are missing.
 - **Client:** pays → consent → answers (one screen per question, saved as they go) → safety questions →
   client details (typed) → submit → thank-you screen.
   No report in the app.
