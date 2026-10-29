@@ -174,6 +174,10 @@ results with you"). The client never sees a report in the app.
 - Client app shell: `components/PageChrome.tsx` = sticky header + bottom tab bar (`BottomNav`: Home `/`,
   Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile. Home
   lists the client's assessments: unfinished → Continue; completed → View details (thank-you + receipt).
+- Public policy pages (no sign-in, required by Razorpay; English only; listed in `lib/legal.ts`, skipped by
+  `proxy.ts`): /pricing, /terms, /privacy, /refund-policy (no refunds, no cancellations), /contact. Business
+  address, email and phone live in `lib/legal.ts`. The brand `Footer` links to all five; the payment screen
+  links Terms and Refund policy. Update the pages when what we collect or who sees it changes.
 - Prefer canonical Tailwind classes (`min-h-11`, not `min-h-[44px]`); keep arbitrary values only for sizes
   off the 4px scale (font sizes, `calc()`, safe-area).
 

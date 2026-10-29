@@ -13,7 +13,7 @@ import type { PaymentRow, PaymentStore } from './store';
 //                       payment.failed marks the payment failed. Every step is idempotent.
 // The browser never decides the amount or whether a payment succeeded.
 
-/** ₹3,500 per assessment (CLAUDE.md, Products). Shown only on the payment step. */
+/** ₹3,500 per assessment (CLAUDE.md, Products). Shown on the payment step and the public /pricing page. */
 export const ASSESSMENT_PRICE_PAISE = 350_000;
 export const CURRENCY = 'INR';
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Info, Lock } from 'lucide-react';
 import { useLanguage } from '../../../components/LanguageProvider';
@@ -199,6 +200,21 @@ export function PaymentView({
             <p className="mt-3 flex items-start gap-2 text-[13px] leading-5 text-ink-muted">
               <Lock size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-teal" aria-hidden />
               <span>{t.paySecure}</span>
+            </p>
+            <p className="mt-2 text-[13px] leading-5 text-ink-muted">
+              {t.payAgree.split(/(\{terms\}|\{refund\})/).map((part, i) =>
+                part === '{terms}' ? (
+                  <Link key={i} href="/terms" className="font-medium text-teal underline underline-offset-2">
+                    {t.payTerms}
+                  </Link>
+                ) : part === '{refund}' ? (
+                  <Link key={i} href="/refund-policy" className="font-medium text-teal underline underline-offset-2">
+                    {t.payRefund}
+                  </Link>
+                ) : (
+                  part
+                )
+              )}
             </p>
           </>
         )
