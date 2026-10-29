@@ -14,11 +14,11 @@ export const BUSINESS = {
 export const POLICIES_UPDATED = '29 October 2026';
 
 export const POLICY_LINKS = [
-  { href: '/pricing', label: 'Pricing & Services' },
-  { href: '/terms', label: 'Terms & Conditions' },
-  { href: '/privacy', label: 'Privacy Policy' },
-  { href: '/refund-policy', label: 'Refund & Cancellation' },
-  { href: '/contact', label: 'Contact Us' },
+  { href: '/pricing', label: 'Pricing & Services', short: 'Pricing' },
+  { href: '/terms', label: 'Terms & Conditions', short: 'Terms' },
+  { href: '/privacy', label: 'Privacy Policy', short: 'Privacy' },
+  { href: '/refund-policy', label: 'Refund & Cancellation', short: 'Refunds' },
+  { href: '/contact', label: 'Contact Us', short: 'Contact' },
 ] as const;
 
 /** Paths that need no sign-in. */

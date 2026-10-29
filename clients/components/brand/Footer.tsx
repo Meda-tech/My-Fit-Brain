@@ -20,14 +20,23 @@ export function Footer({ tone = 'light', bordered = true, className }: FooterPro
         className
       )}
     >
-      <p>Space to speak. · My Fit Brain, a unit of MeDa Partners Pvt Ltd</p>
-      <nav aria-label="Policies" className="mt-1.5 flex flex-wrap justify-center gap-x-3 text-[12px] opacity-80">
+      <nav aria-label="Policies" className="flex flex-wrap justify-center gap-x-4 sm:gap-x-6">
         {POLICY_LINKS.map((link) => (
-          <Link key={link.href} href={link.href} className="py-1 underline-offset-2 hover:underline">
-            {link.label}
+          <Link
+            key={link.href}
+            href={link.href}
+            title={link.label}
+            className="py-1 underline-offset-4 hover:underline"
+          >
+            {link.short}
           </Link>
         ))}
       </nav>
+      <p className="mt-2 text-[12px] leading-4.5 opacity-80">
+        <span className="block sm:inline">Space to speak.</span>
+        <span className="hidden sm:inline"> · </span>
+        <span className="block sm:inline">My Fit Brain, a unit of MeDa Partners Pvt Ltd</span>
+      </p>
     </footer>
   );
 }
