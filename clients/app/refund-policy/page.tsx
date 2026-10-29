@@ -32,15 +32,10 @@ export default function RefundPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="Failed or duplicate payments">
+      <LegalSection title="Failed payments">
         <p>
           If money left your account but the payment did not go through, it is not a purchase. Razorpay and your bank
           return such amounts to your original payment method automatically, usually within 5 to 7 working days.
-        </p>
-        <p>
-          If you were charged twice for the same assessment because of a technical error, write to us with your
-          registered mobile number and the Razorpay payment ID. We will check and return the extra charge to your
-          original payment method.
         </p>
       </LegalSection>
 
