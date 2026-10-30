@@ -58,6 +58,12 @@ describe('checkout', () => {
     expect(formatPrice()).toBe('₹3,500');
   });
 
+  it('sends the client id and name as order notes, never the test', async () => {
+    const { deps, rzp } = setup();
+    const c = await order(deps);
+    expect(rzp.lastNotes).toEqual({ payment_id: c.paymentId, client_id: client.id, client_name: client.full_name });
+  });
+
   it('is refused when Razorpay is not configured or the questionnaire has no live version', async () => {
     const { deps } = setup(false);
     await expectPaymentError(createCheckout(deps, client, 'IA'), 'NOT_CONFIGURED');

@@ -66,7 +66,9 @@ export async function createCheckout(deps: PaymentDeps, client: ClientProfile, t
     amount: ASSESSMENT_PRICE_PAISE,
     currency: CURRENCY,
     receipt: id,
-    notes: { payment_id: id },
+    // Shown under Notes in the Razorpay dashboard (a payment has no name field of its own).
+    // Never the test name or anything from the assessment (discretion rule).
+    notes: { payment_id: id, client_id: client.id, client_name: client.full_name.slice(0, 256) },
   });
   if (order.amount !== ASSESSMENT_PRICE_PAISE || order.currency !== CURRENCY) {
     throw new PaymentError('INVALID', 'The order amount does not match.');

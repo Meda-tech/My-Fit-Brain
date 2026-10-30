@@ -60,7 +60,10 @@ export class FakeRazorpay implements RazorpayGateway {
   captures: string[] = [];
   private n = 0;
 
-  async createOrder(input: { amount: number; currency: string; receipt: string }) {
+  /** Notes sent with the most recent order. */
+  lastNotes: Record<string, string> = {};
+  async createOrder(input: { amount: number; currency: string; receipt: string; notes: Record<string, string> }) {
+    this.lastNotes = input.notes;
     const order = { id: `order_${++this.n}`, amount: input.amount, currency: input.currency, receipt: input.receipt, status: 'created' };
     this.orders.set(order.id, order);
     return order;
