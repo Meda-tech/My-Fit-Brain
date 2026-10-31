@@ -11,7 +11,7 @@ export const BUSINESS = {
 } as const;
 
 /** Shown on every policy page as "Last updated". */
-export const POLICIES_UPDATED = '29 October 2026';
+export const POLICIES_UPDATED = '31 October 2026';
 
 export const POLICY_LINKS = [
   { href: '/pricing', label: 'Pricing & Services', short: 'Pricing' },

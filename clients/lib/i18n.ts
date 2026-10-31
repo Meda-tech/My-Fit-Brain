@@ -167,6 +167,17 @@ export const translations = {
       error: 'Something went wrong. Please try again.',
       notFound: 'This assessment could not be found.',
     },
+    // Public pay link (pay first, log in later).
+    pay: {
+      phoneHint: "Is this your WhatsApp number? You'll log in with it.",
+      forYourNumber: 'For your number',
+      paidTitle: 'Payment received',
+      paidBody: 'Log in with {phone} to start your assessment.',
+      paidLogin: 'Log in to start',
+      pending: 'We are confirming your payment. This can take a few minutes. Log in with the same number to see your assessment once it is confirmed.',
+      error: 'Something went wrong. If money was deducted, log in with the same number in a few minutes to see your assessment.',
+      limited: 'Too many attempts with this number. Please try again in an hour.',
+    },
     home: {
       welcome: 'Welcome,',
       eyebrow: 'Assessments',
@@ -362,6 +373,16 @@ export const translations = {
       stoppedClose: 'बंद करें',
       error: 'कुछ गड़बड़ हो गई। कृपया फिर से प्रयास करें।',
       notFound: 'यह असेसमेंट नहीं मिला।',
+    },
+    pay: {
+      phoneHint: 'क्या यह आपका WhatsApp नंबर है? आप इसी से लॉग इन करेंगे।',
+      forYourNumber: 'आपके नंबर के लिए',
+      paidTitle: 'भुगतान मिल गया',
+      paidBody: 'अपना असेसमेंट शुरू करने के लिए {phone} से लॉग इन करें।',
+      paidLogin: 'लॉग इन करके शुरू करें',
+      pending: 'हम आपके भुगतान की पुष्टि कर रहे हैं। इसमें कुछ मिनट लग सकते हैं। पुष्टि के बाद उसी नंबर से लॉग इन करें, आपका असेसमेंट दिख जाएगा।',
+      error: 'कुछ गड़बड़ हो गई। अगर पैसे कट गए हैं, तो कुछ मिनट बाद उसी नंबर से लॉग इन करें, आपका असेसमेंट दिख जाएगा।',
+      limited: 'इस नंबर से बहुत ज़्यादा कोशिशें हो गईं। कृपया एक घंटे बाद फिर से कोशिश करें।',
     },
     home: {
       welcome: 'स्वागत है,',

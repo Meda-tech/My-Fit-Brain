@@ -6,6 +6,8 @@ import { currentClient, serviceDeps } from '../../lib/assessment/server';
 import * as service from '../../lib/assessment/service';
 import { AssessmentError, type At, type Interrupt, type Step } from '../../lib/assessment/types';
 import { LANG_COOKIE, parseLang } from '../../lib/lang-cookie';
+import { paymentDeps } from '../../lib/payments/server';
+import { PaymentError, startPurchase } from '../../lib/payments/service';
 
 // Server actions for the assessment screens. Each one resolves the signed-in client; the service checks
 // that the attempt is theirs and uses its pinned version. Errors come back as codes, never stack traces.
@@ -16,6 +18,22 @@ function failure(err: unknown): ActionError {
   if (err instanceof AssessmentError) return { ok: false, code: err.code };
   console.error('Assessment action failed:', err);
   return { ok: false, code: 'ERROR' };
+}
+
+/** Start on a paid purchase (Home): creates the attempt with its report ID, then opens it. */
+export async function startPurchaseAction(formData: FormData): Promise<void> {
+  const client = await currentClient();
+  const paymentId = String(formData.get('paymentId') ?? '');
+  const language = parseLang((await cookies()).get(LANG_COOKIE)?.value);
+  let attemptId: string;
+  try {
+    attemptId = await startPurchase(paymentDeps(), client, paymentId, language);
+  } catch (err) {
+    // Not theirs, already refunded, or no live version: back to Home, which shows what is possible.
+    if (!(err instanceof PaymentError) && !(err instanceof AssessmentError)) console.error('Start purchase failed:', err);
+    redirect('/');
+  }
+  redirect(`/assessment/${attemptId}`);
 }
 
 export async function giveConsentAction(formData: FormData): Promise<void> {

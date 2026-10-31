@@ -5,13 +5,16 @@ import { ChevronRight, ClipboardList, Lock } from 'lucide-react';
 import { translations } from '../lib/i18n';
 import { useLanguage } from '../components/LanguageProvider';
 import { PageChrome } from '../components/PageChrome';
-import { BinduDot, ButtonLink, Card, Pill } from '../components/brand';
-import type { AttemptSummary, TestCard } from '../lib/assessment/server';
+import { BinduDot, Button, ButtonLink, Card, Pill } from '../components/brand';
+import type { AttemptSummary, PurchaseCard, TestCard } from '../lib/assessment/server';
+import { startPurchaseAction } from './assessment/actions';
 import { pick, type Text } from '@mfb/questionnaire';
 
 interface ClientHomeViewProps {
   firstName: string;
   tests: TestCard[];
+  /** Paid, not started: Start creates the assessment. */
+  purchases: PurchaseCard[];
   attempts: AttemptSummary[];
 }
 
@@ -19,7 +22,7 @@ function formatDate(iso: string, lang: 'en' | 'hi'): string {
   return new Date(iso).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewProps) {
+export function ClientHomeView({ firstName, tests, purchases, attempts }: ClientHomeViewProps) {
   const { lang } = useLanguage();
   const t = translations[lang];
   const local = (p: Text | null) => (p ? pick(p, lang) : null);
@@ -41,7 +44,7 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
       </div>
 
       {/* Your assessments first: that is where a returning client continues. */}
-      {attempts.length > 0 && (
+      {(purchases.length > 0 || attempts.length > 0) && (
         <section className="mb-8" aria-labelledby="your-assessments">
           <h2 id="your-assessments" className="mb-3 flex items-center gap-2 text-[20px] font-semibold text-teal">
             <ClipboardList size={20} strokeWidth={2} aria-hidden />
@@ -49,6 +52,23 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
           </h2>
           <Card className="overflow-hidden">
             <ul className="divide-y divide-sand">
+              {/* Paid, not started: Start creates the assessment and opens it. */}
+              {purchases.map((p) => (
+                <li key={p.id}>
+                  <form action={startPurchaseAction} className="flex min-h-16 items-center gap-3 px-4 py-3">
+                    <input type="hidden" name="paymentId" value={p.id} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink">{local(p.name)}</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+                        <Pill tone="quiet">{t.assess.statusReady}</Pill>
+                      </p>
+                    </div>
+                    <Button type="submit" variant="secondary" size="sm" className="shrink-0">
+                      {t.assess.start}
+                    </Button>
+                  </form>
+                </li>
+              ))}
               {attempts.map((a) => {
                 // Unfinished: continue. Completed: confirmation and payment receipt (no report).
                 const open = a.status === 'paid' || a.status === 'in_progress';
@@ -105,7 +125,7 @@ export function ClientHomeView({ firstName, tests, attempts }: ClientHomeViewPro
                 {t.brand.endorsement}
               </p>
               {test.subtitle && <p className="mt-3 text-[15px] leading-6 text-ink-soft">{local(test.subtitle)}</p>}
-              <ButtonLink href={`/payment/${test.code}`} variant="secondary" className="mt-4 self-start">
+              <ButtonLink href={`/pay/${test.payCode}`} variant="secondary" className="mt-4 self-start">
                 {t.assess.start}
               </ButtonLink>
             </Card>

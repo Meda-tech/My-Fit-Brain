@@ -1,16 +1,21 @@
+import type { Lang } from '@mfb/questionnaire';
 import { createPaidAttempt, type ServiceDeps } from '../assessment/service';
 import { AssessmentError, type ClientProfile } from '../assessment/types';
+import { normalizePhoneNumber } from '../phone';
 import type { RazorpayGateway, RazorpayPayment } from './razorpay';
 import type { PaymentRow, PaymentStore } from './store';
 
-// Payment flow (Razorpay Standard Checkout):
-//   1. createCheckout   server creates a Razorpay order for the fixed price and a payments row
+// Pay first, log in later (Razorpay Standard Checkout):
+//   1. createCheckout   anyone with a phone number: the server creates a Razorpay order for the fixed
+//                       price and a payments row owned by that phone (rate-limited per phone and IP)
 //   2. (browser)        Razorpay Checkout collects the payment
 //   3. confirmCheckout  server checks the checkout signature, then fetches the payment from Razorpay
 //                       and checks order, amount, currency and status (captures it if only authorized)
-//   4. fulfil           payment marked paid, attempt created with its report ID, linked to the payment
-//   webhook             payment.captured / order.paid run 3–4 too (client closed the browser), and
+//   4. settle           the purchase is marked paid; nothing else happens yet
+//   webhook             payment.captured / order.paid run 3–4 too (the browser never came back), and
 //                       payment.failed marks the payment failed. Every step is idempotent.
+//   claimPurchases      after OTP login: paid, unclaimed purchases of the verified phone → the client
+//   startPurchase       the client presses Start: the attempt (and its report ID) is created
 // The browser never decides the amount or whether a payment succeeded.
 
 /** ₹3,500 per assessment (CLAUDE.md, Products). Shown on the payment step and the public /pricing page. */
@@ -25,6 +30,11 @@ export function formatPrice(paise: number = ASSESSMENT_PRICE_PAISE): string {
 export const CHECKOUT_NAME = 'My Fit Brain';
 export const CHECKOUT_DESCRIPTION = 'MFB Assessment';
 
+/** Orders allowed per hour, per phone number and per IP address. */
+export const ORDER_LIMIT_PER_PHONE = 5;
+export const ORDER_LIMIT_PER_IP = 20;
+const LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
 export interface PaymentDeps {
   payments: PaymentStore;
   /** Null when the Razorpay keys are not set. */
@@ -36,7 +46,7 @@ export interface PaymentDeps {
 
 export class PaymentError extends Error {
   constructor(
-    public readonly code: 'NOT_CONFIGURED' | 'NOT_FOUND' | 'INVALID' | 'PENDING' | 'FAILED',
+    public readonly code: 'NOT_CONFIGURED' | 'NOT_FOUND' | 'INVALID' | 'BAD_PHONE' | 'RATE_LIMITED' | 'PENDING' | 'FAILED',
     message: string
   ) {
     super(message);
@@ -50,60 +60,94 @@ function gatewayOf(deps: PaymentDeps): RazorpayGateway {
 }
 
 export type Checkout =
-  | { kind: 'open'; attemptId: string }
-  | { kind: 'order'; keyId: string; orderId: string; amount: number; currency: string; paymentId: string };
+  | { kind: 'owned' }
+  | { kind: 'order'; keyId: string; orderId: string; amount: number; currency: string; paymentId: string; phone: string };
 
-/** Step 1. An unfinished assessment of the same test is resumed instead of paid for again. */
-export async function createCheckout(deps: PaymentDeps, client: ClientProfile, testCode: string): Promise<Checkout> {
+export interface CheckoutInput {
+  /** Questionnaire code (resolved from the pay link's neutral code). */
+  code: string;
+  /** As typed; for a signed-in client, their verified phone. */
+  phone: string;
+  /** The signed-in, registered client buying for their own number, or null. */
+  client: ClientProfile | null;
+  ipHash: string | null;
+}
+
+/** Step 1. A signed-in client who already holds this test (paid or unfinished) is sent Home instead. */
+export async function createCheckout(deps: PaymentDeps, input: CheckoutInput): Promise<Checkout> {
   const gateway = gatewayOf(deps);
-  const live = await deps.assessment.store.liveVersion(testCode);
+  const phone = normalizePhoneNumber(input.phone);
+  if (!phone.valid) throw new PaymentError('BAD_PHONE', 'The mobile number is not valid.');
+  const live = await deps.assessment.store.liveVersion(input.code);
   if (!live) throw new AssessmentError('NO_LIVE_VERSION', 'This assessment is not available right now.');
-  const open = await deps.assessment.store.findOpenAttempt(client.id, testCode);
-  if (open) return { kind: 'open', attemptId: open.id };
+
+  if (input.client) {
+    const [open, ready] = await Promise.all([
+      deps.assessment.store.findOpenAttempt(input.client.id, input.code),
+      deps.payments.listReady(input.client.id),
+    ]);
+    if (open || ready.some((p) => p.test_code === input.code)) return { kind: 'owned' };
+  }
+
+  const now = deps.now();
+  const recent = await deps.payments.countRecent(phone.normalized, input.ipHash, new Date(now.getTime() - LIMIT_WINDOW_MS).toISOString());
+  if (recent.phone >= ORDER_LIMIT_PER_PHONE || recent.ip >= ORDER_LIMIT_PER_IP) {
+    throw new PaymentError('RATE_LIMITED', 'Too many attempts. Please try again later.');
+  }
 
   const id = deps.newId();
-  const order = await gateway.createOrder({
-    amount: ASSESSMENT_PRICE_PAISE,
-    currency: CURRENCY,
-    receipt: id,
-    // Shown under Notes in the Razorpay dashboard (a payment has no name field of its own).
-    // Never the test name or anything from the assessment (discretion rule).
-    notes: { payment_id: id, client_id: client.id, client_name: client.full_name.slice(0, 256) },
-  });
+  // Shown under Notes in the Razorpay dashboard. Never the test name or anything from the assessment
+  // (discretion rule).
+  const notes: Record<string, string> = { payment_id: id, phone: phone.normalized };
+  if (input.client) {
+    notes.client_id = input.client.id;
+    notes.client_name = input.client.full_name.slice(0, 256);
+  }
+  const order = await gateway.createOrder({ amount: ASSESSMENT_PRICE_PAISE, currency: CURRENCY, receipt: id, notes });
   if (order.amount !== ASSESSMENT_PRICE_PAISE || order.currency !== CURRENCY) {
     throw new PaymentError('INVALID', 'The order amount does not match.');
   }
   await deps.payments.createPayment({
     id,
-    client_id: client.id,
-    test_code: testCode,
+    phone: phone.normalized,
+    client_id: input.client?.id ?? null,
+    claimed_at: input.client ? now.toISOString() : null,
+    test_code: input.code,
     amount_paise: ASSESSMENT_PRICE_PAISE,
     currency: CURRENCY,
     provider_order_id: order.id,
+    ip_hash: input.ipHash,
   });
-  return { kind: 'order', keyId: gateway.keyId, orderId: order.id, amount: order.amount, currency: order.currency, paymentId: id };
+  return {
+    kind: 'order',
+    keyId: gateway.keyId,
+    orderId: order.id,
+    amount: order.amount,
+    currency: order.currency,
+    paymentId: id,
+    phone: phone.normalized,
+  };
 }
 
-/** Step 3, from the checkout success callback. Returns the new (or existing) attempt. */
+/** Step 3, from the checkout success callback (no sign-in needed). Returns the paid purchase. */
 export async function confirmCheckout(
   deps: PaymentDeps,
-  client: ClientProfile,
   input: { orderId: string; paymentId: string; signature: string }
-): Promise<{ attemptId: string }> {
+): Promise<PaymentRow> {
   const gateway = gatewayOf(deps);
   const payment = await deps.payments.getByOrderId(input.orderId);
-  if (!payment || payment.client_id !== client.id) throw new PaymentError('NOT_FOUND', 'Payment not found.');
+  if (!payment) throw new PaymentError('NOT_FOUND', 'Payment not found.');
   if (!gateway.verifyCheckoutSignature(input.orderId, input.paymentId, input.signature)) {
     throw new PaymentError('INVALID', 'The payment could not be verified.');
   }
-  return { attemptId: await settle(deps, payment, input.paymentId) };
+  return settle(deps, payment, input.paymentId);
 }
 
-/** Confirms a gateway payment against our order and fulfils it. Idempotent. */
-async function settle(deps: PaymentDeps, payment: PaymentRow, providerPaymentId: string): Promise<string> {
-  if (payment.attempt_id) return payment.attempt_id;
+/** Confirms a gateway payment against our order and marks it paid. Idempotent. */
+async function settle(deps: PaymentDeps, payment: PaymentRow, providerPaymentId: string): Promise<PaymentRow> {
+  if (payment.status === 'paid') return payment;
   const gateway = gatewayOf(deps);
-  let rp = await gateway.fetchPayment(providerPaymentId);
+  let rp: RazorpayPayment = await gateway.fetchPayment(providerPaymentId);
   if (rp.order_id !== payment.provider_order_id || rp.amount !== payment.amount_paise || rp.currency !== payment.currency) {
     throw new PaymentError('INVALID', 'The payment does not match the order.');
   }
@@ -113,28 +157,45 @@ async function settle(deps: PaymentDeps, payment: PaymentRow, providerPaymentId:
     throw new PaymentError('FAILED', 'The payment did not go through.');
   }
   if (rp.status !== 'captured') throw new PaymentError('PENDING', 'The payment is not complete yet.');
-  return fulfil(deps, payment, rp);
+  return deps.payments.markPaid(payment.id, { provider_payment_id: rp.id, method: rp.method, paid_at: deps.now().toISOString() });
 }
 
-async function fulfil(deps: PaymentDeps, payment: PaymentRow, rp: RazorpayPayment): Promise<string> {
-  const paid = await deps.payments.markPaid(payment.id, {
-    provider_payment_id: rp.id,
-    method: rp.method,
-    paid_at: deps.now().toISOString(),
-  });
-  if (paid.attempt_id) return paid.attempt_id;
+/**
+ * Links every paid, unclaimed purchase of the client's verified phone to the client. Runs on Home, so
+ * a purchase paid before login, or confirmed later by the webhook, shows up on the next visit.
+ */
+export async function claimPurchases(deps: PaymentDeps, client: ClientProfile, verifiedPhone: string): Promise<number> {
+  const phone = normalizePhoneNumber(verifiedPhone);
+  if (!phone.valid) return 0;
+  return deps.payments.claim(phone.normalized, client.id, deps.now().toISOString());
+}
 
-  // Verify and webhook may arrive together: createPaidAttempt returns the same attempt to both and
-  // takes one report number.
-  let attempt = await deps.assessment.store.findAttemptByPaymentRef(rp.id);
-  if (!attempt) {
-    const client = await deps.payments.clientProfile(payment.client_id);
-    if (!client) throw new PaymentError('NOT_FOUND', 'Client not found.');
-    attempt = await createPaidAttempt(deps.assessment, client, payment.test_code, {
-      ref: rp.id,
-      paidAt: paid.paid_at ?? deps.now().toISOString(),
-    });
+/** Under 18 at registration: the phone's paid purchases are flagged for a refund (nothing else is saved). */
+export async function flagRefundForPhone(deps: PaymentDeps, verifiedPhone: string): Promise<number> {
+  const phone = normalizePhoneNumber(verifiedPhone);
+  if (!phone.valid) return 0;
+  return deps.payments.markRefundNeeded(phone.normalized);
+}
+
+/**
+ * The client presses Start on a purchase: the attempt is created, pinned to the live version, with its
+ * report ID, and linked to the purchase. Pressing again returns the same attempt.
+ */
+export async function startPurchase(deps: PaymentDeps, client: ClientProfile, paymentId: string, language: Lang): Promise<string> {
+  const payment = await deps.payments.getById(paymentId);
+  // Not found and not yours look the same.
+  if (!payment || payment.client_id !== client.id) throw new PaymentError('NOT_FOUND', 'Purchase not found.');
+  if (payment.attempt_id) return payment.attempt_id;
+  if (payment.status !== 'paid' || !payment.provider_payment_id || !payment.paid_at || payment.refund_status) {
+    throw new PaymentError('INVALID', 'This purchase cannot be started.');
   }
+  const attempt = await createPaidAttempt(
+    deps.assessment,
+    client,
+    payment.test_code,
+    { ref: payment.provider_payment_id, paidAt: payment.paid_at },
+    language
+  );
   await deps.payments.linkAttempt(payment.id, attempt.id);
   return attempt.id;
 }

@@ -14,8 +14,8 @@ export default function RefundPolicyPage() {
       <LegalSection title="No refunds">
         <p>
           <strong>All payments are final and non-refundable.</strong> Once your payment is confirmed, your assessment
-          opens at once and a report ID is set aside for you. For this reason we do not offer refunds, in full or in
-          part, for any reason, including:
+          is held for the mobile number you paid with and is ready as soon as you sign in with it. For this reason we
+          do not offer refunds, in full or in part, for any reason, including:
         </p>
         <ul>
           <li>if you do not start or do not finish the assessment;</li>

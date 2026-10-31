@@ -24,8 +24,17 @@ export async function currentClient(): Promise<ClientProfile> {
 
 export interface TestCard {
   code: string;
+  /** Neutral code of the pay link /pay/<payCode>. */
+  payCode: string;
   name: Text;
   subtitle: Text | null;
+}
+
+/** A paid purchase, claimed by the client, not started yet (Start creates the attempt). */
+export interface PurchaseCard {
+  id: string;
+  name: Text;
+  paidAt: string;
 }
 
 export interface AttemptSummary {
@@ -39,27 +48,41 @@ export interface AttemptSummary {
 
 interface QuestionnaireRow {
   code: string;
+  pay_code: string;
   name_en: string;
   name_hi: string | null;
   sort: number;
 }
 
-async function questionnaires(): Promise<Map<string, { name: Text; sort: number }>> {
-  const { data, error } = await createAdminClient().from('questionnaires').select('code, name_en, name_hi, sort').order('sort');
+async function questionnaires(): Promise<Map<string, { name: Text; payCode: string; sort: number }>> {
+  const { data, error } = await createAdminClient().from('questionnaires').select('code, pay_code, name_en, name_hi, sort').order('sort');
   if (error) throw new Error(`Could not read questionnaires: ${error.message}`);
-  return new Map(((data ?? []) as QuestionnaireRow[]).map((q) => [q.code, { name: { en: q.name_en, hi: q.name_hi }, sort: q.sort }]));
+  return new Map(
+    ((data ?? []) as QuestionnaireRow[]).map((q) => [q.code, { name: { en: q.name_en, hi: q.name_hi }, payCode: q.pay_code, sort: q.sort }])
+  );
 }
 
-/** Live questionnaires (as cards) and the client's own assessments. */
-export async function homeData(client: ClientProfile): Promise<{ tests: TestCard[]; attempts: AttemptSummary[] }> {
+/** Live questionnaires (as cards), the client's purchases not started yet, and their own assessments. */
+export async function homeData(
+  client: ClientProfile
+): Promise<{ tests: TestCard[]; purchases: PurchaseCard[]; attempts: AttemptSummary[] }> {
   const db = createAdminClient();
-  // Three independent reads: run them together instead of one after another.
-  const [names, { data: live, error }, attempts] = await Promise.all([
+  // Independent reads: run them together instead of one after another.
+  const [names, { data: live, error }, { data: ready, error: readyError }, attempts] = await Promise.all([
     questionnaires(),
     db.from('questionnaire_versions').select('questionnaire_code, definition').eq('status', 'live'),
+    db
+      .from('payments')
+      .select('id, test_code, paid_at')
+      .eq('client_id', client.id)
+      .eq('status', 'paid')
+      .is('attempt_id', null)
+      .is('refund_status', null)
+      .order('paid_at', { ascending: true }),
     serviceDeps().store.listAttempts(client.id),
   ]);
   if (error) throw new Error(`Could not read live versions: ${error.message}`);
+  if (readyError) throw new Error(`Could not read purchases: ${readyError.message}`);
 
   const tests = ((live ?? []) as { questionnaire_code: string; definition: unknown }[])
     .map((v) => {
@@ -67,16 +90,23 @@ export async function homeData(client: ClientProfile): Promise<{ tests: TestCard
       const info = names.get(v.questionnaire_code);
       return {
         code: v.questionnaire_code,
+        payCode: info?.payCode ?? '',
         name: info?.name ?? { en: v.questionnaire_code },
         subtitle: parsed.ok ? parsed.definition.subtitle : null,
         sort: info?.sort ?? 0,
       };
     })
+    .filter((test) => test.payCode)
     .sort((a, b) => a.sort - b.sort)
-    .map(({ code, name, subtitle }): TestCard => ({ code, name, subtitle }));
+    .map(({ code, payCode, name, subtitle }): TestCard => ({ code, payCode, name, subtitle }));
 
   return {
     tests,
+    purchases: ((ready ?? []) as { id: string; test_code: string; paid_at: string }[]).map((p) => ({
+      id: p.id,
+      name: names.get(p.test_code)?.name ?? { en: p.test_code },
+      paidAt: p.paid_at,
+    })),
     attempts: attempts.map((a) => ({
       id: a.id,
       reportId: a.report_id,

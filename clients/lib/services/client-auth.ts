@@ -5,6 +5,8 @@ import { createAdminClient } from '../supabase/admin';
 import { normalizePhoneNumber } from '../phone';
 import { ClientRecord } from '../types';
 import { MAX_AGE, MIN_AGE, isGender, isRelationshipStatus } from '../options';
+import { paymentDeps } from '../payments/server';
+import { flagRefundForPhone } from '../payments/service';
 
 export interface PhoneCheckResult {
   valid: boolean;
@@ -165,6 +167,16 @@ export async function completeRegistration(
     return { success: false, error: 'age' };
   }
   if (age < MIN_AGE) {
+    // Nothing about the person is saved. Purchases already paid with this verified number are flagged
+    // for a refund, so the team can return the money (Admin → Payments → Refund needed).
+    try {
+      const {
+        data: { user },
+      } = await (await createClient()).auth.getUser();
+      if (user?.phone) await flagRefundForPhone(paymentDeps(), user.phone);
+    } catch (err) {
+      console.error('Could not flag purchases for refund:', err);
+    }
     return { success: false, ageStop: true };
   }
 

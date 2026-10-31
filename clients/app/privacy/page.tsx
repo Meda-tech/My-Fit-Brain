@@ -17,7 +17,8 @@ export default function PrivacyPage() {
         <ul>
           <li>
             <strong>Mobile number</strong> to sign you in with a one-time code (OTP) and to contact you about your
-            consultation.
+            consultation. If you pay before signing in, we keep the number you paid with, so your assessment is ready
+            when you sign in with it.
           </li>
           <li>
             <strong>Registration details:</strong> your name, gender, age, relationship status, and, if you give
@@ -30,7 +31,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Payment records:</strong> the Razorpay order and payment IDs, amount, payment method type, status
-            and time. Your card, UPI or bank details go directly to Razorpay; we never see or store them.
+            and time. Your card, UPI or bank details go directly to Razorpay; we never see or store them. To stop misuse
+            of the payment page, we keep a scrambled code made from your internet address (never the address itself).
           </li>
           <li>
             <strong>Cookies:</strong> only what the app needs to keep you signed in and remember your language. We do
