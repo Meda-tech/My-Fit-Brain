@@ -1,19 +1,21 @@
 -- ==============================================================================
 -- Pay first, log in later.
 --
--- A visitor pays on the public page /pay/<questionnaire code> (e.g. /pay/IA) with only a phone
--- number. The payment is a "purchase" owned by that phone. When someone logs in with that phone
--- (OTP), every paid, unclaimed purchase for the phone is linked to their client record. The
--- assessment (and its report ID) is created only when the client presses Start.
+-- A visitor pays on the public page /pay/<pay_code> with only a phone number. The payment is a
+-- "purchase" owned by that phone. When someone logs in with that phone (OTP), every paid, unclaimed
+-- purchase for the phone is linked to their client record. The assessment (and its report ID) is
+-- created only when the client presses Start.
 --
 -- This file only ADDS. It deletes, drops or truncates nothing. It does:
---   1. payments                  + phone (E.164), claimed_at, refund_status, ip_hash;
+--   1. questionnaires.pay_code   a neutral short code for the pay link (never the test name);
+--                                existing questionnaires get a random code
+--   2. payments                  + phone (E.164), claimed_at, refund_status, ip_hash;
 --                                client_id may be empty until the purchase is claimed.
 --                                Existing payments get their client's phone and count as claimed
 --                                (an UPDATE that fills the new columns; no row is removed)
---   2. payment_guard()           replaced: owner (phone / client) may change only before Start
---   3. payment_moves             a log of "Move purchase to another number" (staff action)
---   4. RLS                       payment_moves: super admins and coordinators read; writes only by
+--   3. payment_guard()           replaced: owner (phone / client) may change only before Start
+--   4. payment_moves             a log of "Move purchase to another number" (staff action)
+--   5. RLS                       payment_moves: super admins and coordinators read; writes only by
 --                                the server. The payments policies stay as they are.
 --
 -- Paste-ready: run in the Supabase SQL Editor. Checks: docs/tasks/13-pay-first-verify.sql.
@@ -21,7 +23,21 @@
 
 BEGIN;
 
--- 1. PAYMENTS BECOME PURCHASES OWNED BY A PHONE
+-- 1. PAY LINK CODE (each existing row gets its own random value from the volatile default)
+ALTER TABLE public.questionnaires
+  ADD COLUMN IF NOT EXISTS pay_code text NOT NULL DEFAULT substr(md5(gen_random_uuid()::text), 1, 8);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_questionnaires_pay_code ON public.questionnaires (pay_code);
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'questionnaires_pay_code_format') THEN
+    ALTER TABLE public.questionnaires
+      ADD CONSTRAINT questionnaires_pay_code_format CHECK (pay_code ~ '^[a-z0-9]{6,16}$');
+  END IF;
+END;
+$$;
+COMMENT ON COLUMN public.questionnaires.pay_code IS 'Neutral code in the public pay link /pay/<pay_code>; never the test name';
+
+-- 2. PAYMENTS BECOME PURCHASES OWNED BY A PHONE
 ALTER TABLE public.payments
   ADD COLUMN IF NOT EXISTS phone text,
   ADD COLUMN IF NOT EXISTS claimed_at timestamptz,
@@ -71,7 +87,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_phone ON public.payments (phone, created
 CREATE INDEX IF NOT EXISTS idx_payments_ip ON public.payments (ip_hash, created_at DESC) WHERE ip_hash IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_payments_unclaimed ON public.payments (phone) WHERE client_id IS NULL AND status = 'paid';
 
--- 2. GUARD: identity and amount never change; a paid payment stays paid; the owner (phone, client)
+-- 3. GUARD: identity and amount never change; a paid payment stays paid; the owner (phone, client)
 -- may change only until the assessment is started; a refunded purchase is never started; no deletes.
 CREATE OR REPLACE FUNCTION public.payment_guard()
 RETURNS trigger
@@ -111,7 +127,7 @@ BEGIN
 END;
 $$;
 
--- 3. MOVES (staff: "Move purchase to another number")
+-- 4. MOVES (staff: "Move purchase to another number")
 CREATE TABLE IF NOT EXISTS public.payment_moves (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   payment_id uuid NOT NULL REFERENCES public.payments(id),
@@ -124,7 +140,7 @@ CREATE TABLE IF NOT EXISTS public.payment_moves (
 COMMENT ON TABLE public.payment_moves IS 'Purchases moved to another phone number by staff (who, when, from, to)';
 CREATE INDEX IF NOT EXISTS idx_payment_moves_payment ON public.payment_moves (payment_id, moved_at DESC);
 
--- 4. ROW LEVEL SECURITY (writes only through the service role)
+-- 5. ROW LEVEL SECURITY (writes only through the service role)
 ALTER TABLE public.payment_moves ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS payment_moves_select ON public.payment_moves;
 CREATE POLICY payment_moves_select ON public.payment_moves FOR SELECT TO authenticated

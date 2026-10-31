@@ -26,7 +26,7 @@ transaction: if something fails, nothing from that file is saved; fix the cause 
 
 Skip `20261016100000` and `20261017000000` (old question-bank files; the reset removes what they made anyway).
 | 13 | `supabase/migrations/20261027000000_client_details.sql` | client-details list per questionnaire and the typed answers (`attempt_details`) |
-| 14 | `supabase/migrations/20261031000000_pay_first.sql` | pay first, log in later: purchases owned by a phone, `payment_moves` |
+| 14 | `supabase/migrations/20261031000000_pay_first.sql` | pay first, log in later: purchases owned by a phone, `payment_moves` (its `questionnaires.pay_code` column is unused) |
 
 Any migration added later goes after 14, in file-name order.
 
