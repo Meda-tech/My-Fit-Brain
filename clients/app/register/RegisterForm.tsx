@@ -64,8 +64,19 @@ export function RegisterForm({ userPhone, lang, onAgeStop }: RegisterFormProps) 
     const parsedAge = /^\d+$/.test(trimmedAge) ? Number(trimmedAge) : NaN;
     const ageValid = Number.isInteger(parsedAge) && parsedAge >= 1 && parsedAge <= MAX_AGE;
 
-    // Under 18: stop here. No server call, nothing saved.
+    // Under 18: the server keeps a minimal record (number, name, age) for refunds and answers ageStop.
+    // Only the name is needed first.
     if (ageValid && parsedAge < MIN_AGE) {
+      if (fullName.trim().length < 2) {
+        setFieldErrors({ fullName: true });
+        return;
+      }
+      setLoading(true);
+      try {
+        await completeRegistration({ fullName, gender, age: parsedAge, maritalStatus });
+      } catch (err: unknown) {
+        console.error('Recording the age stop failed:', err);
+      }
       onAgeStop();
       return;
     }

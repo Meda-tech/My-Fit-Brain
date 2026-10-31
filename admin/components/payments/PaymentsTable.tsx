@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import type { PaymentListRow } from '../../lib/services/payments';
 import { PaymentSheet } from './PaymentSheet';
-import { PaymentStatusPill } from './PaymentStatusPill';
+import { PaymentStatusPill, paymentState } from './PaymentStatusPill';
 import { formatAmount, formatDate, formatTime, methodLabel } from './format';
 
 // Payments as table rows (stacked cards on narrow screens). A row opens the side sheet; the open
@@ -39,7 +39,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
   const rowProps = (p: PaymentListRow) => ({
     tabIndex: 0,
     role: 'button' as const,
-    'aria-label': `Payment ${formatAmount(p.amount_paise, p.currency)} from ${p.client?.full_name ?? 'client'}, ${p.status}`,
+    'aria-label': `Payment ${formatAmount(p.amount_paise, p.currency)} from ${p.client?.full_name ?? p.age_stop?.full_name ?? p.phone}, ${paymentState(p)}`,
     onClick: (e: React.MouseEvent<HTMLElement>) => open(p.id, e.currentTarget),
     onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -63,7 +63,9 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <p className="truncate font-semibold text-ink">{p.client?.full_name ?? '—'}</p>
+                <p className="truncate font-semibold text-ink">
+                  {p.client?.full_name ?? (p.age_stop ? `Under 18 · ${p.age_stop.full_name ?? p.phone}` : p.phone)}
+                </p>
                 <p className="shrink-0 font-heading font-semibold text-ink">{formatAmount(p.amount_paise, p.currency)}</p>
               </div>
               <p className="mt-0.5 text-[13px] text-ink-muted">
@@ -71,7 +73,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                 {p.attempt?.report_id ? ` · ${p.attempt.report_id}` : ''}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
-                <PaymentStatusPill status={p.status} />
+                <PaymentStatusPill state={paymentState(p)} />
                 <span>
                   {formatDate(when(p))}, {formatTime(when(p))}
                 </span>
@@ -112,8 +114,10 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                   <p className="text-[12px] text-ink-muted">{formatTime(when(p))}</p>
                 </td>
                 <td className="px-5 py-3.5">
-                  <p className="font-semibold text-ink">{p.client?.full_name ?? '—'}</p>
-                  <p className="font-mono text-[12px] text-ink-muted">{p.client?.phone ?? ''}</p>
+                  <p className="font-semibold text-ink">
+                    {p.client?.full_name ?? (p.age_stop ? `Under 18 · ${p.age_stop.full_name ?? 'no name'}` : 'Not logged in yet')}
+                  </p>
+                  <p className="font-mono text-[12px] text-ink-muted">{p.phone}</p>
                 </td>
                 <td className="px-5 py-3.5">
                   <p className="text-ink">{p.test_name}</p>
@@ -123,7 +127,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                   {formatAmount(p.amount_paise, p.currency)}
                 </td>
                 <td className="px-5 py-3.5">
-                  <PaymentStatusPill status={p.status} />
+                  <PaymentStatusPill state={paymentState(p)} />
                 </td>
                 <td className="hidden whitespace-nowrap px-5 py-3.5 text-ink-soft @[60rem]:table-cell">{methodLabel(p.method)}</td>
                 <td className="hidden whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-muted @[70rem]:table-cell">

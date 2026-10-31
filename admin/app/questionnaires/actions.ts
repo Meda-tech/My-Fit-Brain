@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { Issue } from '@mfb/questionnaire';
 import { requireStaff } from '../../lib/auth';
-import { createQuestionnaire, importDefinition, publishVersion, saveClientDetails } from '../../lib/services/questionnaires';
+import { createQuestionnaire, importDefinition, publishVersion, saveClientDetails, setQuestionnaireActive } from '../../lib/services/questionnaires';
 
 export interface FormState {
   error: string | null;
@@ -45,4 +45,11 @@ export async function publishAction(formData: FormData): Promise<void> {
   const versionId = String(formData.get('versionId') ?? '');
   await publishVersion(versionId, profile.id);
   redirect(`/questionnaires/${code}?v=${versionId}&published=1`);
+}
+
+export async function setActiveAction(formData: FormData): Promise<void> {
+  const code = String(formData.get('code') ?? '');
+  await setQuestionnaireActive(code, formData.get('active') === 'on');
+  revalidatePath('/questionnaires');
+  revalidatePath(`/questionnaires/${code}`);
 }

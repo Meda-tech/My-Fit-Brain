@@ -9,7 +9,7 @@ export default function TermsPage() {
       intro={
         <p>
           These terms apply when you use My Fit Brain Assessments at app.myfitbrain.app (the &ldquo;service&rdquo;).
-          The service is run by My Fit Brain, a unit of {BUSINESS.legalName}, {BUSINESS.address} (&ldquo;we&rdquo;,
+          My Fit Brain is operated by {BUSINESS.legalName}, {BUSINESS.address} (&ldquo;we&rdquo;,
           &ldquo;us&rdquo;). By signing in or paying, you agree to these terms.
         </p>
       }

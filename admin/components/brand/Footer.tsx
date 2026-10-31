@@ -17,7 +17,7 @@ export function Footer({ tone = 'light', bordered = true, className }: FooterPro
         className
       )}
     >
-      Space to speak. · My Fit Brain, a unit of MeDa Partners Pvt Ltd
+      Space to speak. · My Fit Brain
     </footer>
   );
 }

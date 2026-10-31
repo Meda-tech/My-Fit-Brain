@@ -5,6 +5,8 @@ import { createAdminClient } from '../supabase/admin';
 import { normalizePhoneNumber } from '../phone';
 import { ClientRecord } from '../types';
 import { MAX_AGE, MIN_AGE, isGender, isRelationshipStatus } from '../options';
+import { paymentDeps } from '../payments/server';
+import { flagRefundForPhone } from '../payments/service';
 
 export interface PhoneCheckResult {
   valid: boolean;
@@ -143,7 +145,7 @@ export type RegisterErrorCode =
 
 export interface RegisterClientResult {
   success: boolean;
-  /** Under 18: nothing was saved; the UI shows the AGE_STOP screen. */
+  /** Under 18: no client record (only the minimal age-stop record); the UI shows the AGE_STOP screen. */
   ageStop?: boolean;
   error?: RegisterErrorCode;
   client?: ClientRecord;
@@ -165,6 +167,28 @@ export async function completeRegistration(
     return { success: false, error: 'age' };
   }
   if (age < MIN_AGE) {
+    // No client record. A minimal record is kept (verified number, name, age entered, when) so the team
+    // knows who came, and purchases paid with this number are flagged for a refund (Admin → Under 18,
+    // Payments → Refund needed). Nothing else from the form is saved.
+    try {
+      const {
+        data: { user },
+      } = await (await createClient()).auth.getUser();
+      const phone = user?.phone ? normalizePhoneNumber(user.phone) : null;
+      if (user && phone?.valid) {
+        const name = (input.fullName ?? '').trim().slice(0, 200);
+        const { error } = await createAdminClient()
+          .from('age_stops')
+          .upsert(
+            { phone: phone.normalized, full_name: name || null, age, auth_user_id: user.id, last_at: new Date().toISOString() },
+            { onConflict: 'phone' }
+          );
+        if (error) console.error('Could not record the under-18 stop:', error.message);
+        await flagRefundForPhone(paymentDeps(), phone.normalized);
+      }
+    } catch (err) {
+      console.error('Could not record the under-18 stop:', err);
+    }
     return { success: false, ageStop: true };
   }
 

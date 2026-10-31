@@ -1,8 +1,10 @@
 import 'server-only';
-import { randomUUID } from 'node:crypto';
-import { getAuthUser } from '../auth';
-import { currentClient, serviceDeps } from '../assessment/server';
+import { createHmac, randomUUID } from 'node:crypto';
+import { parseDefinition, type Text } from '@mfb/questionnaire';
+import { getAuthUser, getCurrentClient } from '../auth';
+import { serviceDeps } from '../assessment/server';
 import type { ClientProfile } from '../assessment/types';
+import { normalizePhoneNumber } from '../phone';
 import { createAdminClient } from '../supabase/admin';
 import { razorpayConfig, razorpayGateway } from './razorpay';
 import { formatPrice, type PaymentDeps } from './service';
@@ -25,14 +27,59 @@ export function paymentsConfigured(): boolean {
   return razorpayConfig() !== null;
 }
 
-/** The signed-in, registered client for an API route, or null (the route answers 401). */
-export async function apiClient(): Promise<ClientProfile | null> {
-  if (!(await getAuthUser())) return null;
-  try {
-    return await currentClient();
-  } catch {
-    return null; // not registered yet (currentClient redirects)
-  }
+/**
+ * The signed-in, registered client and the phone verified at OTP login, or null (signed out, or not
+ * registered yet). Never redirects: the pay page and payment routes work without sign-in.
+ */
+export async function signedInBuyer(): Promise<{ client: ClientProfile; phone: string } | null> {
+  const user = await getAuthUser();
+  if (!user?.phone) return null;
+  const session = await getCurrentClient();
+  if (!session?.client) return null;
+  // Supabase Auth keeps the phone without "+" (919876543210): normalise to E.164 like the payments rows.
+  const phone = normalizePhoneNumber(user.phone.startsWith('+') ? user.phone : `+${user.phone}`);
+  if (!phone.valid) return null;
+  return { client: { id: session.client.id, full_name: session.client.full_name }, phone: phone.normalized };
+}
+
+export interface PayQuestionnaire {
+  code: string;
+  name: Text;
+  /** From the live version's JSON. */
+  subtitle: Text | null;
+  /** False while switched off in the admin: the page shows it, but nobody can buy it. */
+  active: boolean;
+}
+
+/** The questionnaire behind a pay link /pay/<code> (e.g. IA; any case), only while it has a live version. */
+export async function payQuestionnaire(rawCode: string): Promise<PayQuestionnaire | null> {
+  const code = rawCode.toUpperCase();
+  if (!/^[A-Z]{1,8}$/.test(code)) return null;
+  const db = createAdminClient();
+  const { data, error } = await db.from('questionnaires').select('code, name_en, name_hi, is_active').eq('code', code).maybeSingle();
+  if (error || !data) return null;
+  const { data: live } = await db
+    .from('questionnaire_versions')
+    .select('definition')
+    .eq('questionnaire_code', data.code)
+    .eq('status', 'live')
+    .maybeSingle();
+  if (!live) return null;
+  const parsed = parseDefinition(live.definition);
+  return {
+    code: data.code,
+    name: { en: data.name_en, hi: data.name_hi },
+    subtitle: parsed.ok ? parsed.definition.subtitle : null,
+    active: data.is_active !== false,
+  };
+}
+
+/** A keyed hash of the caller's IP (rate limiting only; the IP itself is never stored). */
+export function ipHash(headers: Headers): string | null {
+  const ip = headers.get('x-forwarded-for')?.split(',')[0]?.trim() || headers.get('x-real-ip')?.trim();
+  const key = process.env.RAZORPAY_KEY_SECRET;
+  if (!ip || !key) return null;
+  return createHmac('sha256', key).update(`ip:${ip}`).digest('hex').slice(0, 32);
 }
 
 export interface PaymentReceipt {

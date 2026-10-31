@@ -14,6 +14,7 @@ import {
 import { createClient } from '../../lib/supabase/client';
 import { checkPhoneStatus } from '../../lib/services/client-auth';
 import { normalizePhoneNumber, maskPhoneNumber, sanitizeIndianNationalPhone } from '../../lib/phone';
+import { LOGIN_PHONE_KEY } from '../../lib/login-phone';
 import { translations } from '../../lib/i18n';
 import { useLanguage } from '../../components/LanguageProvider';
 import { ClientAuthLayout } from '../../components/ClientAuthLayout';
@@ -50,6 +51,19 @@ export function ClientLoginFlow() {
     }
     return () => clearTimeout(timer);
   }, [resendCountdown]);
+
+  // Coming from a payment: fill in the number that was paid for (read once).
+  useEffect(() => {
+    try {
+      const paid = sessionStorage.getItem(LOGIN_PHONE_KEY);
+      if (!paid) return;
+      sessionStorage.removeItem(LOGIN_PHONE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage exists only after mount
+      setRawPhone(sanitizeIndianNationalPhone(paid));
+    } catch {
+      // Storage blocked: the client types the number.
+    }
+  }, []);
 
   const phoneValidation = normalizePhoneNumber(rawPhone);
 

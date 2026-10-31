@@ -9,7 +9,7 @@ import { colour, pdfAssets } from './assets';
 // parts, the same for every questionnaire; parts with no content are left out. Every sentence comes
 // from the stored report; only the labels below are UI words. Generated on request and never stored.
 
-const FOOTER_LINE = 'My Fit Brain · A unit of MeDa Partners Pvt Ltd · System Designed by MeDa Partners Pvt Ltd';
+const FOOTER_LINE = 'My Fit Brain · Space to speak.';
 const BRAND_LINE = 'Space to speak.';
 
 const LABELS = {

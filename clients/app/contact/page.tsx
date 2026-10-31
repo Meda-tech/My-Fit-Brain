@@ -19,7 +19,7 @@ export default function ContactPage() {
       <Card className="divide-y divide-sand">
         <div className="p-6">
           <p className="font-heading text-[20px] font-medium text-ink">{BUSINESS.brand}</p>
-          <p className="mt-1 text-[15px] text-ink-soft">A unit of {BUSINESS.legalName}</p>
+          <p className="mt-1 text-[15px] text-ink-soft">Operated by {BUSINESS.legalName}</p>
         </div>
         {ROWS.map(({ icon: Icon, label, value, href }) => (
           <div key={label} className="flex items-start gap-4 p-6">

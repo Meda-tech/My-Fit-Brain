@@ -3,9 +3,11 @@ import { updateSession } from './lib/supabase/middleware';
 import { PUBLIC_PATHS } from './lib/legal';
 
 // Next.js 16 "proxy" (formerly middleware): refreshes the Supabase session on each request.
-// The policy pages are public (no sign-in), so they skip the session check entirely.
+// The policy pages and the pay links (/pay/<code>: pay first, log in later) are public (no sign-in), so
+// they skip the session check entirely.
 export async function proxy(request: NextRequest) {
-  if (PUBLIC_PATHS.includes(request.nextUrl.pathname)) {
+  const path = request.nextUrl.pathname;
+  if (PUBLIC_PATHS.includes(path) || path.startsWith('/pay/')) {
     return NextResponse.next();
   }
   return await updateSession(request);

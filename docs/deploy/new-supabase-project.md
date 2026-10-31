@@ -26,12 +26,20 @@ transaction: if something fails, nothing from that file is saved; fix the cause 
 
 Skip `20261016100000` and `20261017000000` (old question-bank files; the reset removes what they made anyway).
 | 13 | `supabase/migrations/20261027000000_client_details.sql` | client-details list per questionnaire and the typed answers (`attempt_details`) |
+| 14 | `supabase/migrations/20261031000000_pay_first.sql` | pay first, log in later: purchases owned by a phone, `payment_moves` |
+| 15 | `supabase/migrations/20261031000001_drop_pay_code.sql` | removes the unused `questionnaires.pay_code` (pay links use the questionnaire code) |
+| 16 | `supabase/migrations/20261031000002_questionnaire_active.sql` | On / Off switch per questionnaire (`is_active`) |
+| 17 | `supabase/migrations/20261031000003_link_registered_purchases.sql` | one-time: links earlier purchases to clients already registered with that number (fills only; harmless on an empty database) |
+| 18 | `supabase/migrations/20261031000004_age_stops.sql` | minimal under-18 record (`age_stops`) for refunds |
 
-Any migration added later goes after 13, in file-name order.
+Any migration added later goes after 18, in file-name order.
 
 **Checks** (read-only), after the matching step: `docs/tasks/02-verify.sql` (after 3),
 `08-payments-verify.sql` (after 7), `08c-payments-access-verify.sql` (after 9), `09-sms-hook-verify.sql`
-(after 10; sends a test SMS), `11-verify.sql` (after 12).
+(after 10; sends a test SMS), `11-verify.sql` (after 12), `13-pay-first-verify.sql` (after 14), `13b-drop-pay-code-verify.sql` (after 15),
+`14-questionnaire-active-verify.sql` (after 16),
+`15-link-registered-purchases-verify.sql` (after 17),
+`16-age-stops-verify.sql` (after 18).
 
 Then import the starting drafts: Admin → Questionnaires → open **MFB Intimacy Assessment** → paste
 `docs/questionnaires/intimacy.json` into **Import JSON** → **Publish**; the same for **MFB Mind Assessment**

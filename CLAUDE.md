@@ -101,10 +101,22 @@ Never invent questions, values or report text. If something is not covered, stop
 
 - **MFB Intimacy Assessment** — code `IA`, report ID `MFB-IA-YYYY-NNNNN`
 - **MFB Mind Assessment** — code `MA`, report ID `MFB-MA-YYYY-NNNNN`
+- **On / Off** (Admin → Questionnaires, super admins and coordinators; `questionnaires.is_active`, migration
+  `20261031000002_questionnaire_active.sql`): Off = nobody can buy it (the pay link says "not available right
+  now", the order route refuses with PAUSED, Home hides it). Paid purchases can still be started and running
+  assessments finished.
 - Any new questionnaire = one row in `questionnaires` (code, names, report prefix; Admin → Questionnaires →
   New questionnaire) plus its JSON versions. No code change.
 - Each costs ₹3,500 and includes the assessment and one consultation. No price anywhere except the payment
-  step and the client's own payment receipt (completed screen: amount paid, date, method, Razorpay ID).
+  step, the public /pricing page and the client's own payment receipt (completed screen: amount paid, date,
+  method, Razorpay ID). The payment step and /pricing show ₹3,500 next to the regular price ₹7,000 struck
+  through, with "Introductory price" (owner decision 2026-10-31; `REGULAR_PRICE_PAISE` is display only, never
+  charged). Keep it only while ₹7,000 is the real regular price.
+- "What you get" (payment step, Home cards, /pricing; `pay.features` in `clients/lib/i18n.ts`, EN + HI):
+  the assessment, one consultation, report review and guidance with your counsellor, personalised action
+  plan, follow-up support, educational resources and guidance. No "diagnostic" or "treatment" wording.
+- Home: paid, not started shows a "Paid" pill, the paid date and Start; a test the client already paid for
+  shows "already paid" instead of Buy now. No "Install app" button (the browser's own prompt still works).
 - Display line under each name: "Designed by Dr. Neha Mehta".
 - One person per assessment. A partner takes and pays for their own; reports are never linked.
 - The report is for the care team only. The client never sees it in the app; the counsellor downloads the
@@ -156,9 +168,13 @@ Never invent questions, values or report text. If something is not covered, stop
 
 ## Client flow
 
-Phone OTP login → registration (name, gender, age, relationship status, city, state, email; under 18 →
-AGE_STOP, save nothing) → choose test (live questionnaires) → payment ₹3,500 → report ID assigned on payment
-success → one-line consent → one question per screen, in the order of the JSON → built-in safety questions →
+**Pay first, log in later.** Public pay link `/pay/<code>`, e.g. `/pay/IA` (phone only, ₹3,500; or the same page from
+Home, phone fixed to the signed-in number) → success screen with the masked number → phone OTP login (number
+filled in) → registration (name, gender, age, relationship status, city, state, email; under 18 →
+AGE_STOP, no account; only the minimal `age_stops` record is kept, and the number's paid purchases are flagged
+refund needed) → Home claims every paid,
+unclaimed purchase of the verified number → **Start** creates the attempt and its report ID → one-line
+consent → one question per screen, in the order of the JSON → built-in safety questions →
 client details (typed, required; the questionnaire's current list) → submit ("nothing can be changed after this") → thank-you screen ("Your counsellor will go through your
 results with you"). The client never sees a report in the app.
 
@@ -170,12 +186,15 @@ results with you"). The client never sees a report in the app.
   multiple choice = checkboxes with `max_choices`.
 - The report is built once at submit, in the language the client was using (EN / हिं toggle), and stored in
   `attempt_results.report` with the engine result. Never re-scored or rebuilt for display.
-- URLs and titles carry no test name: `/payment/<code>`, `/assessment/<uuid>`.
+- URLs and titles carry no test name: `/pay/<code>` (the questionnaire code, e.g. `/pay/IA`, any case; shown with
+  Copy pay link in Admin → Questionnaires; title and link preview "My Fit Brain"), `/assessment/<uuid>`. The unused column
+  `questionnaires.pay_code` is removed by `20261031000001_drop_pay_code.sql`.
 - Client app shell: `components/PageChrome.tsx` = sticky header + bottom tab bar (`BottomNav`: Home `/`,
   Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile. Home
-  lists the client's assessments: unfinished → Continue; completed → View details (thank-you + receipt).
-- Public policy pages (no sign-in, required by Razorpay; English only; listed in `lib/legal.ts`, skipped by
-  `proxy.ts`): /pricing, /terms, /privacy, /refund-policy (no refunds, no cancellations), /contact. Business
+  lists the client's assessments: paid, not started → Start; unfinished → Continue; completed → View
+  details (thank-you + receipt).
+- Public pages (no sign-in; skipped by `proxy.ts`): the pay links `/pay/*`, and the policy pages (required by
+  Razorpay; English only; listed in `lib/legal.ts`): /pricing, /terms, /privacy, /refund-policy (no refunds, no cancellations), /contact. Business
   address, email and phone live in `lib/legal.ts`. The brand `Footer` links to all five; the payment screen
   links Terms and Refund policy. Update the pages when what we collect or who sees it changes.
 - Prefer canonical Tailwind classes (`min-h-11`, not `min-h-[44px]`); keep arbitrary values only for sizes
@@ -197,12 +216,23 @@ results with you"). The client never sees a report in the app.
   checkout, and the server marks a payment paid only after checking the checkout signature and fetching
   the payment from Razorpay (order, amount, currency, status; authorized payments are captured). The
   signed webhook (`/api/payments/webhook`: payment.captured, order.paid, payment.failed) does the same
-  when the browser never returns. One payment → one attempt, created only through
+  when the browser never returns. Order and verify need no sign-in.
+- A purchase whose number already belongs to a registered client (signed in before) is linked to that client
+  when the order is created (`clientByPhone`); otherwise at the first Home load with that verified number.
+  Home also asks Razorpay about the number's "not completed" orders of the last 48 hours
+  (`recoverOpenPayments`) and marks paid any that were paid there but never confirmed here.
+- A payment row is a **purchase owned by a phone** (migration `20261031000000_pay_first.sql`, checks
+  `docs/tasks/13-pay-first-verify.sql`): `phone` (E.164), `client_id` + `claimed_at` empty until someone
+  logs in with that verified number (claimed on every Home load), `refund_status` needed → refunded,
+  `ip_hash` (keyed hash, rate limit only: 5 orders per phone and 20 per IP per hour). Owner (phone, client)
+  may change only before Start (trigger). One purchase → one attempt, created on **Start** only through
   `public.create_paid_attempt()` (per-payment advisory lock; the report number and the insert in one
-  transaction, so report IDs have no gaps even when verify and webhook race). Never call `next_report_id()`
-  separately from the insert.
+  transaction, so report IDs have no gaps even on a double tap). Never call `next_report_id()` separately
+  from the insert.
 - Admin → Payments (`/payments`): super admins and coordinators only (nav, page guard and RLS
-  `can_view_payments()`); counsellors never see payments.
+  `can_view_payments()`); counsellors never see payments. Filters include Paid, not started and Refund
+  needed; a paid purchase that is not started can be moved to another number (logged in `payment_moves`) or
+  marked refunded (after refunding in the Razorpay dashboard).
 - Report IDs identify assessments; they are **not** GST invoice numbers (open: a gap-free invoice series per
   financial year, April–March, for paid payments only). Checkout name/description: "My Fit Brain" / "MFB
   Assessment" only. Keys: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-side
@@ -315,7 +345,9 @@ so copy the master file there before using a new combination.
 - Brand line: "Space to speak." — capital S, full stop. Never translated inside the logo.
 - Campaign lines allowed: "Talk to someone who understands." · "Understood, in your language."
 - Retired everywhere: "We Care For Your Emotions", "Science with a human touch".
-- Footer: "Space to speak. · My Fit Brain, a unit of MeDa Partners Pvt Ltd".
+- Footer (apps and the report PDF): "Space to speak. · My Fit Brain". No "a unit of MeDa Partners" in the UI or
+  the PDF (owner decision 2026-10-31). Only the policy pages (terms, privacy, refund, contact) name the company,
+  as "operated by MeDa Partners Pvt Ltd", because the payment gateway requires it.
 
 ---
 
@@ -339,7 +371,11 @@ so copy the master file there before using a new combination.
 
 ## Safety (never weaken)
 
-- Under 18 → AGE_STOP screen at registration, end, save nothing.
+- Under 18 → AGE_STOP screen at registration, end, no client record. The server (never only the browser) keeps
+  a minimal record in `age_stops` (verified number, name typed, age entered, when; owner decision 2026-10-31,
+  migration `20261031000004_age_stops.sql`) and flags the number's paid purchases refund needed. Nothing else
+  from the form is saved. Admin → Under 18 (super admins, coordinators; RLS `can_view_payments()`) lists them;
+  Payments shows "Under 18 · name" on their purchases.
 - Crisis question = Yes → immediate calm support screen (Tele-MANAS 14416 / 1-800-891-4416, `tel:` links),
   `attempt_alerts` row for the team, report shows the support message first with no plan and no focus lines.
   Coordinator calls within 4 working hours (after 8 PM → by 10 AM next day).
@@ -416,4 +452,6 @@ existing migrations, `.env*` files.
 - Done: **Client details** (typed answers after the safety questions). Run
   `20261027000000_client_details.sql`, checks `docs/tasks/12-client-details-verify.sql`; then set the list
   in Admin → Questionnaires (or import + publish `intimacy.json`, which carries the six Intimacy questions).
+- Done: **Pay first, log in later** (`/pay/<code>`, purchases owned by a phone, claim at login, Start
+  creates the attempt). Run `20261031000000_pay_first.sql`, checks `docs/tasks/13-pay-first-verify.sql`.
 - Next: Task 07 — polish.

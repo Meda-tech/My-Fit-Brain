@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       intro={
         <p>
-          Your information stays private. This policy explains what My Fit Brain, a unit of {BUSINESS.legalName},
+          Your information stays private. This policy explains what My Fit Brain, operated by {BUSINESS.legalName},
           collects when you use My Fit Brain Assessments, why, and who can see it. It follows India&rsquo;s Digital
           Personal Data Protection Act, 2023.
         </p>
@@ -17,7 +17,8 @@ export default function PrivacyPage() {
         <ul>
           <li>
             <strong>Mobile number</strong> to sign you in with a one-time code (OTP) and to contact you about your
-            consultation.
+            consultation. If you pay before signing in, we keep the number you paid with, so your assessment is ready
+            when you sign in with it.
           </li>
           <li>
             <strong>Registration details:</strong> your name, gender, age, relationship status, and, if you give
@@ -30,14 +31,19 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Payment records:</strong> the Razorpay order and payment IDs, amount, payment method type, status
-            and time. Your card, UPI or bank details go directly to Razorpay; we never see or store them.
+            and time. Your card, UPI or bank details go directly to Razorpay; we never see or store them. To stop misuse
+            of the payment page, we keep a scrambled code made from your internet address (never the address itself).
           </li>
           <li>
             <strong>Cookies:</strong> only what the app needs to keep you signed in and remember your language. We do
             not use advertising or tracking cookies.
           </li>
         </ul>
-        <p>We do not ask anyone under 18 to register; if you are under 18, we stop and save nothing.</p>
+        <p>
+          My Fit Brain is for adults. If you enter an age under 18, we stop and do not create an account. We keep
+          only your mobile number, the name you typed, the age you entered and the time, so we can refund any
+          payment made with that number. Nothing else from the form is saved.
+        </p>
       </LegalSection>
 
       <LegalSection title="Why we use it">

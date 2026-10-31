@@ -35,7 +35,7 @@ export function Footer({ tone = 'light', bordered = true, className }: FooterPro
       <p className="mt-2 text-[12px] leading-4.5 opacity-80">
         <span className="block sm:inline">Space to speak.</span>
         <span className="hidden sm:inline"> · </span>
-        <span className="block sm:inline">My Fit Brain, a unit of MeDa Partners Pvt Ltd</span>
+        <span className="block sm:inline">My Fit Brain</span>
       </p>
     </footer>
   );

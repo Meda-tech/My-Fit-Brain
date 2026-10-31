@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
-import { cn } from '../brand';
+import { markRefundedAction, movePurchaseAction } from '../../app/payments/actions';
+import { Button, cn, inputClasses, labelClasses } from '../brand';
 import type { PaymentListRow } from '../../lib/services/payments';
-import { PaymentStatusPill } from './PaymentStatusPill';
+import { PaymentStatusPill, paymentState } from './PaymentStatusPill';
 import { ATTEMPT_STATUS_LABELS, formatAmount, formatDateTime, methodLabel } from './format';
 
 // Side sheet with everything about one payment. Slides in from the right; Esc, the close button or
@@ -70,7 +72,7 @@ function SheetBody({
             {formatAmount(p.amount_paise, p.currency)}
           </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
-            <PaymentStatusPill status={p.status} />
+            <PaymentStatusPill state={paymentState(p)} />
             <span>{p.status === 'paid' ? formatDateTime(p.paid_at) : formatDateTime(p.created_at)}</span>
           </div>
         </div>
@@ -93,6 +95,15 @@ function SheetBody({
           </p>
         )}
 
+        <Section title="Purchase">
+          <Row label="Paid for number">
+            <span className="font-mono text-[13px]">{p.phone}</span>
+          </Row>
+          <Row label="Linked to client">{p.claimed_at ? formatDateTime(p.claimed_at) : 'Not yet (logs in with this number)'}</Row>
+        </Section>
+
+        <PurchaseActions payment={p} />
+
         <Section title="Client">
           {p.client ? (
             <>
@@ -110,8 +121,15 @@ function SheetBody({
               </Row>
               <Row label="Location">{location || '—'}</Row>
             </>
+          ) : p.age_stop ? (
+            <>
+              <p className="mb-2 text-[14px] text-coral-deep">Stopped at registration: under 18. No account was created.</p>
+              <Row label="Name (typed)">{p.age_stop.full_name || '—'}</Row>
+              <Row label="Age entered">{p.age_stop.age} years</Row>
+              <Row label="Stopped at">{formatDateTime(p.age_stop.last_at)}</Row>
+            </>
           ) : (
-            <p className="text-[14px] text-ink-muted">Client record not available.</p>
+            <p className="text-[14px] text-ink-muted">Nobody has logged in with this number yet.</p>
           )}
         </Section>
 
@@ -131,7 +149,11 @@ function SheetBody({
             </>
           ) : (
             <p className="text-[14px] text-ink-muted">
-              {p.status === 'paid' ? 'Being created…' : 'No assessment: the payment was not completed.'}
+              {p.status !== 'paid'
+                ? 'No assessment: the payment was not completed.'
+                : p.refund_status
+                  ? 'No assessment: the purchase is marked for refund.'
+                  : 'Not started yet. The assessment and its report ID are created when the client presses Start.'}
             </p>
           )}
         </Section>
@@ -168,6 +190,99 @@ function SheetBody({
         </Section>
       </div>
     </>
+  );
+}
+
+/** Move to another number / mark refunded: only for a paid purchase that is not started. */
+function PurchaseActions({ payment: p }: { payment: PaymentListRow }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [moving, setMoving] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  if (p.status !== 'paid' || p.attempt || p.refund_status === 'refunded') return null;
+
+  const run = (action: () => Promise<{ error: string | null }>) => {
+    setError(null);
+    startTransition(async () => {
+      const { error } = await action();
+      if (error) {
+        setError(error);
+        return;
+      }
+      setMoving(false);
+      setPhone('');
+      router.refresh();
+    });
+  };
+
+  return (
+    <section className="space-y-3">
+      {p.refund_status === 'needed' && (
+        <p className="rounded-input border border-sand bg-cream p-3 text-[14px] text-ink-soft">
+          <span className="font-semibold text-coral-deep">Refund needed.</span> Refund it in the Razorpay dashboard, then mark it
+          refunded here.
+        </p>
+      )}
+      {moving ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => movePurchaseAction(p.id, phone));
+          }}
+          className="space-y-2 rounded-card border border-sand p-4"
+        >
+          <label htmlFor="move-phone" className={labelClasses}>
+            New mobile number
+          </label>
+          <input
+            id="move-phone"
+            type="tel"
+            inputMode="numeric"
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="98765 43210"
+            className={inputClasses}
+          />
+          <p className="text-[13px] text-ink-muted">
+            Whoever logs in with the new number gets this purchase on Home. The current link to a client is removed.
+          </p>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" loading={pending} loadingText="Moving…">
+              Move purchase
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setMoving(false)} disabled={pending}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setMoving(true)} disabled={pending}>
+            Move purchase to another number
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={pending}
+            onClick={() => {
+              if (window.confirm('Mark this purchase as refunded? Do this only after the money was returned in Razorpay. It cannot be undone.')) {
+                run(() => markRefundedAction(p.id));
+              }
+            }}
+          >
+            Mark refunded
+          </Button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-[14px] text-coral-deep">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
 

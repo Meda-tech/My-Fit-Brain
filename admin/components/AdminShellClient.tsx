@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   CreditCard,
+  UserX,
 } from 'lucide-react';
 import { StaffRole } from '../lib/types';
 import { ROLE_LABELS } from '../lib/roles';
@@ -99,7 +100,12 @@ export function AdminShellClient({
     { href: '/clients', label: 'Clients', icon: Users },
     { href: '/questionnaires', label: 'Questionnaires', icon: BookOpen },
     // Payments: super admins and coordinators only (RLS: can_view_payments()).
-    ...(role === 'super_admin' || role === 'coordinator' ? [{ href: '/payments', label: 'Payments', icon: CreditCard }] : []),
+    ...(role === 'super_admin' || role === 'coordinator'
+      ? [
+          { href: '/payments', label: 'Payments', icon: CreditCard },
+          { href: '/under-18', label: 'Under 18', icon: UserX },
+        ]
+      : []),
     ...(isSuperAdmin ? [{ href: '/coordinators', label: 'Team', icon: ShieldCheck }] : []),
   ];
 

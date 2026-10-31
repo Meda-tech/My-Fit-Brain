@@ -1,9 +1,13 @@
 import Link from 'next/link';
 import { ContactLines, LegalPage, LegalSection } from '../../components/LegalPage';
 import { Card } from '../../components/brand';
-import { formatPrice } from '../../lib/payments/service';
+import { FeatureList, PriceTag } from '../../components/AssessmentOffer';
+import { translations } from '../../lib/i18n';
+import { REGULAR_PRICE_PAISE, formatPrice } from '../../lib/payments/service';
 
 const PRICE = formatPrice();
+const REGULAR_PRICE = formatPrice(REGULAR_PRICE_PAISE);
+const t = translations.en.pay;
 
 const SERVICES = [
   {
@@ -27,7 +31,7 @@ export default function PricingPage() {
       updated={false}
       intro={
         <p>
-          My Fit Brain, a unit of MeDa Partners Pvt Ltd, offers two assessments. Each is a structured assessment
+          My Fit Brain offers two assessments. Each is a structured assessment
           designed by Dr. Neha Mehta, followed by one consultation with a qualified counsellor.
         </p>
       }
@@ -38,25 +42,22 @@ export default function PricingPage() {
             <h2 className="text-[20px] font-medium leading-[1.3] text-ink">{service.name}</h2>
             <p className="mt-1 text-[14px] text-ink-muted">Designed by Dr. Neha Mehta</p>
             <p className="mt-4 flex-1 text-[15px] leading-6 text-ink-soft">{service.about}</p>
-            <p className="mt-5 font-heading text-[30px] font-semibold text-teal">{PRICE}</p>
-            <p className="text-[14px] text-ink-muted">One-time payment, in Indian Rupees</p>
+            <PriceTag className="mt-5" price={PRICE} regular={REGULAR_PRICE} regularLabel={t.regularPrice} offerLabel={t.offerPrice} />
+            <p className="mt-2 text-[14px] text-ink-muted">One-time payment, in Indian Rupees</p>
           </Card>
         ))}
       </div>
 
       <LegalSection title="What the price includes">
-        <ul>
-          <li>The full online assessment, in English or Hindi.</li>
-          <li>One consultation with a qualified counsellor, who goes through your results with you.</li>
-        </ul>
+        <FeatureList title={t.featuresTitle} items={t.features} />
         <p>There are no subscriptions, renewals or hidden charges.</p>
       </LegalSection>
 
       <LegalSection title="How the service is delivered">
         <ul>
           <li>Everything happens online. Nothing is shipped.</li>
-          <li>Sign in with your mobile number and pay securely through Razorpay (UPI, card, net banking or wallet).</li>
-          <li>The assessment opens straight after your payment is confirmed. You can finish it at your own pace.</li>
+          <li>Pay securely through Razorpay (UPI, card, net banking or wallet) with your mobile number.</li>
+          <li>Sign in with the same number and start the assessment. You can finish it at your own pace.</li>
           <li>After you submit, our team contacts you to arrange your consultation.</li>
         </ul>
         <p>
