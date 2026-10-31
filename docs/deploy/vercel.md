@@ -9,7 +9,7 @@ installs from the repo root (so the packages are linked) and builds its own app 
 publish or install the packages separately: `npm ci` at the root links them automatically.
 
 ```
-GitHub repo ──┬── Vercel project "mfb-clients"  Root Directory: clients  → app.myfitbrain.app
+GitHub repo ──┬── Vercel project "mfb-clients"  Root Directory: clients  → www.myfitbrain.app (myfitbrain.app redirects to www)
               └── Vercel project "mfb-admin"    Root Directory: admin    → admin.myfitbrain.app
 ```
 
@@ -90,7 +90,7 @@ deploys). Never prefix a secret with `NEXT_PUBLIC_`: those are sent to the brows
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL | no |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → API → `anon` `public` key | no |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → API → `service_role` key | **yes** |
-| `NEXT_PUBLIC_CLIENTS_URL` | `https://app.myfitbrain.app` | no |
+| `NEXT_PUBLIC_CLIENTS_URL` | `https://www.myfitbrain.app` | no |
 | `NEXT_PUBLIC_ADMIN_URL` | `https://admin.myfitbrain.app` | no |
 | `RAZORPAY_KEY_ID` | Razorpay → API Keys → Key ID (`rzp_test_…` or `rzp_live_…`) | no* |
 | `RAZORPAY_KEY_SECRET` | Razorpay → API Keys → Key Secret | **yes** |
@@ -105,7 +105,7 @@ deploys). Never prefix a secret with `NEXT_PUBLIC_`: those are sent to the brows
 | `NEXT_PUBLIC_SUPABASE_URL` | same as above | no |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | same as above | no |
 | `SUPABASE_SERVICE_ROLE_KEY` | same as above | **yes** |
-| `NEXT_PUBLIC_CLIENTS_URL` | `https://app.myfitbrain.app` | no |
+| `NEXT_PUBLIC_CLIENTS_URL` | `https://www.myfitbrain.app` | no |
 | `NEXT_PUBLIC_ADMIN_URL` | `https://admin.myfitbrain.app` | no |
 
 After changing a variable, **redeploy** (Deployments → ⋯ → Redeploy): variables are read at build and
@@ -117,7 +117,7 @@ start-up.
 
 Project → Settings → Domains:
 
-- `mfb-clients` → add `app.myfitbrain.app`
+- `mfb-clients` → add `www.myfitbrain.app` and `myfitbrain.app` (redirect to www)
 - `mfb-admin` → add `admin.myfitbrain.app`
 
 Vercel shows the DNS record to create at your domain registrar (usually a `CNAME` for `app` and
@@ -129,13 +129,13 @@ Vercel shows the DNS record to create at your domain registrar (usually a `CNAME
 
 **Supabase → Authentication → URL Configuration**
 
-- Site URL: `https://app.myfitbrain.app`
-- Redirect URLs: add `https://app.myfitbrain.app/**` and `https://admin.myfitbrain.app/**`
+- Site URL: `https://www.myfitbrain.app`
+- Redirect URLs: add `https://www.myfitbrain.app/**` and `https://admin.myfitbrain.app/**`
 
 **Razorpay → Account & Settings → Webhooks** (create one in Test Mode now, and again in Live Mode
 when you go live; each mode has its own keys and webhooks)
 
-- URL: `https://app.myfitbrain.app/api/payments/webhook`
+- URL: `https://www.myfitbrain.app/api/payments/webhook`
 - Secret: a long random string (same value as `RAZORPAY_WEBHOOK_SECRET`)
 - Events: `payment.captured`, `order.paid`, `payment.failed`
 
@@ -147,7 +147,7 @@ No code changes.
 
 ## 6. After each production deploy (5-minute check)
 
-1. `https://app.myfitbrain.app` → phone OTP login works.
+1. `https://www.myfitbrain.app` → phone OTP login works.
 2. Choose a test → **Pay ₹3,500** opens Razorpay (in test mode, pay with UPI `success@razorpay`).
 3. After paying, the assessment opens; Admin → **Payments** shows the payment as Paid.
 4. Razorpay → Webhooks → your webhook → recent deliveries show `200`.

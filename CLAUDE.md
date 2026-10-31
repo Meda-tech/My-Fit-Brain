@@ -84,10 +84,12 @@ Never invent questions, values or report text. If something is not covered, stop
 
 | Folder | Purpose | Domain | Dev port |
 |---|---|---|---|
-| `clients/` | OTP login, registration, test choice, payment, assessment, thank-you | `https://app.myfitbrain.app` | 3000 |
+| `clients/` | OTP login, registration, test choice, payment, assessment, thank-you | `https://www.myfitbrain.app` | 3000 |
 | `admin/` | Super admin, coordinators, counsellors | `https://admin.myfitbrain.app` | 3001 |
 
-- The folder is `clients/`; the public subdomain stays `app.`.
+- The folder is `clients/`; it is served at `www.myfitbrain.app` (`myfitbrain.app` redirects to www).
+- Both Vercel projects need `NEXT_PUBLIC_CLIENTS_URL=https://www.myfitbrain.app` and
+  `NEXT_PUBLIC_ADMIN_URL=https://admin.myfitbrain.app` (`lib/site.ts`; production builds fall back to these).
 - One Supabase project for both apps. No custom backend: logic runs in Next.js Server Actions / route
   handlers and Postgres functions.
 - Stack: Next.js 16 (App Router, Turbopack), React 19, TypeScript 5, Tailwind v4, Supabase

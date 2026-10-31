@@ -1,8 +1,9 @@
-// App origins come from env so nothing is hard-wired to a domain.
-// Local defaults match the dev ports (clients 3000, admin 3001).
-// Production: https://app.myfitbrain.app and https://admin.myfitbrain.app (set in env).
-const DEFAULT_CLIENTS_URL = 'http://localhost:3000';
-const DEFAULT_ADMIN_URL = 'http://localhost:3001';
+// App origins come from env (NEXT_PUBLIC_CLIENTS_URL, NEXT_PUBLIC_ADMIN_URL), set in BOTH Vercel projects.
+// Without them: the live domains on a Vercel production build (never localhost), the dev ports locally
+// (clients 3000, admin 3001).
+const IS_VERCEL_PRODUCTION = (process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.VERCEL_ENV) === 'production';
+const DEFAULT_CLIENTS_URL = IS_VERCEL_PRODUCTION ? 'https://www.myfitbrain.app' : 'http://localhost:3000';
+const DEFAULT_ADMIN_URL = IS_VERCEL_PRODUCTION ? 'https://admin.myfitbrain.app' : 'http://localhost:3001';
 
 function origin(value: string | undefined, fallback: string): string {
   return (value?.trim() || fallback).replace(/\/+$/, '');

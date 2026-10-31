@@ -52,7 +52,7 @@ with `mind.json`.
 | Authentication → Sign In / Providers → Phone | Enabled, as in the current project |
 | Authentication → Auth Hooks → Send SMS hook | **Required for OTP.** Type Postgres, schema `public`, function `custom_send_sms`, enabled. The SQL creates the function but does not switch the hook on |
 | Project Settings → JWT Keys | Use the asymmetric signing keys (ECC), so sign-in checks run without a network call |
-| Authentication → URL Configuration | Site URL `https://app.myfitbrain.app`; Redirect URLs `https://app.myfitbrain.app/**`, `https://admin.myfitbrain.app/**` |
+| Authentication → URL Configuration | Site URL `https://www.myfitbrain.app`; Redirect URLs `https://www.myfitbrain.app/**`, `https://admin.myfitbrain.app/**` |
 
 ## 3. First super admin
 

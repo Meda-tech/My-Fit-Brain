@@ -8,7 +8,7 @@ export default function TermsPage() {
       title="Terms & Conditions"
       intro={
         <p>
-          These terms apply when you use My Fit Brain Assessments at app.myfitbrain.app (the &ldquo;service&rdquo;).
+          These terms apply when you use My Fit Brain Assessments at myfitbrain.app (the &ldquo;service&rdquo;).
           My Fit Brain is operated by {BUSINESS.legalName}, {BUSINESS.address} (&ldquo;we&rdquo;,
           &ldquo;us&rdquo;). By signing in or paying, you agree to these terms.
         </p>
