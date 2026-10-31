@@ -50,6 +50,10 @@ export interface PaymentStore {
   markPaid(id: string, paid: { provider_payment_id: string; method: string | null; paid_at: string }): Promise<PaymentRow>;
   /** Marks a still-open payment failed (a paid one is never touched). */
   markFailed(id: string, failure: { provider_payment_id: string | null; code: string | null; reason: string | null }): Promise<void>;
+  /** The registered client (signed in with OTP before) whose verified number this is, or null. */
+  clientByPhone(phone: string): Promise<{ id: string; full_name: string } | null>;
+  /** Payments of the phone still waiting for the checkout result, created since `since`. */
+  listOpen(phone: string, since: string): Promise<PaymentRow[]>;
   /** Links every paid, unclaimed purchase of the phone to the client; returns how many. */
   claim(phone: string, clientId: string, at: string): Promise<number>;
   /** The client's paid purchases that are not started and not marked for refund, oldest first. */
@@ -136,6 +140,28 @@ export function supabasePaymentStore(db: SupabaseClient): PaymentStore {
         .is('refund_status', null)
         .order('paid_at', { ascending: true });
       return (check(r, 'ready purchases') ?? []) as PaymentRow[];
+    },
+    async clientByPhone(phone) {
+      // Stored as +91…; older rows may hold 91… or the 10 digits.
+      const digits = phone.replace(/^\+/, '');
+      const r = await db
+        .from('clients')
+        .select('id, full_name')
+        .in('phone', [phone, digits, digits.slice(-10)])
+        .not('auth_user_id', 'is', null)
+        .limit(1)
+        .maybeSingle();
+      return check(r, 'client by phone') as { id: string; full_name: string } | null;
+    },
+    async listOpen(phone, since) {
+      const r = await db
+        .from('payments')
+        .select(COLUMNS)
+        .eq('phone', phone)
+        .eq('status', 'created')
+        .gte('created_at', since)
+        .order('created_at', { ascending: true });
+      return (check(r, 'open payments') ?? []) as PaymentRow[];
     },
     async markRefundNeeded(phone) {
       const r = await db

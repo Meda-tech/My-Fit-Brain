@@ -16,6 +16,7 @@ import {
   formatPrice,
   handleWebhook,
   PaymentError,
+  recoverOpenPayments,
   startPurchase,
   type PaymentDeps,
 } from '../lib/payments/service';
@@ -251,6 +252,57 @@ describe('webhook', () => {
     const cheap = rzp.pay(c2.orderId, { amount: 100 });
     expect(await webhook(deps, 'payment.captured', cheap, 'evt_m')).toBe('ignored');
     expect(payments.rows.get(c2.paymentId)?.status).toBe('created');
+  });
+});
+
+describe('registered number and recovery', () => {
+  it('a pay-link order for an already registered number belongs to that client at once', async () => {
+    const { deps, payments, rzp } = setup();
+    payments.clients.set(PHONE, client);
+    const c = await order(deps, '98765 43210');
+    expect(payments.rows.get(c.paymentId)).toMatchObject({ client_id: client.id, claimed_at: '2026-10-22T10:00:00.000Z' });
+    expect(rzp.lastNotes).toMatchObject({ client_id: client.id, client_name: client.full_name });
+    // Once paid it is on Home with Start, without any claim.
+    const p = rzp.pay(c.orderId);
+    await confirmCheckout(deps, { orderId: c.orderId, paymentId: p.id, signature: FakeRazorpay.sign(c.orderId, p.id) });
+    expect((await payments.listReady(client.id)).map((r) => r.id)).toEqual([c.paymentId]);
+  });
+
+  it('an unknown number stays unlinked until someone logs in with it', async () => {
+    const { deps, payments } = setup();
+    payments.clients.set('+919999999999', client);
+    const c = await order(deps);
+    expect(payments.rows.get(c.paymentId)).toMatchObject({ client_id: null, claimed_at: null });
+  });
+
+  it('recovers a payment made at Razorpay that the browser never confirmed, once', async () => {
+    const { deps, payments, rzp } = setup();
+    const c = await order(deps);
+    rzp.pay(c.orderId, { status: 'authorized', captured: false });
+    expect(await recoverOpenPayments(deps, PHONE)).toBe(1);
+    expect(payments.rows.get(c.paymentId)).toMatchObject({ status: 'paid' });
+    expect(rzp.captures).toHaveLength(1);
+    expect(await recoverOpenPayments(deps, PHONE)).toBe(0);
+    expect(await claimPurchases(deps, client, PHONE)).toBe(1);
+  });
+
+  it('leaves an order alone when nothing was paid, or only a failed try', async () => {
+    const { deps, payments, rzp } = setup();
+    const a = await order(deps);
+    const b = await order(deps);
+    rzp.pay(b.orderId, { status: 'failed', captured: false });
+    expect(await recoverOpenPayments(deps, PHONE)).toBe(0);
+    expect(payments.rows.get(a.paymentId)?.status).toBe('created');
+    expect(payments.rows.get(b.paymentId)?.status).toBe('created');
+  });
+
+  it('does nothing without Razorpay keys or for orders older than 48 hours', async () => {
+    const { deps, payments, rzp } = setup();
+    const c = await order(deps);
+    rzp.pay(c.orderId);
+    expect(await recoverOpenPayments(setup(false).deps, PHONE)).toBe(0);
+    payments.rows.get(c.paymentId)!.created_at = '2026-10-19T10:00:00.000Z';
+    expect(await recoverOpenPayments(deps, PHONE)).toBe(0);
   });
 });
 

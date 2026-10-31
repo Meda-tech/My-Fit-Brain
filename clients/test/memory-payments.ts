@@ -10,6 +10,8 @@ export class MemoryPayments implements PaymentStore {
   events = new Set<string>();
   /** created_at for new rows (tests move it to check the rate-limit window). */
   createdAt = '2026-10-22T09:58:00.000Z';
+  /** Registered clients by verified phone (clientByPhone). */
+  clients = new Map<string, { id: string; full_name: string }>();
 
   async createPayment(row: NewPayment) {
     const p = {
@@ -47,6 +49,12 @@ export class MemoryPayments implements PaymentStore {
   async markFailed(id: string, f: { provider_payment_id: string | null; code: string | null; reason: string | null }) {
     const p = this.rows.get(id)!;
     if (p.status === 'created') Object.assign(p, { status: 'failed', provider_payment_id: f.provider_payment_id, failure_code: f.code, failure_reason: f.reason });
+  }
+  async clientByPhone(phone: string) {
+    return this.clients.get(phone) ?? null;
+  }
+  async listOpen(phone: string, since: string) {
+    return [...this.rows.values()].filter((r) => r.phone === phone && r.status === 'created' && r.created_at >= since).map((r) => ({ ...r }));
   }
   async claim(phone: string, clientId: string, at: string) {
     let n = 0;
@@ -122,6 +130,9 @@ export class FakeRazorpay implements RazorpayGateway {
     const p = this.payments.get(id);
     if (!p) throw new Error('payment not found');
     return { ...p };
+  }
+  async fetchOrderPayments(orderId: string) {
+    return [...this.payments.values()].filter((p) => p.order_id === orderId).map((p) => ({ ...p }));
   }
   async capturePayment(id: string) {
     const p = this.payments.get(id)!;

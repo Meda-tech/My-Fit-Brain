@@ -216,6 +216,10 @@ results with you"). The client never sees a report in the app.
   the payment from Razorpay (order, amount, currency, status; authorized payments are captured). The
   signed webhook (`/api/payments/webhook`: payment.captured, order.paid, payment.failed) does the same
   when the browser never returns. Order and verify need no sign-in.
+- A purchase whose number already belongs to a registered client (signed in before) is linked to that client
+  when the order is created (`clientByPhone`); otherwise at the first Home load with that verified number.
+  Home also asks Razorpay about the number's "not completed" orders of the last 48 hours
+  (`recoverOpenPayments`) and marks paid any that were paid there but never confirmed here.
 - A payment row is a **purchase owned by a phone** (migration `20261031000000_pay_first.sql`, checks
   `docs/tasks/13-pay-first-verify.sql`): `phone` (E.164), `client_id` + `claimed_at` empty until someone
   logs in with that verified number (claimed on every Home load), `refund_status` needed → refunded,

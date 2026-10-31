@@ -98,13 +98,17 @@ export async function createCheckout(deps: PaymentDeps, input: CheckoutInput): P
     throw new PaymentError('RATE_LIMITED', 'Too many attempts. Please try again later.');
   }
 
+  // The number already belongs to a registered client: the purchase is theirs at once (the admin shows
+  // their name, and Home lists it), the same as a later claim with that verified number.
+  const owner = input.client ?? (await deps.payments.clientByPhone(phone.normalized));
+
   const id = deps.newId();
   // Shown under Notes in the Razorpay dashboard. Never the test name or anything from the assessment
   // (discretion rule).
   const notes: Record<string, string> = { payment_id: id, phone: phone.normalized };
-  if (input.client) {
-    notes.client_id = input.client.id;
-    notes.client_name = input.client.full_name.slice(0, 256);
+  if (owner) {
+    notes.client_id = owner.id;
+    notes.client_name = owner.full_name.slice(0, 256);
   }
   const order = await gateway.createOrder({ amount: ASSESSMENT_PRICE_PAISE, currency: CURRENCY, receipt: id, notes });
   if (order.amount !== ASSESSMENT_PRICE_PAISE || order.currency !== CURRENCY) {
@@ -113,8 +117,8 @@ export async function createCheckout(deps: PaymentDeps, input: CheckoutInput): P
   await deps.payments.createPayment({
     id,
     phone: phone.normalized,
-    client_id: input.client?.id ?? null,
-    claimed_at: input.client ? now.toISOString() : null,
+    client_id: owner?.id ?? null,
+    claimed_at: owner ? now.toISOString() : null,
     test_code: input.code,
     amount_paise: ASSESSMENT_PRICE_PAISE,
     currency: CURRENCY,
@@ -161,6 +165,34 @@ async function settle(deps: PaymentDeps, payment: PaymentRow, providerPaymentId:
   }
   if (rp.status !== 'captured') throw new PaymentError('PENDING', 'The payment is not complete yet.');
   return deps.payments.markPaid(payment.id, { provider_payment_id: rp.id, method: rp.method, paid_at: deps.now().toISOString() });
+}
+
+/** How far back Home looks for payments the browser never confirmed. */
+const RECOVER_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * Payments of this number still marked "not completed" are checked with Razorpay: one paid there but
+ * never confirmed here (the browser closed after paying, or no webhook reached us) is marked paid now.
+ * Runs on Home before the claim. Returns how many were recovered; a failed check is retried next visit.
+ */
+export async function recoverOpenPayments(deps: PaymentDeps, verifiedPhone: string): Promise<number> {
+  const phone = normalizePhoneNumber(verifiedPhone);
+  if (!phone.valid || !deps.gateway) return 0;
+  const gateway = deps.gateway;
+  const open = await deps.payments.listOpen(phone.normalized, new Date(deps.now().getTime() - RECOVER_WINDOW_MS).toISOString());
+  let recovered = 0;
+  for (const payment of open) {
+    try {
+      const tried = await gateway.fetchOrderPayments(payment.provider_order_id);
+      const done = tried.find((p) => p.status === 'captured') ?? tried.find((p) => p.status === 'authorized');
+      if (!done) continue;
+      await settle(deps, payment, done.id);
+      recovered += 1;
+    } catch (err) {
+      console.warn(`Could not recover payment ${payment.id}:`, err instanceof Error ? err.message : err);
+    }
+  }
+  return recovered;
 }
 
 /**

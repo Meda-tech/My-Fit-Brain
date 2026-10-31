@@ -47,6 +47,8 @@ export interface RazorpayGateway {
   keyId: string;
   createOrder(input: { amount: number; currency: string; receipt: string; notes: Record<string, string> }): Promise<RazorpayOrder>;
   fetchPayment(paymentId: string): Promise<RazorpayPayment>;
+  /** Every payment tried on an order (to recover one the browser never confirmed). */
+  fetchOrderPayments(orderId: string): Promise<RazorpayPayment[]>;
   capturePayment(paymentId: string, amount: number, currency: string): Promise<RazorpayPayment>;
   verifyCheckoutSignature(orderId: string, paymentId: string, signature: string): boolean;
   verifyWebhookSignature(rawBody: string, signature: string): boolean;
@@ -90,6 +92,8 @@ export function razorpayGateway(config: RazorpayConfig): RazorpayGateway {
     keyId: config.keyId,
     createOrder: (input) => call<RazorpayOrder>('POST', '/orders', input),
     fetchPayment: (id) => call<RazorpayPayment>('GET', `/payments/${encodeURIComponent(id)}`),
+    fetchOrderPayments: async (orderId) =>
+      (await call<{ items?: RazorpayPayment[] }>('GET', `/orders/${encodeURIComponent(orderId)}/payments`)).items ?? [],
     capturePayment: (id, amount, currency) =>
       call<RazorpayPayment>('POST', `/payments/${encodeURIComponent(id)}/capture`, { amount, currency }),
     // Razorpay checkout signature = HMAC_SHA256(order_id + "|" + payment_id, key_secret).
