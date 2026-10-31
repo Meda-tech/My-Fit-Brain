@@ -171,7 +171,8 @@ Never invent questions, values or report text. If something is not covered, stop
 **Pay first, log in later.** Public pay link `/pay/<code>`, e.g. `/pay/IA` (phone only, ₹3,500; or the same page from
 Home, phone fixed to the signed-in number) → success screen with the masked number → phone OTP login (number
 filled in) → registration (name, gender, age, relationship status, city, state, email; under 18 →
-AGE_STOP, save nothing, the number's paid purchases are flagged refund needed) → Home claims every paid,
+AGE_STOP, no account; only the minimal `age_stops` record is kept, and the number's paid purchases are flagged
+refund needed) → Home claims every paid,
 unclaimed purchase of the verified number → **Start** creates the attempt and its report ID → one-line
 consent → one question per screen, in the order of the JSON → built-in safety questions →
 client details (typed, required; the questionnaire's current list) → submit ("nothing can be changed after this") → thank-you screen ("Your counsellor will go through your
@@ -370,7 +371,11 @@ so copy the master file there before using a new combination.
 
 ## Safety (never weaken)
 
-- Under 18 → AGE_STOP screen at registration, end, save nothing.
+- Under 18 → AGE_STOP screen at registration, end, no client record. The server (never only the browser) keeps
+  a minimal record in `age_stops` (verified number, name typed, age entered, when; owner decision 2026-10-31,
+  migration `20261031000004_age_stops.sql`) and flags the number's paid purchases refund needed. Nothing else
+  from the form is saved. Admin → Under 18 (super admins, coordinators; RLS `can_view_payments()`) lists them;
+  Payments shows "Under 18 · name" on their purchases.
 - Crisis question = Yes → immediate calm support screen (Tele-MANAS 14416 / 1-800-891-4416, `tel:` links),
   `attempt_alerts` row for the team, report shows the support message first with no plan and no focus lines.
   Coordinator calls within 4 working hours (after 8 PM → by 10 AM next day).

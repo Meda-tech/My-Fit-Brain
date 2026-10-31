@@ -39,7 +39,11 @@ export default function PrivacyPage() {
             not use advertising or tracking cookies.
           </li>
         </ul>
-        <p>We do not ask anyone under 18 to register; if you are under 18, we stop and save nothing.</p>
+        <p>
+          My Fit Brain is for adults. If you enter an age under 18, we stop and do not create an account. We keep
+          only your mobile number, the name you typed, the age you entered and the time, so we can refund any
+          payment made with that number. Nothing else from the form is saved.
+        </p>
       </LegalSection>
 
       <LegalSection title="Why we use it">

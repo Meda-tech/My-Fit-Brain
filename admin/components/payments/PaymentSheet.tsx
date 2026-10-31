@@ -121,6 +121,13 @@ function SheetBody({
               </Row>
               <Row label="Location">{location || '—'}</Row>
             </>
+          ) : p.age_stop ? (
+            <>
+              <p className="mb-2 text-[14px] text-coral-deep">Stopped at registration: under 18. No account was created.</p>
+              <Row label="Name (typed)">{p.age_stop.full_name || '—'}</Row>
+              <Row label="Age entered">{p.age_stop.age} years</Row>
+              <Row label="Stopped at">{formatDateTime(p.age_stop.last_at)}</Row>
+            </>
           ) : (
             <p className="text-[14px] text-ink-muted">Nobody has logged in with this number yet.</p>
           )}

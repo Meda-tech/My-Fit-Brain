@@ -65,6 +65,17 @@ export interface PaymentListRow {
   test_name: string;
   client: PaymentClient | null;
   attempt: PaymentAttempt | null;
+  /** Stopped at registration as under 18 with this number (minimal record), or null. */
+  age_stop: AgeStop | null;
+}
+
+/** Minimal under-18 record: number, name typed, age entered, when. */
+export interface AgeStop {
+  phone: string;
+  full_name: string | null;
+  age: number;
+  first_at: string;
+  last_at: string;
 }
 
 export type PaymentPeriod = 'all' | 'today' | '7d' | '30d' | 'month';
@@ -93,16 +104,17 @@ const COLUMNS = `
   attempts(id, report_id, status, consent_at, started_at, completed_at, questionnaire_versions(number))
 `;
 
-type RawRow = Omit<PaymentListRow, 'test_name' | 'client' | 'attempt'> & {
+type RawRow = Omit<PaymentListRow, 'test_name' | 'client' | 'attempt' | 'age_stop'> & {
   questionnaires: { name_en: string } | null;
   clients: PaymentClient | null;
   attempts: (Omit<PaymentAttempt, 'version_number'> & { questionnaire_versions: { number: number } | null }) | null;
 };
 
-function toRow(r: RawRow): PaymentListRow {
+function toRow(r: RawRow, ageStops: Map<string, AgeStop>): PaymentListRow {
   const { questionnaires, clients, attempts, ...rest } = r;
   return {
     ...rest,
+    age_stop: clients ? null : (ageStops.get(r.phone) ?? null),
     test_name: questionnaires?.name_en ?? r.test_code,
     client: clients,
     attempt: attempts
@@ -178,7 +190,51 @@ export async function listPayments(filters: PaymentFilters): Promise<{ rows: Pay
     if (error.code === '42P01') return { rows: [], total: 0 }; // migration not applied yet
     throw new Error(`Could not read payments: ${error.message}`);
   }
-  return { rows: ((data ?? []) as unknown as RawRow[]).map(toRow), total: count ?? 0 };
+  const raw = (data ?? []) as unknown as RawRow[];
+  const unlinked = [...new Set(raw.filter((r) => !r.clients).map((r) => r.phone))];
+  const ageStops = new Map<string, AgeStop>();
+  if (unlinked.length) {
+    const { data: stops } = await supabase.from('age_stops').select(AGE_STOP_COLUMNS).in('phone', unlinked);
+    for (const s of (stops ?? []) as AgeStop[]) ageStops.set(s.phone, s);
+  }
+  return { rows: raw.map((r) => toRow(r, ageStops)), total: count ?? 0 };
+}
+
+const AGE_STOP_COLUMNS = 'phone, full_name, age, first_at, last_at';
+
+export interface AgeStopRow extends AgeStop {
+  paidCount: number;
+  refundNeededCount: number;
+  refundedCount: number;
+}
+
+/** Everyone stopped at registration as under 18, newest first, with their purchases' refund state. */
+export async function listAgeStops(): Promise<AgeStopRow[]> {
+  const { profile } = await requireStaff();
+  if (!canViewPayments(profile.role)) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('age_stops').select(AGE_STOP_COLUMNS).order('last_at', { ascending: false }).limit(500);
+  if (error) {
+    if (error.code === '42P01') return []; // migration not applied yet
+    throw new Error(`Could not read under-18 records: ${error.message}`);
+  }
+  const stops = (data ?? []) as AgeStop[];
+  if (!stops.length) return [];
+  const { data: pays } = await supabase
+    .from('payments')
+    .select('phone, status, refund_status')
+    .in('phone', stops.map((s) => s.phone))
+    .eq('status', 'paid');
+  const rows = (pays ?? []) as { phone: string; refund_status: RefundStatus | null }[];
+  return stops.map((s) => {
+    const mine = rows.filter((p) => p.phone === s.phone);
+    return {
+      ...s,
+      paidCount: mine.length,
+      refundNeededCount: mine.filter((p) => p.refund_status === 'needed').length,
+      refundedCount: mine.filter((p) => p.refund_status === 'refunded').length,
+    };
+  });
 }
 
 export interface PaymentSummary {

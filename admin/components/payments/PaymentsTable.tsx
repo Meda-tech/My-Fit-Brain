@@ -39,7 +39,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
   const rowProps = (p: PaymentListRow) => ({
     tabIndex: 0,
     role: 'button' as const,
-    'aria-label': `Payment ${formatAmount(p.amount_paise, p.currency)} from ${p.client?.full_name ?? p.phone}, ${paymentState(p)}`,
+    'aria-label': `Payment ${formatAmount(p.amount_paise, p.currency)} from ${p.client?.full_name ?? p.age_stop?.full_name ?? p.phone}, ${paymentState(p)}`,
     onClick: (e: React.MouseEvent<HTMLElement>) => open(p.id, e.currentTarget),
     onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -63,7 +63,9 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <p className="truncate font-semibold text-ink">{p.client?.full_name ?? p.phone}</p>
+                <p className="truncate font-semibold text-ink">
+                  {p.client?.full_name ?? (p.age_stop ? `Under 18 · ${p.age_stop.full_name ?? p.phone}` : p.phone)}
+                </p>
                 <p className="shrink-0 font-heading font-semibold text-ink">{formatAmount(p.amount_paise, p.currency)}</p>
               </div>
               <p className="mt-0.5 text-[13px] text-ink-muted">
@@ -112,7 +114,9 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                   <p className="text-[12px] text-ink-muted">{formatTime(when(p))}</p>
                 </td>
                 <td className="px-5 py-3.5">
-                  <p className="font-semibold text-ink">{p.client?.full_name ?? 'Not logged in yet'}</p>
+                  <p className="font-semibold text-ink">
+                    {p.client?.full_name ?? (p.age_stop ? `Under 18 · ${p.age_stop.full_name ?? 'no name'}` : 'Not logged in yet')}
+                  </p>
                   <p className="font-mono text-[12px] text-ink-muted">{p.phone}</p>
                 </td>
                 <td className="px-5 py-3.5">
