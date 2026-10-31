@@ -1,7 +1,11 @@
 -- Checks for 20261031000000_pay_first.sql. SELECT only: run in the Supabase SQL Editor after the migration.
 
--- 1. Every questionnaire has a pay code (expect one row per questionnaire, pay_code filled, all different).
-select code, name_en, pay_code from public.questionnaires order by sort;
+-- 1. Pay links that work: /pay/<code> for every questionnaire with a live version (expect IA and MA once
+--    published).
+select q.code, q.name_en, '/pay/' || q.code as pay_link
+from public.questionnaires q
+where exists (select 1 from public.questionnaire_versions v where v.questionnaire_code = q.code and v.status = 'live')
+order by q.sort;
 
 -- 2. New payment columns exist (expect 4 rows).
 select column_name, data_type, is_nullable

@@ -47,11 +47,12 @@ export interface PayQuestionnaire {
   name: Text;
 }
 
-/** The questionnaire behind a pay link, only while it has a live version. */
-export async function payQuestionnaire(payCode: string): Promise<PayQuestionnaire | null> {
-  if (!/^[a-z0-9]{6,16}$/.test(payCode)) return null;
+/** The questionnaire behind a pay link /pay/<code> (e.g. IA; any case), only while it has a live version. */
+export async function payQuestionnaire(rawCode: string): Promise<PayQuestionnaire | null> {
+  const code = rawCode.toUpperCase();
+  if (!/^[A-Z]{1,8}$/.test(code)) return null;
   const db = createAdminClient();
-  const { data, error } = await db.from('questionnaires').select('code, name_en, name_hi').eq('pay_code', payCode).maybeSingle();
+  const { data, error } = await db.from('questionnaires').select('code, name_en, name_hi').eq('code', code).maybeSingle();
   if (error || !data) return null;
   const { count } = await db
     .from('questionnaire_versions')

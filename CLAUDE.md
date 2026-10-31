@@ -156,7 +156,7 @@ Never invent questions, values or report text. If something is not covered, stop
 
 ## Client flow
 
-**Pay first, log in later.** Public pay link `/pay/<pay_code>` (phone only, ₹3,500; or the same page from
+**Pay first, log in later.** Public pay link `/pay/<code>`, e.g. `/pay/IA` (phone only, ₹3,500; or the same page from
 Home, phone fixed to the signed-in number) → success screen with the masked number → phone OTP login (number
 filled in) → registration (name, gender, age, relationship status, city, state, email; under 18 →
 AGE_STOP, save nothing, the number's paid purchases are flagged refund needed) → Home claims every paid,
@@ -173,7 +173,7 @@ results with you"). The client never sees a report in the app.
   multiple choice = checkboxes with `max_choices`.
 - The report is built once at submit, in the language the client was using (EN / हिं toggle), and stored in
   `attempt_results.report` with the engine result. Never re-scored or rebuilt for display.
-- URLs and titles carry no test name: `/pay/<pay_code>` (random code in `questionnaires.pay_code`, shown with
+- URLs and titles carry no test name: `/pay/<code>` (the questionnaire code, e.g. `/pay/IA`, any case; shown with
   Copy pay link in Admin → Questionnaires; title and link preview "My Fit Brain"), `/assessment/<uuid>`.
 - Client app shell: `components/PageChrome.tsx` = sticky header + bottom tab bar (`BottomNav`: Home `/`,
   Profile `/profile`). Payment and assessment screens hide the tab bar. Sign out lives on Profile. Home
@@ -428,6 +428,6 @@ existing migrations, `.env*` files.
 - Done: **Client details** (typed answers after the safety questions). Run
   `20261027000000_client_details.sql`, checks `docs/tasks/12-client-details-verify.sql`; then set the list
   in Admin → Questionnaires (or import + publish `intimacy.json`, which carries the six Intimacy questions).
-- Done: **Pay first, log in later** (`/pay/<pay_code>`, purchases owned by a phone, claim at login, Start
+- Done: **Pay first, log in later** (`/pay/<code>`, purchases owned by a phone, claim at login, Start
   creates the attempt). Run `20261031000000_pay_first.sql`, checks `docs/tasks/13-pay-first-verify.sql`.
 - Next: Task 07 — polish.

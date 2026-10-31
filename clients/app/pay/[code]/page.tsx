@@ -6,8 +6,8 @@ import { PageChrome } from '../../../components/PageChrome';
 import { Footer } from '../../../components/brand';
 import { PayView } from './PayView';
 
-// Public pay link /pay/<pay_code> (pay first, log in later). The code is neutral; the link preview and
-// the tab title never name the test (discretion rule).
+// Public pay link /pay/<questionnaire code>, e.g. /pay/IA (pay first, log in later). The link preview
+// and the tab title never name the test (discretion rule).
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ export default async function PayPage({ params }: { params: Promise<{ code: stri
   return (
     <PageChrome nav={false}>
       <PayView
-        payCode={code}
+        code={questionnaire.code}
         name={questionnaire.name}
         price={formatPrice()}
         enabled={paymentsConfigured()}

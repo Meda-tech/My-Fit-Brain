@@ -6,11 +6,11 @@ import { createCheckout, PaymentError } from '../../../../lib/payments/service';
 // Step 1: create a Razorpay order. No sign-in needed: the purchase belongs to the phone number. A
 // signed-in client always buys for their own verified number. The amount is fixed on the server.
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => ({}))) as { payCode?: unknown; phone?: unknown };
-  if (typeof body.payCode !== 'string' || typeof body.phone !== 'string') {
+  const body = (await request.json().catch(() => ({}))) as { code?: unknown; phone?: unknown };
+  if (typeof body.code !== 'string' || typeof body.phone !== 'string') {
     return NextResponse.json({ ok: false, code: 'BAD_REQUEST' }, { status: 400 });
   }
-  const questionnaire = await payQuestionnaire(body.payCode);
+  const questionnaire = await payQuestionnaire(body.code);
   if (!questionnaire) return NextResponse.json({ ok: false, code: 'NOT_FOUND' }, { status: 404 });
   const buyer = await signedInBuyer();
   try {

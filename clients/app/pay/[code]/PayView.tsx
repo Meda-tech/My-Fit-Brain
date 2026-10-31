@@ -54,14 +54,14 @@ function brandTeal(): string {
 type Status = 'idle' | 'busy' | 'failed' | 'pending' | 'error' | 'limited' | 'closed';
 
 export function PayView({
-  payCode,
+  code,
   name,
   price,
   enabled,
   signedInPhone,
   prefill,
 }: {
-  payCode: string;
+  code: string;
   name: Text;
   price: string;
   enabled: boolean;
@@ -115,7 +115,7 @@ export function PayView({
       const res = await fetch('/api/payments/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payCode, phone: phone.normalized }),
+        body: JSON.stringify({ code, phone: phone.normalized }),
       });
       const order = (await res.json().catch(() => ({}))) as {
         ok?: boolean;

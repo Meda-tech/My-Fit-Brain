@@ -59,12 +59,12 @@ export default async function QuestionnairesPage() {
                 </div>
               </div>
 
-              {/* Public pay link: pay first, log in later. Neutral code, never the test name. */}
+              {/* Public pay link: pay first, log in later (/pay/<code>). */}
               <div className="mt-4 flex flex-wrap items-center gap-2 rounded-input bg-mist px-3 py-2">
                 <span className="min-w-0 flex-1 break-all font-mono text-[13px] text-ink-soft">
-                  {CLIENTS_URL}/pay/{q.pay_code}
+                  {CLIENTS_URL}/pay/{q.code}
                 </span>
-                <CopyButton text={`${CLIENTS_URL}/pay/${q.pay_code}`} label="Copy pay link" variant="ghost" />
+                <CopyButton text={`${CLIENTS_URL}/pay/${q.code}`} label="Copy pay link" variant="ghost" />
               </div>
 
               <dl className="mt-5 grid grid-cols-2 gap-4">

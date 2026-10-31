@@ -23,9 +23,8 @@ export async function currentClient(): Promise<ClientProfile> {
 }
 
 export interface TestCard {
+  /** Also the pay link: /pay/<code>. */
   code: string;
-  /** Neutral code of the pay link /pay/<payCode>. */
-  payCode: string;
   name: Text;
   subtitle: Text | null;
 }
@@ -48,18 +47,15 @@ export interface AttemptSummary {
 
 interface QuestionnaireRow {
   code: string;
-  pay_code: string;
   name_en: string;
   name_hi: string | null;
   sort: number;
 }
 
-async function questionnaires(): Promise<Map<string, { name: Text; payCode: string; sort: number }>> {
-  const { data, error } = await createAdminClient().from('questionnaires').select('code, pay_code, name_en, name_hi, sort').order('sort');
+async function questionnaires(): Promise<Map<string, { name: Text; sort: number }>> {
+  const { data, error } = await createAdminClient().from('questionnaires').select('code, name_en, name_hi, sort').order('sort');
   if (error) throw new Error(`Could not read questionnaires: ${error.message}`);
-  return new Map(
-    ((data ?? []) as QuestionnaireRow[]).map((q) => [q.code, { name: { en: q.name_en, hi: q.name_hi }, payCode: q.pay_code, sort: q.sort }])
-  );
+  return new Map(((data ?? []) as QuestionnaireRow[]).map((q) => [q.code, { name: { en: q.name_en, hi: q.name_hi }, sort: q.sort }]));
 }
 
 /** Live questionnaires (as cards), the client's purchases not started yet, and their own assessments. */
@@ -90,15 +86,13 @@ export async function homeData(
       const info = names.get(v.questionnaire_code);
       return {
         code: v.questionnaire_code,
-        payCode: info?.payCode ?? '',
         name: info?.name ?? { en: v.questionnaire_code },
         subtitle: parsed.ok ? parsed.definition.subtitle : null,
         sort: info?.sort ?? 0,
       };
     })
-    .filter((test) => test.payCode)
     .sort((a, b) => a.sort - b.sort)
-    .map(({ code, payCode, name, subtitle }): TestCard => ({ code, payCode, name, subtitle }));
+    .map(({ code, name, subtitle }): TestCard => ({ code, name, subtitle }));
 
   return {
     tests,

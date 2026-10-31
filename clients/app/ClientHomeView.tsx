@@ -125,7 +125,7 @@ export function ClientHomeView({ firstName, tests, purchases, attempts }: Client
                 {t.brand.endorsement}
               </p>
               {test.subtitle && <p className="mt-3 text-[15px] leading-6 text-ink-soft">{local(test.subtitle)}</p>}
-              <ButtonLink href={`/pay/${test.payCode}`} variant="secondary" className="mt-4 self-start">
+              <ButtonLink href={`/pay/${test.code}`} variant="secondary" className="mt-4 self-start">
                 {t.assess.start}
               </ButtonLink>
             </Card>
