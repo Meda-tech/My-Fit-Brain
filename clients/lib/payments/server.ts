@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHmac, randomUUID } from 'node:crypto';
-import type { Text } from '@mfb/questionnaire';
+import { parseDefinition, type Text } from '@mfb/questionnaire';
 import { getAuthUser, getCurrentClient } from '../auth';
 import { serviceDeps } from '../assessment/server';
 import type { ClientProfile } from '../assessment/types';
@@ -45,6 +45,8 @@ export async function signedInBuyer(): Promise<{ client: ClientProfile; phone: s
 export interface PayQuestionnaire {
   code: string;
   name: Text;
+  /** From the live version's JSON. */
+  subtitle: Text | null;
 }
 
 /** The questionnaire behind a pay link /pay/<code> (e.g. IA; any case), only while it has a live version. */
@@ -54,13 +56,19 @@ export async function payQuestionnaire(rawCode: string): Promise<PayQuestionnair
   const db = createAdminClient();
   const { data, error } = await db.from('questionnaires').select('code, name_en, name_hi').eq('code', code).maybeSingle();
   if (error || !data) return null;
-  const { count } = await db
+  const { data: live } = await db
     .from('questionnaire_versions')
-    .select('id', { count: 'exact', head: true })
+    .select('definition')
     .eq('questionnaire_code', data.code)
-    .eq('status', 'live');
-  if (!count) return null;
-  return { code: data.code, name: { en: data.name_en, hi: data.name_hi } };
+    .eq('status', 'live')
+    .maybeSingle();
+  if (!live) return null;
+  const parsed = parseDefinition(live.definition);
+  return {
+    code: data.code,
+    name: { en: data.name_en, hi: data.name_hi },
+    subtitle: parsed.ok ? parsed.definition.subtitle : null,
+  };
 }
 
 /** A keyed hash of the caller's IP (rate limiting only; the IP itself is never stored). */

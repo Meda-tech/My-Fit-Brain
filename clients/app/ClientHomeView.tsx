@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, ClipboardList, Lock } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronRight, ClipboardList, Lock, ShoppingBag } from 'lucide-react';
 import { translations } from '../lib/i18n';
 import { useLanguage } from '../components/LanguageProvider';
 import { PageChrome } from '../components/PageChrome';
 import { BinduDot, Button, ButtonLink, Card, Pill } from '../components/brand';
 import type { AttemptSummary, PurchaseCard, TestCard } from '../lib/assessment/server';
 import { startPurchaseAction } from './assessment/actions';
+import { FeatureList } from '../components/AssessmentOffer';
 import { pick, type Text } from '@mfb/questionnaire';
 
 interface ClientHomeViewProps {
@@ -53,17 +54,22 @@ export function ClientHomeView({ firstName, tests, purchases, attempts }: Client
           <Card className="overflow-hidden">
             <ul className="divide-y divide-sand">
               {/* Paid, not started: Start creates the assessment and opens it. */}
-              {purchases.map((p) => (
+              {purchases.map((p, i) => (
                 <li key={p.id}>
                   <form action={startPurchaseAction} className="flex min-h-16 items-center gap-3 px-4 py-3">
                     <input type="hidden" name="paymentId" value={p.id} />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-ink">{local(p.name)}</p>
                       <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
-                        <Pill tone="quiet">{t.assess.statusReady}</Pill>
+                        <Pill>
+                          <CheckCircle2 size={13} strokeWidth={2} aria-hidden />
+                          {t.assess.statusPaid}
+                        </Pill>
+                        <span>{t.assess.paidOnDate.replace('{date}', formatDate(p.paidAt, lang))}</span>
                       </p>
                     </div>
-                    <Button type="submit" variant="secondary" size="sm" className="shrink-0">
+                    {/* The first paid assessment gets the one primary button on the screen. */}
+                    <Button type="submit" variant={i === 0 ? 'primary' : 'secondary'} size="sm" className="shrink-0">
                       {t.assess.start}
                     </Button>
                   </form>
@@ -112,24 +118,38 @@ export function ClientHomeView({ firstName, tests, purchases, attempts }: Client
         </section>
       )}
 
-      {/* Start an assessment */}
-      <section aria-labelledby="start-title">
-        <h2 id="start-title" className="mb-3 text-[20px] font-semibold text-teal">
-          {t.assess.startTitle}
+      {/* Buy an assessment (the price is shown only on the payment step). */}
+      <section aria-labelledby="buy-title">
+        <h2 id="buy-title" className="mb-3 flex items-center gap-2 text-[20px] font-semibold text-teal">
+          <ShoppingBag size={20} strokeWidth={2} aria-hidden />
+          <span>{t.assess.buyTitle}</span>
         </h2>
         <div className="space-y-4">
-          {tests.map((test) => (
-            <Card key={test.code} className="flex flex-col p-5">
-              <h3 className="text-[19px] font-semibold leading-snug text-ink">{local(test.name)}</h3>
-              <p lang="en" className="mt-1 text-[13px] text-ink-muted">
-                {t.brand.endorsement}
-              </p>
-              {test.subtitle && <p className="mt-3 text-[15px] leading-6 text-ink-soft">{local(test.subtitle)}</p>}
-              <ButtonLink href={`/pay/${test.code}`} variant="secondary" className="mt-4 self-start">
-                {t.assess.start}
-              </ButtonLink>
-            </Card>
-          ))}
+          {tests.map((test) => {
+            // Paid but not started: send them to Start instead of selling it again.
+            const owned = purchases.some((p) => p.code === test.code);
+            return (
+              <Card key={test.code} className="flex flex-col p-5">
+                <h3 className="text-[19px] font-semibold leading-snug text-ink">{local(test.name)}</h3>
+                <p lang="en" className="mt-1 text-[13px] text-ink-muted">
+                  {t.brand.endorsement}
+                </p>
+                {test.subtitle && <p className="mt-3 text-[15px] leading-6 text-ink-soft">{local(test.subtitle)}</p>}
+                <FeatureList className="mt-4" title={t.pay.featuresTitle} items={t.pay.features} />
+                {owned ? (
+                  <p className="mt-4 flex items-start gap-2 rounded-input bg-mist px-3 py-2.5 text-[14px] leading-5.5 text-teal">
+                    <CheckCircle2 size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
+                    <span>{t.assess.alreadyPaid}</span>
+                  </p>
+                ) : (
+                  <ButtonLink href={`/pay/${test.code}`} variant="secondary" className="mt-5 self-start">
+                    <span>{t.assess.buy}</span>
+                    <ArrowRight size={18} strokeWidth={2} aria-hidden />
+                  </ButtonLink>
+                )}
+              </Card>
+            );
+          })}
           {tests.length === 0 && <p className="text-[15px] text-ink-muted">{t.assess.none}</p>}
         </div>
       </section>

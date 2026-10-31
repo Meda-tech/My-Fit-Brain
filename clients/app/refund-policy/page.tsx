@@ -6,7 +6,7 @@ export default function RefundPolicyPage() {
       title="Refund & Cancellation Policy"
       intro={
         <p>
-          This policy applies to every purchase made on My Fit Brain, a unit of MeDa Partners Pvt Ltd. Please read
+          This policy applies to every purchase made on My Fit Brain, operated by MeDa Partners Pvt Ltd. Please read
           it before you pay.
         </p>
       }

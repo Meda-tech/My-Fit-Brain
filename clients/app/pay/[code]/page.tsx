@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { payQuestionnaire, paymentsConfigured, signedInBuyer } from '../../../lib/payments/server';
-import { formatPrice } from '../../../lib/payments/service';
+import { REGULAR_PRICE_PAISE, formatPrice } from '../../../lib/payments/service';
 import { PageChrome } from '../../../components/PageChrome';
 import { Footer } from '../../../components/brand';
 import { PayView } from './PayView';
@@ -27,7 +27,9 @@ export default async function PayPage({ params }: { params: Promise<{ code: stri
       <PayView
         code={questionnaire.code}
         name={questionnaire.name}
+        subtitle={questionnaire.subtitle}
         price={formatPrice()}
+        regularPrice={formatPrice(REGULAR_PRICE_PAISE)}
         enabled={paymentsConfigured()}
         signedInPhone={buyer?.phone ?? null}
         prefill={buyer ? { name: buyer.client.full_name } : null}

@@ -32,6 +32,7 @@ export interface TestCard {
 /** A paid purchase, claimed by the client, not started yet (Start creates the attempt). */
 export interface PurchaseCard {
   id: string;
+  code: string;
   name: Text;
   paidAt: string;
 }
@@ -98,6 +99,7 @@ export async function homeData(
     tests,
     purchases: ((ready ?? []) as { id: string; test_code: string; paid_at: string }[]).map((p) => ({
       id: p.id,
+      code: p.test_code,
       name: names.get(p.test_code)?.name ?? { en: p.test_code },
       paidAt: p.paid_at,
     })),

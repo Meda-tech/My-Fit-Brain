@@ -22,6 +22,9 @@ import type { PaymentRow, PaymentStore } from './store';
 export const ASSESSMENT_PRICE_PAISE = 350_000;
 export const CURRENCY = 'INR';
 
+/** Display only: the regular price shown struck through next to the price. Never charged. */
+export const REGULAR_PRICE_PAISE = 700_000;
+
 export function formatPrice(paise: number = ASSESSMENT_PRICE_PAISE): string {
   return `₹${(paise / 100).toLocaleString('en-IN')}`;
 }

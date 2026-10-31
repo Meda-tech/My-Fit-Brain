@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       intro={
         <p>
-          Your information stays private. This policy explains what My Fit Brain, a unit of {BUSINESS.legalName},
+          Your information stays private. This policy explains what My Fit Brain, operated by {BUSINESS.legalName},
           collects when you use My Fit Brain Assessments, why, and who can see it. It follows India&rsquo;s Digital
           Personal Data Protection Act, 2023.
         </p>

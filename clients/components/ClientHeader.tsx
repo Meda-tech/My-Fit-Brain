@@ -5,7 +5,6 @@ import { LogOut } from 'lucide-react';
 import { SupportedLanguage } from '../lib/types';
 import { translations } from '../lib/i18n';
 import { LanguageToggle } from './LanguageToggle';
-import { InstallAppButton } from './InstallAppButton';
 import { Logo, buttonClasses } from './brand';
 
 interface ClientHeaderProps {
@@ -30,7 +29,6 @@ export function ClientHeader({
         </Link>
 
         <div className="flex items-center gap-1">
-          <InstallAppButton lang={currentLang} />
           <LanguageToggle currentLang={currentLang} onLanguageChange={onLanguageChange} />
 
           {showSignOut && (

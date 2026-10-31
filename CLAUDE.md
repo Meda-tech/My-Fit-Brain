@@ -104,7 +104,15 @@ Never invent questions, values or report text. If something is not covered, stop
 - Any new questionnaire = one row in `questionnaires` (code, names, report prefix; Admin → Questionnaires →
   New questionnaire) plus its JSON versions. No code change.
 - Each costs ₹3,500 and includes the assessment and one consultation. No price anywhere except the payment
-  step and the client's own payment receipt (completed screen: amount paid, date, method, Razorpay ID).
+  step, the public /pricing page and the client's own payment receipt (completed screen: amount paid, date,
+  method, Razorpay ID). The payment step and /pricing show ₹3,500 next to the regular price ₹7,000 struck
+  through, with "Introductory price" (owner decision 2026-10-31; `REGULAR_PRICE_PAISE` is display only, never
+  charged). Keep it only while ₹7,000 is the real regular price.
+- "What you get" (payment step, Home cards, /pricing; `pay.features` in `clients/lib/i18n.ts`, EN + HI):
+  the assessment, one consultation, report review and guidance with your counsellor, personalised action
+  plan, follow-up support, educational resources and guidance. No "diagnostic" or "treatment" wording.
+- Home: paid, not started shows a "Paid" pill, the paid date and Start; a test the client already paid for
+  shows "already paid" instead of Buy now. No "Install app" button (the browser's own prompt still works).
 - Display line under each name: "Designed by Dr. Neha Mehta".
 - One person per assessment. A partner takes and pays for their own; reports are never linked.
 - The report is for the care team only. The client never sees it in the app; the counsellor downloads the
@@ -328,7 +336,9 @@ so copy the master file there before using a new combination.
 - Brand line: "Space to speak." — capital S, full stop. Never translated inside the logo.
 - Campaign lines allowed: "Talk to someone who understands." · "Understood, in your language."
 - Retired everywhere: "We Care For Your Emotions", "Science with a human touch".
-- Footer: "Space to speak. · My Fit Brain, a unit of MeDa Partners Pvt Ltd".
+- Footer (apps and the report PDF): "Space to speak. · My Fit Brain". No "a unit of MeDa Partners" in the UI or
+  the PDF (owner decision 2026-10-31). Only the policy pages (terms, privacy, refund, contact) name the company,
+  as "operated by MeDa Partners Pvt Ltd", because the payment gateway requires it.
 
 ---
 

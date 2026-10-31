@@ -10,6 +10,7 @@ import { maskPhoneNumber, normalizePhoneNumber, sanitizeIndianNationalPhone } fr
 import { LOGIN_PHONE_KEY } from '../../../lib/login-phone';
 import { pick, type Text } from '@mfb/questionnaire';
 import { Button, Card, Logo, Notice, inputGroupClasses, labelClasses } from '../../../components/brand';
+import { FeatureList, PriceTag } from '../../../components/AssessmentOffer';
 
 // Pay first, log in later. The server creates the order (/api/payments/order) and verifies the result
 // (/api/payments/verify); this screen only asks the phone number, opens the checkout and reports back.
@@ -56,14 +57,19 @@ type Status = 'idle' | 'busy' | 'failed' | 'pending' | 'error' | 'limited' | 'cl
 export function PayView({
   code,
   name,
+  subtitle,
   price,
+  regularPrice,
   enabled,
   signedInPhone,
   prefill,
 }: {
   code: string;
   name: Text;
+  subtitle: Text | null;
   price: string;
+  /** Shown struck through; never charged. */
+  regularPrice: string;
   enabled: boolean;
   /** A signed-in client always pays for their own verified number (E.164). */
   signedInPhone: string | null;
@@ -222,9 +228,16 @@ export function PayView({
       <p lang="en" className="mt-1 text-[13px] text-ink-muted">
         {t.brand.endorsement}
       </p>
-      {/* The only place a price appears (CLAUDE.md). */}
-      <p className="mt-4 font-heading text-[34px] font-semibold text-ink">{price}</p>
-      <p className="mt-2 text-[16px] leading-6.5 text-ink-soft">{t.assess.paymentIncludes}</p>
+      {subtitle && <p className="mt-4 text-[16px] leading-6.5 text-ink-soft">{pick(subtitle, lang)}</p>}
+      {/* The only place a price appears in the app (CLAUDE.md). */}
+      <PriceTag
+        className="mt-5"
+        price={price}
+        regular={regularPrice}
+        regularLabel={t.pay.regularPrice}
+        offerLabel={t.pay.offerPrice}
+      />
+      <FeatureList className="mt-6 border-t border-sand pt-5" title={t.pay.featuresTitle} items={t.pay.features} />
 
       {message && (
         <Notice
