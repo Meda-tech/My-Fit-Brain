@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ChevronRight, Database } from 'lucide-react';
 import { AI_PROMPT } from '@mfb/questionnaire';
 import { requireStaff } from '../../lib/auth';
+import { CLIENTS_URL } from '../../lib/site';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { Card, Notice, Pill } from '../../components/brand';
@@ -56,6 +57,14 @@ export default async function QuestionnairesPage() {
                     <p className="mt-0.5 text-[13px] text-ink-muted">Hindi name not set</p>
                   )}
                 </div>
+              </div>
+
+              {/* Public pay link: pay first, log in later. Neutral code, never the test name. */}
+              <div className="mt-4 flex flex-wrap items-center gap-2 rounded-input bg-mist px-3 py-2">
+                <span className="min-w-0 flex-1 break-all font-mono text-[13px] text-ink-soft">
+                  {CLIENTS_URL}/pay/{q.pay_code}
+                </span>
+                <CopyButton text={`${CLIENTS_URL}/pay/${q.pay_code}`} label="Copy pay link" variant="ghost" />
               </div>
 
               <dl className="mt-5 grid grid-cols-2 gap-4">

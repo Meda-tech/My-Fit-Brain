@@ -9,21 +9,24 @@ import { formatAmount } from '../../components/payments/format';
 import {
   PAGE_SIZE,
   PAYMENT_PERIODS,
-  PAYMENT_STATUSES,
+  PAYMENT_VIEWS,
   canViewPayments,
   listPayments,
   paymentSummary,
   type PaymentFilters,
   type PaymentPeriod,
-  type PaymentStatus,
+  type PaymentView,
 } from '../../lib/services/payments';
 import { Button, ButtonLink, Card, cn, inputClasses } from '../../components/brand';
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_LABELS: Record<PaymentStatus | 'all', string> = {
+const STATUS_LABELS: Record<PaymentView | 'all', string> = {
   all: 'All',
   paid: 'Paid',
+  not_started: 'Paid, not started',
+  refund_needed: 'Refund needed',
+  refunded: 'Refunded',
   created: 'Not completed',
   failed: 'Failed',
 };
@@ -52,7 +55,7 @@ export default async function PaymentsPage({
 
   const sp = await searchParams;
   const filters: PaymentFilters = {
-    status: (PAYMENT_STATUSES as string[]).includes(sp.status ?? '') ? (sp.status as PaymentStatus) : 'all',
+    status: (PAYMENT_VIEWS as string[]).includes(sp.status ?? '') ? (sp.status as PaymentView) : 'all',
     period: PAYMENT_PERIODS.some((p) => p.id === sp.period) ? (sp.period as PaymentPeriod) : 'all',
     q: (sp.q ?? '').slice(0, 80),
     page: Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1),
@@ -79,7 +82,7 @@ export default async function PaymentsPage({
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
-      <PageHeader title="Payments" description="Assessment payments received through Razorpay." />
+      <PageHeader title="Payments" description="Assessment purchases through Razorpay. A purchase belongs to the number it was paid for until someone logs in with it." />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <Metric
@@ -94,12 +97,17 @@ export default async function PaymentsPage({
           icon={<CircleCheck size={22} strokeWidth={2} aria-hidden />}
         />
         <Metric
-          label="Not completed"
-          value={String(summary.openCount)}
-          detail="Checkout opened, not paid"
+          label="Paid, not started"
+          value={String(summary.notStartedCount)}
+          detail={`${summary.openCount} checkouts not completed`}
           icon={<Clock size={22} strokeWidth={2} aria-hidden />}
         />
-        <Metric label="Failed" value={String(summary.failedCount)} icon={<CircleAlert size={22} strokeWidth={2} aria-hidden />} />
+        <Metric
+          label="Refund needed"
+          value={String(summary.refundNeededCount)}
+          detail={`${summary.failedCount} failed`}
+          icon={<CircleAlert size={22} strokeWidth={2} aria-hidden />}
+        />
       </div>
 
       {/* Filters */}
@@ -114,7 +122,7 @@ export default async function PaymentsPage({
               name="q"
               aria-label="Search payments"
               defaultValue={filters.q}
-              placeholder="Client name, mobile, email, report ID or Razorpay ID"
+              placeholder="Client name, paid-for mobile, email, report ID or Razorpay ID"
               className={`${inputClasses} pl-10`}
             />
           </div>
@@ -131,7 +139,7 @@ export default async function PaymentsPage({
         </form>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <nav aria-label="Status" className="flex flex-wrap gap-2">
-            {(['all', ...PAYMENT_STATUSES] as const).map((s) => (
+            {(['all', ...PAYMENT_VIEWS] as const).map((s) => (
               <Link key={s} href={href({ status: s, page: '1' })} aria-current={filters.status === s ? 'page' : undefined} className={chip(filters.status === s)}>
                 {STATUS_LABELS[s]}
               </Link>
@@ -160,7 +168,7 @@ export default async function PaymentsPage({
           <div className="p-10 text-center sm:p-12">
             <SearchX size={40} strokeWidth={2} className="mx-auto mb-2 text-teal" aria-hidden />
             <p className="text-[16px] font-medium text-ink">No payments match.</p>
-            <p className="mt-1 text-[14px] text-ink-muted">Payments appear here as soon as a client opens the checkout.</p>
+            <p className="mt-1 text-[14px] text-ink-muted">Payments appear here as soon as someone opens the checkout.</p>
           </div>
         ) : (
           <PaymentsTable rows={rows} initialSelected={sp.payment ?? null} />

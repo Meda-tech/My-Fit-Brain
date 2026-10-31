@@ -22,6 +22,8 @@ export interface QuestionnaireRow {
   name_en: string;
   name_hi: string | null;
   report_prefix: string;
+  /** Neutral code of the public pay link (clients app /pay/<pay_code>). */
+  pay_code: string;
   sort: number;
   /** The current client-details list (not versioned; edited at any time). */
   client_details: ClientDetail[];
@@ -61,7 +63,7 @@ export async function listQuestionnaires(): Promise<{ questionnaire: Questionnai
   await requireStaff();
   const supabase = await createClient();
   const [q, v] = await Promise.all([
-    supabase.from('questionnaires').select('code, name_en, name_hi, report_prefix, sort, client_details').order('sort'),
+    supabase.from('questionnaires').select('code, name_en, name_hi, report_prefix, pay_code, sort, client_details').order('sort'),
     supabase.from('questionnaire_versions').select(VERSION_COLUMNS).order('number', { ascending: false }),
   ]);
   if (q.error) {
