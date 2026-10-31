@@ -23,6 +23,9 @@ export interface QuestionnaireRow {
   name_hi: string | null;
   report_prefix: string;
   sort: number;
+  /** Off = nobody can buy it (pay link, Home); paid purchases and running assessments go on. */
+  is_active: boolean;
+  active_changed_at: string | null;
   /** The current client-details list (not versioned; edited at any time). */
   client_details: ClientDetail[];
 }
@@ -61,7 +64,7 @@ export async function listQuestionnaires(): Promise<{ questionnaire: Questionnai
   await requireStaff();
   const supabase = await createClient();
   const [q, v] = await Promise.all([
-    supabase.from('questionnaires').select('code, name_en, name_hi, report_prefix, sort, client_details').order('sort'),
+    supabase.from('questionnaires').select('code, name_en, name_hi, report_prefix, sort, is_active, active_changed_at, client_details').order('sort'),
     supabase.from('questionnaire_versions').select(VERSION_COLUMNS).order('number', { ascending: false }),
   ]);
   if (q.error) {
@@ -159,6 +162,17 @@ export async function saveClientDetails(code: string, list: unknown): Promise<{ 
   const { error } = await createAdminClient().from('questionnaires').update({ client_details: parsed.details }).eq('code', code);
   if (error) throw new Error(`Could not save the client details: ${error.message}`);
   return { ok: true };
+}
+
+/** Switches a questionnaire on or off for buying. Paid purchases and running assessments are not affected. */
+export async function setQuestionnaireActive(code: string, active: boolean): Promise<void> {
+  const { profile } = await requireStaff();
+  if (!canEditQuestionnaires(profile.role)) throw new Error('Only super admins and coordinators can switch an assessment on or off.');
+  const { error } = await createAdminClient()
+    .from('questionnaires')
+    .update({ is_active: active, active_changed_at: new Date().toISOString(), active_changed_by: profile.id })
+    .eq('code', code);
+  if (error) throw new Error(`Could not switch the assessment ${active ? 'on' : 'off'}: ${error.message}`);
 }
 
 export async function createQuestionnaire(input: { code: string; name_en: string; name_hi: string; report_prefix: string }): Promise<string | null> {

@@ -31,6 +31,7 @@ export default async function PayPage({ params }: { params: Promise<{ code: stri
         price={formatPrice()}
         regularPrice={formatPrice(REGULAR_PRICE_PAISE)}
         enabled={paymentsConfigured()}
+        paused={!questionnaire.active}
         signedInPhone={buyer?.phone ?? null}
         prefill={buyer ? { name: buyer.client.full_name } : null}
       />

@@ -47,6 +47,8 @@ export interface PayQuestionnaire {
   name: Text;
   /** From the live version's JSON. */
   subtitle: Text | null;
+  /** False while switched off in the admin: the page shows it, but nobody can buy it. */
+  active: boolean;
 }
 
 /** The questionnaire behind a pay link /pay/<code> (e.g. IA; any case), only while it has a live version. */
@@ -54,7 +56,7 @@ export async function payQuestionnaire(rawCode: string): Promise<PayQuestionnair
   const code = rawCode.toUpperCase();
   if (!/^[A-Z]{1,8}$/.test(code)) return null;
   const db = createAdminClient();
-  const { data, error } = await db.from('questionnaires').select('code, name_en, name_hi').eq('code', code).maybeSingle();
+  const { data, error } = await db.from('questionnaires').select('code, name_en, name_hi, is_active').eq('code', code).maybeSingle();
   if (error || !data) return null;
   const { data: live } = await db
     .from('questionnaire_versions')
@@ -68,6 +70,7 @@ export async function payQuestionnaire(rawCode: string): Promise<PayQuestionnair
     code: data.code,
     name: { en: data.name_en, hi: data.name_hi },
     subtitle: parsed.ok ? parsed.definition.subtitle : null,
+    active: data.is_active !== false,
   };
 }
 

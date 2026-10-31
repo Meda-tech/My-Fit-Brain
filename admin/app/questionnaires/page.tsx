@@ -7,6 +7,7 @@ import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { Card, Notice, Pill } from '../../components/brand';
 import { canEditQuestionnaires, formatDateTime, listQuestionnaires } from '../../lib/services/questionnaires';
+import { ActiveSwitch } from './ActiveSwitch';
 import { CopyButton } from './CopyButton';
 import { NewQuestionnaireForm } from './NewQuestionnaireForm';
 import { StatusPill } from './StatusPill';
@@ -59,8 +60,27 @@ export default async function QuestionnairesPage() {
                 </div>
               </div>
 
+              {/* On / Off for buying. */}
+              <div
+                className={`mt-4 flex flex-wrap items-center gap-3 rounded-input border px-3 py-2.5 ${q.is_active ? 'border-sand' : 'border-coral-deep bg-cream'}`}
+              >
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${q.is_active ? 'bg-teal' : 'bg-coral-deep'}`} aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold text-ink">{q.is_active ? 'On: clients can buy it' : 'Off: nobody can buy it'}</p>
+                  <p className="text-[13px] text-ink-muted">
+                    {q.is_active
+                      ? live
+                        ? 'The pay link and Home show it.'
+                        : 'Clients see it once a version is published.'
+                      : 'The pay link says it is not available. Paid clients can still start and finish it.'}
+                    {q.active_changed_at && ` Changed ${formatDateTime(q.active_changed_at)}.`}
+                  </p>
+                </div>
+                {canEdit && <ActiveSwitch code={q.code} name={q.name_en} active={q.is_active} />}
+              </div>
+
               {/* Public pay link: pay first, log in later (/pay/<code>). */}
-              <div className="mt-4 flex flex-wrap items-center gap-2 rounded-input bg-mist px-3 py-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-input bg-mist px-3 py-2">
                 <span className="min-w-0 flex-1 break-all font-mono text-[13px] text-ink-soft">
                   {CLIENTS_URL}/pay/{q.code}
                 </span>

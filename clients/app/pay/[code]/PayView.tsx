@@ -52,7 +52,7 @@ function brandTeal(): string {
   return getComputedStyle(document.documentElement).getPropertyValue('--color-teal').trim();
 }
 
-type Status = 'idle' | 'busy' | 'failed' | 'pending' | 'error' | 'limited' | 'closed';
+type Status = 'idle' | 'busy' | 'failed' | 'pending' | 'error' | 'limited' | 'closed' | 'paused';
 
 export function PayView({
   code,
@@ -61,6 +61,7 @@ export function PayView({
   price,
   regularPrice,
   enabled,
+  paused,
   signedInPhone,
   prefill,
 }: {
@@ -71,6 +72,8 @@ export function PayView({
   /** Shown struck through; never charged. */
   regularPrice: string;
   enabled: boolean;
+  /** Switched off in the admin: nobody can buy it right now. */
+  paused: boolean;
   /** A signed-in client always pays for their own verified number (E.164). */
   signedInPhone: string | null;
   prefill: { name: string } | null;
@@ -79,7 +82,7 @@ export function PayView({
   const { lang } = useLanguage();
   const t = translations[lang];
   const title = pick(name, lang);
-  const [status, setStatus] = useState<Status>(enabled ? 'idle' : 'closed');
+  const [status, setStatus] = useState<Status>(paused ? 'paused' : enabled ? 'idle' : 'closed');
   const [rawPhone, setRawPhone] = useState('');
   /** Masked number shown after a successful payment. */
   const [paidFor, setPaidFor] = useState<string | null>(null);
@@ -134,7 +137,9 @@ export function PayView({
         contact?: string;
       };
       if (!order.ok) {
-        setStatus(order.code === 'NOT_CONFIGURED' ? 'closed' : order.code === 'RATE_LIMITED' ? 'limited' : 'error');
+        setStatus(
+          order.code === 'NOT_CONFIGURED' ? 'closed' : order.code === 'PAUSED' ? 'paused' : order.code === 'RATE_LIMITED' ? 'limited' : 'error'
+        );
         return;
       }
       // Signed in and already holding this assessment: it is on Home.
@@ -214,7 +219,9 @@ export function PayView({
           ? { variant: 'error' as const, text: t.pay.error }
           : status === 'limited'
             ? { variant: 'error' as const, text: t.pay.limited }
-            : status === 'closed'
+            : status === 'paused'
+              ? { variant: 'info' as const, text: t.pay.paused }
+              : status === 'closed'
               ? { variant: 'info' as const, text: t.assess.paymentsClosed }
               : null;
 
@@ -262,7 +269,7 @@ export function PayView({
         </Button>
       )}
 
-      {status !== 'closed' && status !== 'pending' && (
+      {status !== 'closed' && status !== 'paused' && status !== 'pending' && (
         <form onSubmit={pay} className="mt-6">
           {signedInPhone ? (
             <p className="text-[15px] leading-6 text-ink-soft">

@@ -101,6 +101,10 @@ Never invent questions, values or report text. If something is not covered, stop
 
 - **MFB Intimacy Assessment** — code `IA`, report ID `MFB-IA-YYYY-NNNNN`
 - **MFB Mind Assessment** — code `MA`, report ID `MFB-MA-YYYY-NNNNN`
+- **On / Off** (Admin → Questionnaires, super admins and coordinators; `questionnaires.is_active`, migration
+  `20261031000002_questionnaire_active.sql`): Off = nobody can buy it (the pay link says "not available right
+  now", the order route refuses with PAUSED, Home hides it). Paid purchases can still be started and running
+  assessments finished.
 - Any new questionnaire = one row in `questionnaires` (code, names, report prefix; Admin → Questionnaires →
   New questionnaire) plus its JSON versions. No code change.
 - Each costs ₹3,500 and includes the assessment and one consultation. No price anywhere except the payment

@@ -12,6 +12,8 @@ export async function POST(request: NextRequest) {
   }
   const questionnaire = await payQuestionnaire(body.code);
   if (!questionnaire) return NextResponse.json({ ok: false, code: 'NOT_FOUND' }, { status: 404 });
+  // Switched off in the admin: no new purchases.
+  if (!questionnaire.active) return NextResponse.json({ ok: false, code: 'PAUSED' }, { status: 409 });
   const buyer = await signedInBuyer();
   try {
     const checkout = await createCheckout(paymentDeps(), {

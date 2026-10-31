@@ -51,12 +51,13 @@ interface QuestionnaireRow {
   name_en: string;
   name_hi: string | null;
   sort: number;
+  is_active: boolean;
 }
 
-async function questionnaires(): Promise<Map<string, { name: Text; sort: number }>> {
-  const { data, error } = await createAdminClient().from('questionnaires').select('code, name_en, name_hi, sort').order('sort');
+async function questionnaires(): Promise<Map<string, { name: Text; sort: number; active: boolean }>> {
+  const { data, error } = await createAdminClient().from('questionnaires').select('code, name_en, name_hi, sort, is_active').order('sort');
   if (error) throw new Error(`Could not read questionnaires: ${error.message}`);
-  return new Map(((data ?? []) as QuestionnaireRow[]).map((q) => [q.code, { name: { en: q.name_en, hi: q.name_hi }, sort: q.sort }]));
+  return new Map(((data ?? []) as QuestionnaireRow[]).map((q) => [q.code, { name: { en: q.name_en, hi: q.name_hi }, sort: q.sort, active: q.is_active !== false }]));
 }
 
 /** Live questionnaires (as cards), the client's purchases not started yet, and their own assessments. */
@@ -81,7 +82,9 @@ export async function homeData(
   if (error) throw new Error(`Could not read live versions: ${error.message}`);
   if (readyError) throw new Error(`Could not read purchases: ${readyError.message}`);
 
+  // Only questionnaires switched on in the admin can be bought.
   const tests = ((live ?? []) as { questionnaire_code: string; definition: unknown }[])
+    .filter((v) => names.get(v.questionnaire_code)?.active !== false)
     .map((v) => {
       const parsed = parseDefinition(v.definition);
       const info = names.get(v.questionnaire_code);
