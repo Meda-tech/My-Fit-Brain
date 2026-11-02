@@ -2,17 +2,15 @@ import { requireStaff } from '../../../lib/auth';
 import {
   PAYMENT_PERIODS,
   PAYMENT_LISTS,
-  STAGE_LABELS,
   canViewPayments,
   exportPayments,
-  paymentStage,
   type PaymentListRow,
   type PaymentPeriod,
   type PaymentList,
 } from '../../../lib/services/payments';
 import { buildXlsx, type XlsxCell } from '../../../lib/xlsx';
-import { assessmentLabel, paymentLabel } from '../../../components/payments/PaymentStatusPill';
-import { clientName, formatDateTime, methodLabel } from '../../../components/payments/format';
+import { paymentSummaryFields } from '../../../lib/payment-fields';
+import { formatDateTime, methodLabel } from '../../../components/payments/format';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,11 +19,12 @@ export const dynamic = 'force-dynamic';
 // the Export dialog. Super admins and coordinators only. Built on request; nothing is stored.
 
 const COLUMNS: { header: string; width: number; value: (p: PaymentListRow) => XlsxCell }[] = [
-  { header: 'Status', width: 22, value: (p) => STAGE_LABELS[paymentStage(p)] },
-  { header: 'Payment', width: 15, value: (p) => paymentLabel(p).label },
-  { header: 'Assessment', width: 15, value: (p) => assessmentLabel(p)?.label ?? '' },
-  { header: 'Name', width: 24, value: (p) => clientName(p) ?? 'Not logged in yet' },
-  { header: 'Mobile (paid for)', width: 17, value: (p) => p.phone },
+  // The first five are shared with the Google Sheets sync (lib/payment-fields.ts).
+  { header: 'Status', width: 22, value: (p) => paymentSummaryFields(p).status },
+  { header: 'Payment', width: 15, value: (p) => paymentSummaryFields(p).payment },
+  { header: 'Assessment', width: 15, value: (p) => paymentSummaryFields(p).assessment },
+  { header: 'Name', width: 24, value: (p) => paymentSummaryFields(p).name },
+  { header: 'Mobile (paid for)', width: 17, value: (p) => paymentSummaryFields(p).mobile },
   { header: 'Email', width: 28, value: (p) => (p.client ?? p.registered)?.email ?? '' },
   { header: 'Gender', width: 10, value: (p) => (p.client ?? p.registered)?.gender ?? '' },
   { header: 'Age', width: 6, value: (p) => (p.client ?? p.registered)?.age ?? p.age_stop?.age ?? null },

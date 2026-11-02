@@ -251,8 +251,11 @@ async function filteredQuery(supabase: Supabase, filters: Omit<PaymentFilters, '
   return { query: query.order('created_at', { ascending: false }) };
 }
 
-/** Adds the under-18 records, the registered client of unlinked numbers and the paid-later flag. */
-async function enrich(supabase: Supabase, raw: RawRow[]): Promise<PaymentListRow[]> {
+/**
+ * Adds the under-18 records, the registered client of unlinked numbers and the paid-later flag.
+ * `strict`: a failed lookup throws instead of leaving the extra details out (the Sheets sync).
+ */
+async function enrich(supabase: Supabase, raw: RawRow[], strict = false): Promise<PaymentListRow[]> {
   const unlinked = [...new Set(raw.filter((r) => !r.clients).map((r) => r.phone))];
   const unpaid = raw.filter((r) => r.status !== 'paid');
   const unpaidPhones = [...new Set(unpaid.map((r) => r.phone))];
@@ -265,6 +268,8 @@ async function enrich(supabase: Supabase, raw: RawRow[]): Promise<PaymentListRow
       ? supabase.from('clients').select('id, full_name, phone, email, gender, age, city, state').in('phone', phoneForms).not('auth_user_id', 'is', null)
       : null,
   ]);
+  const lookupError = stopsRes?.error ?? paidRes?.error ?? clientsRes?.error;
+  if (strict && lookupError) throw new Error(`Could not read payment details: ${lookupError.message}`);
   const ageStops = new Map<string, AgeStop>();
   for (const s of (stopsRes?.data ?? []) as AgeStop[]) ageStops.set(s.phone, s);
   const registered = new Map<string, PaymentClient>();
@@ -311,6 +316,90 @@ export async function exportPayments(filters: Omit<PaymentFilters, 'page'>): Pro
   const rows: PaymentListRow[] = [];
   for (let i = 0; i < raw.length; i += 200) rows.push(...(await enrich(supabase, raw.slice(i, i + 200))));
   return rows;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Google Sheets sync (/api/integrations/google-sheets/payments). No staff session: the route checks
+// its own token first and passes the service-role client. Read only.
+
+/** More rows than this and the sync is refused rather than cut short. */
+export const SYNC_LIMIT = 20_000;
+
+export class TooManyRowsError extends Error {}
+
+/** Every row a paged query returns, 1,000 at a time (the API's default row cap). */
+async function readAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < 1000) return out;
+    if (out.length > SYNC_LIMIT) throw new TooManyRowsError();
+  }
+}
+
+function chunks<T>(list: T[], size = 200): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Payments for the Sheets sync, newest first. Without a range: all of them. With a range (from
+ * inclusive, to exclusive; either end optional): every payment whose shown values may have changed in
+ * it, i.e. the payment row changed (payments.updated_at: created, paid, failed, logged in, refund,
+ * moved), its assessment changed (attempts.updated_at: started, consent, answers, completed), the
+ * client for its number changed (clients.updated_at: registered, name edited), or an under-18 stop
+ * was recorded for its number (age_stops.last_at).
+ */
+export async function readPaymentsForSync(db: Supabase, range: { from?: string; to?: string }): Promise<PaymentListRow[]> {
+  const inRange = <Q extends { gte: (c: string, v: string) => Q; lt: (c: string, v: string) => Q }>(q: Q, column: string): Q => {
+    let out = q;
+    if (range.from) out = out.gte(column, range.from);
+    if (range.to) out = out.lt(column, range.to);
+    return out;
+  };
+
+  let raw: RawRow[];
+  if (!range.from && !range.to) {
+    raw = await readAll<RawRow>((a, b) => db.from('payments').select(COLUMNS).order('created_at').order('id').range(a, b));
+  } else {
+    const [changed, attempts, clients, stops] = await Promise.all([
+      readAll<{ id: string }>((a, b) => inRange(db.from('payments').select('id'), 'updated_at').order('id').range(a, b)),
+      readAll<{ id: string }>((a, b) => inRange(db.from('attempts').select('id'), 'updated_at').order('id').range(a, b)),
+      readAll<{ id: string; phone: string }>((a, b) => inRange(db.from('clients').select('id, phone'), 'updated_at').order('id').range(a, b)),
+      readAll<{ phone: string }>((a, b) => inRange(db.from('age_stops').select('phone'), 'last_at').order('phone').range(a, b)),
+    ]);
+    const ids = new Set(changed.map((r) => r.id));
+    const byKey = async (column: string, values: string[]) => {
+      for (const part of chunks([...new Set(values)])) {
+        const rows = await readAll<{ id: string }>((a, b) => db.from('payments').select('id').in(column, part).order('id').range(a, b));
+        for (const r of rows) ids.add(r.id);
+        if (ids.size > SYNC_LIMIT) throw new TooManyRowsError();
+      }
+    };
+    await byKey('attempt_id', attempts.map((r) => r.id));
+    await byKey('client_id', clients.map((r) => r.id));
+    // Unlinked rows show the client registered with the number, or the under-18 record.
+    const phones = [...clients.map((r) => r.phone), ...stops.map((r) => r.phone)];
+    // Payment numbers are +91…; client numbers may be stored as +91…, 91… or the 10 digits.
+    await byKey('phone', phones.flatMap((p) => [p, `+91${p.slice(-10)}`]));
+    if (ids.size > SYNC_LIMIT) throw new TooManyRowsError();
+
+    raw = [];
+    for (const part of chunks([...ids])) {
+      const { data, error } = await db.from('payments').select(COLUMNS).in('id', part);
+      if (error) throw new Error(error.message);
+      raw.push(...((data ?? []) as unknown as RawRow[]));
+    }
+  }
+  if (raw.length > SYNC_LIMIT) throw new TooManyRowsError();
+
+  const rows: PaymentListRow[] = [];
+  for (const part of chunks(raw)) rows.push(...(await enrich(db, part, true)));
+  return rows.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
 }
 
 const AGE_STOP_COLUMNS = 'phone, full_name, age, first_at, last_at';

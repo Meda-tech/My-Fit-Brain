@@ -107,6 +107,13 @@ deploys). Never prefix a secret with `NEXT_PUBLIC_`: those are sent to the brows
 | `SUPABASE_SERVICE_ROLE_KEY` | same as above | **yes** |
 | `NEXT_PUBLIC_CLIENTS_URL` | `https://www.myfitbrain.app` | no |
 | `NEXT_PUBLIC_ADMIN_URL` | `https://admin.myfitbrain.app` | no |
+| `GOOGLE_SHEETS_SYNC_TOKEN` | exactly 64 characters: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | **yes** |
+
+`GOOGLE_SHEETS_SYNC_TOKEN` protects the Google Sheets feed
+`GET https://admin.myfitbrain.app/api/integrations/google-sheets/payments` (header
+`Authorization: Bearer <token>`; optional `?from=` inclusive and `?to=` exclusive, ISO 8601 with a time
+zone). It never expires: to change it, set a new value here, redeploy and update the Apps Script. Unset
+or not 64 characters → every request gets 401.
 
 After changing a variable, **redeploy** (Deployments → ⋯ → Redeploy): variables are read at build and
 start-up.

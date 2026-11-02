@@ -242,6 +242,12 @@ results with you"). The client never sees a report in the app.
   period, then downloads an .xlsx built on request (`/payments/export`, `admin/lib/xlsx.ts`, no library,
   nothing stored). A paid purchase that is not started can be moved to another number (logged in
   `payment_moves`) or marked refunded (after refunding in the Razorpay dashboard).
+- Google Sheets feed (read only): `GET /api/integrations/google-sheets/payments` in the admin app returns
+  status, payment, assessment, name, mobile per purchase, the same values as the Excel export (both use
+  `lib/payment-fields.ts`). `Authorization: Bearer` + `GOOGLE_SHEETS_SYNC_TOKEN` (64 characters, server env
+  only, checked timing-safe before any read; unset → 401 for all). Optional `from` (inclusive) / `to`
+  (exclusive), ISO 8601 with a zone: purchases whose payment, assessment or client (`updated_at`) or
+  under-18 record (`last_at`) changed in the window (`readPaymentsForSync`). Over 20,000 rows → 422.
 - Report IDs identify assessments; they are **not** GST invoice numbers (open: a gap-free invoice series per
   financial year, April–March, for paid payments only). Checkout name/description: "My Fit Brain" / "MFB
   Assessment" only. Keys: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-side
