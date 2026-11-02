@@ -7,7 +7,7 @@ import { Check, Copy, ExternalLink, X } from 'lucide-react';
 import { markRefundedAction, movePurchaseAction } from '../../app/payments/actions';
 import { Button, cn, inputClasses, labelClasses } from '../brand';
 import type { PaymentListRow } from '../../lib/services/payments';
-import { PaymentStatusPill, paymentState } from './PaymentStatusPill';
+import { AssessmentPill, PaymentPill } from './PaymentStatusPill';
 import { ATTEMPT_STATUS_LABELS, formatAmount, formatDateTime, methodLabel } from './format';
 
 // Side sheet with everything about one payment. Slides in from the right; Esc, the close button or
@@ -62,7 +62,8 @@ function SheetBody({
   onClose: () => void;
   closeRef: React.RefObject<HTMLButtonElement | null>;
 }) {
-  const location = [p.client?.city, p.client?.state].filter(Boolean).join(', ');
+  const client = p.client ?? p.registered;
+  const location = [client?.city, client?.state].filter(Boolean).join(', ');
   return (
     <>
       <header className="flex items-start justify-between gap-3 border-b border-sand px-5 py-4 sm:px-6">
@@ -72,7 +73,8 @@ function SheetBody({
             {formatAmount(p.amount_paise, p.currency)}
           </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
-            <PaymentStatusPill state={paymentState(p)} />
+            <PaymentPill payment={p} />
+            <AssessmentPill payment={p} />
             <span>{p.status === 'paid' ? formatDateTime(p.paid_at) : formatDateTime(p.created_at)}</span>
           </div>
         </div>
@@ -99,25 +101,30 @@ function SheetBody({
           <Row label="Paid for number">
             <span className="font-mono text-[13px]">{p.phone}</span>
           </Row>
-          <Row label="Linked to client">{p.claimed_at ? formatDateTime(p.claimed_at) : 'Not yet (logs in with this number)'}</Row>
+          <Row label="Logged in">{p.claimed_at ? formatDateTime(p.claimed_at) : 'Not yet (logs in with this number)'}</Row>
         </Section>
 
         <PurchaseActions payment={p} />
 
         <Section title="Client">
-          {p.client ? (
+          {client ? (
             <>
+              {!p.client && (
+                <p className="py-2.5 text-[14px] text-ink-muted">
+                  Registered with this number. Only paid purchases are linked to the account, so this one is not.
+                </p>
+              )}
               <Row label="Name">
-                <Link href={`/clients/${p.client.id}`} className="font-semibold text-teal hover:underline">
-                  {p.client.full_name}
+                <Link href={`/clients/${client.id}`} className="font-semibold text-teal hover:underline">
+                  {client.full_name}
                 </Link>
               </Row>
               <Row label="Mobile">
-                <span className="font-mono text-[13px]">{p.client.phone}</span>
+                <span className="font-mono text-[13px]">{client.phone}</span>
               </Row>
-              <Row label="Email">{p.client.email || '—'}</Row>
+              <Row label="Email">{client.email || '—'}</Row>
               <Row label="Gender · age">
-                {p.client.gender} · {p.client.age} years
+                {client.gender} · {client.age} years
               </Row>
               <Row label="Location">{location || '—'}</Row>
             </>
@@ -150,7 +157,9 @@ function SheetBody({
           ) : (
             <p className="text-[14px] text-ink-muted">
               {p.status !== 'paid'
-                ? 'No assessment: the payment was not completed.'
+                ? p.paid_later
+                  ? 'No assessment here: the payment was not made. This number paid for the same test later.'
+                  : 'No assessment: the payment was not made.'
                 : p.refund_status
                   ? 'No assessment: the purchase is marked for refund.'
                   : 'Not started yet. The assessment and its report ID are created when the client presses Start.'}

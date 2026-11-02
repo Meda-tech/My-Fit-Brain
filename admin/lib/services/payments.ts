@@ -19,9 +19,42 @@ export function canViewPayments(role: string): boolean {
 export type PaymentStatus = 'created' | 'paid' | 'failed';
 export type RefundStatus = 'needed' | 'refunded';
 
-/** The list filters: a payment status, or a purchase state. */
-export type PaymentView = 'paid' | 'not_started' | 'refund_needed' | 'refunded' | 'created' | 'failed';
-export const PAYMENT_VIEWS: PaymentView[] = ['paid', 'not_started', 'refund_needed', 'refunded', 'created', 'failed'];
+/**
+ * Where a purchase stands, in the words the calling team uses. One stage per row:
+ * paid but nobody logged in with the number yet → logged in but not started → in progress → completed;
+ * or the payment was never made; or the purchase is (to be) refunded.
+ */
+export type PaymentStage = 'not_logged_in' | 'not_started' | 'in_progress' | 'completed' | 'not_paid' | 'refund_needed' | 'refunded';
+export const PAYMENT_STAGES: PaymentStage[] = ['not_logged_in', 'not_started', 'in_progress', 'completed', 'not_paid', 'refund_needed', 'refunded'];
+
+/** The filters: every stage, plus "Paid" (all money received: paid and not refunded, any stage). */
+export type PaymentList = 'paid' | PaymentStage;
+export const PAYMENT_LISTS: PaymentList[] = ['paid', ...PAYMENT_STAGES];
+
+export const STAGE_LABELS: Record<PaymentList | 'all', string> = {
+  all: 'All',
+  paid: 'Paid',
+  not_logged_in: 'Paid, not logged in',
+  not_started: 'Logged in, not started',
+  in_progress: 'In progress',
+  completed: 'Completed',
+  not_paid: 'Payment not made',
+  refund_needed: 'Refund needed',
+  refunded: 'Refunded',
+};
+
+export function paymentStage(p: {
+  status: PaymentStatus;
+  refund_status: RefundStatus | null;
+  claimed_at: string | null;
+  attempt: { status: string } | null;
+}): PaymentStage {
+  if (p.status !== 'paid') return 'not_paid';
+  if (p.refund_status === 'needed') return 'refund_needed';
+  if (p.refund_status === 'refunded') return 'refunded';
+  if (p.attempt) return p.attempt.status === 'completed' ? 'completed' : 'in_progress';
+  return p.claimed_at ? 'not_started' : 'not_logged_in';
+}
 
 export interface PaymentClient {
   id: string;
@@ -67,6 +100,13 @@ export interface PaymentListRow {
   attempt: PaymentAttempt | null;
   /** Stopped at registration as under 18 with this number (minimal record), or null. */
   age_stop: AgeStop | null;
+  /** Payment not made, but the same number paid for the same test later (no need to call). */
+  paid_later: boolean;
+  /**
+   * The client registered with this number when the row itself is not linked to one (e.g. an unpaid
+   * try: only paid purchases are linked to the account).
+   */
+  registered: PaymentClient | null;
 }
 
 /** Minimal under-18 record: number, name typed, age entered, when. */
@@ -88,7 +128,7 @@ export const PAYMENT_PERIODS: { id: PaymentPeriod; label: string }[] = [
 ];
 
 export interface PaymentFilters {
-  status: PaymentView | 'all';
+  status: PaymentList | 'all';
   period: PaymentPeriod;
   q: string;
   page: number;
@@ -104,16 +144,18 @@ const COLUMNS = `
   attempts(id, report_id, status, consent_at, started_at, completed_at, questionnaire_versions(number))
 `;
 
-type RawRow = Omit<PaymentListRow, 'test_name' | 'client' | 'attempt' | 'age_stop'> & {
+type RawRow = Omit<PaymentListRow, 'test_name' | 'client' | 'attempt' | 'age_stop' | 'paid_later' | 'registered'> & {
   questionnaires: { name_en: string } | null;
   clients: PaymentClient | null;
   attempts: (Omit<PaymentAttempt, 'version_number'> & { questionnaire_versions: { number: number } | null }) | null;
 };
 
-function toRow(r: RawRow, ageStops: Map<string, AgeStop>): PaymentListRow {
+function toRow(r: RawRow, ageStops: Map<string, AgeStop>, paidLater: Set<string>, registered: Map<string, PaymentClient>): PaymentListRow {
   const { questionnaires, clients, attempts, ...rest } = r;
   return {
     ...rest,
+    paid_later: paidLater.has(r.id),
+    registered: clients ? null : (registered.get(r.phone.slice(-10)) ?? null),
     age_stop: clients ? null : (ageStops.get(r.phone) ?? null),
     test_name: questionnaires?.name_en ?? r.test_code,
     client: clients,
@@ -147,18 +189,40 @@ function clean(q: string): string {
   return q.replace(/[^\p{L}\p{N}@+._\- ]/gu, '').trim().slice(0, 80);
 }
 
-export async function listPayments(filters: PaymentFilters): Promise<{ rows: PaymentListRow[]; total: number }> {
-  const { profile } = await requireStaff();
-  if (!canViewPayments(profile.role)) return { rows: [], total: 0 };
-  const supabase = await createClient();
+type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-  let query = supabase.from('payments').select(COLUMNS, { count: 'exact' }).order('created_at', { ascending: false });
-  if (filters.status === 'not_started') {
-    query = query.eq('status', 'paid').is('attempt_id', null).is('refund_status', null);
-  } else if (filters.status === 'refund_needed' || filters.status === 'refunded') {
-    query = query.eq('refund_status', filters.status === 'refund_needed' ? 'needed' : 'refunded');
-  } else if (filters.status !== 'all') {
-    query = query.eq('status', filters.status);
+/** The payments query for a stage, period and search, newest first (no paging). */
+async function filteredQuery(supabase: Supabase, filters: Omit<PaymentFilters, 'page'>, count: boolean) {
+  // In progress / completed filter on the linked assessment, so that join must be an inner one.
+  const byAttempt = filters.status === 'in_progress' || filters.status === 'completed';
+  const columns = byAttempt ? COLUMNS.replace('attempts(', 'attempts!inner(') : COLUMNS;
+  let query = supabase.from('payments').select(columns, count ? { count: 'exact' } : undefined);
+
+  switch (filters.status) {
+    case 'paid':
+      // Same as the Received card: refunded money is not counted.
+      query = query.eq('status', 'paid').or('refund_status.is.null,refund_status.eq.needed');
+      break;
+    case 'not_logged_in':
+      query = query.eq('status', 'paid').is('refund_status', null).is('attempt_id', null).is('claimed_at', null);
+      break;
+    case 'not_started':
+      query = query.eq('status', 'paid').is('refund_status', null).is('attempt_id', null).not('claimed_at', 'is', null);
+      break;
+    case 'in_progress':
+      // An assessment with status "paid" exists once Start is pressed (consent still to give).
+      query = query.eq('status', 'paid').is('refund_status', null).in('attempts.status', ['paid', 'in_progress']);
+      break;
+    case 'completed':
+      query = query.eq('status', 'paid').is('refund_status', null).eq('attempts.status', 'completed');
+      break;
+    case 'not_paid':
+      query = query.in('status', ['created', 'failed']);
+      break;
+    case 'refund_needed':
+    case 'refunded':
+      query = query.eq('status', 'paid').eq('refund_status', filters.status === 'refund_needed' ? 'needed' : 'refunded');
+      break;
   }
   const since = periodStart(filters.period);
   if (since) query = query.gte('created_at', since);
@@ -183,21 +247,70 @@ export async function listPayments(filters: PaymentFilters): Promise<{ rows: Pay
     if (attemptIds.length) parts.push(`attempt_id.in.(${attemptIds.join(',')})`);
     query = query.or(parts.join(','));
   }
+  // Wrapped: a query builder is thenable, so returning it bare from an async function would run it.
+  return { query: query.order('created_at', { ascending: false }) };
+}
+
+/** Adds the under-18 records, the registered client of unlinked numbers and the paid-later flag. */
+async function enrich(supabase: Supabase, raw: RawRow[]): Promise<PaymentListRow[]> {
+  const unlinked = [...new Set(raw.filter((r) => !r.clients).map((r) => r.phone))];
+  const unpaid = raw.filter((r) => r.status !== 'paid');
+  const unpaidPhones = [...new Set(unpaid.map((r) => r.phone))];
+  // Client phones are stored as +91…; older rows may hold 91… or the 10 digits.
+  const phoneForms = unlinked.flatMap((p) => [p, p.replace(/^\+/, ''), p.slice(-10)]);
+  const [stopsRes, paidRes, clientsRes] = await Promise.all([
+    unlinked.length ? supabase.from('age_stops').select(AGE_STOP_COLUMNS).in('phone', unlinked) : null,
+    unpaidPhones.length ? supabase.from('payments').select('phone, test_code, created_at').eq('status', 'paid').in('phone', unpaidPhones) : null,
+    unlinked.length
+      ? supabase.from('clients').select('id, full_name, phone, email, gender, age, city, state').in('phone', phoneForms).not('auth_user_id', 'is', null)
+      : null,
+  ]);
+  const ageStops = new Map<string, AgeStop>();
+  for (const s of (stopsRes?.data ?? []) as AgeStop[]) ageStops.set(s.phone, s);
+  const registered = new Map<string, PaymentClient>();
+  for (const c of (clientsRes?.data ?? []) as PaymentClient[]) registered.set(c.phone.slice(-10), c);
+  const paid = (paidRes?.data ?? []) as { phone: string; test_code: string; created_at: string }[];
+  const paidLater = new Set(
+    unpaid
+      .filter((r) => paid.some((p) => p.phone === r.phone && p.test_code === r.test_code && p.created_at > r.created_at))
+      .map((r) => r.id)
+  );
+  return raw.map((r) => toRow(r, ageStops, paidLater, registered));
+}
+
+export async function listPayments(filters: PaymentFilters): Promise<{ rows: PaymentListRow[]; total: number }> {
+  const { profile } = await requireStaff();
+  if (!canViewPayments(profile.role)) return { rows: [], total: 0 };
+  const supabase = await createClient();
 
   const from = (filters.page - 1) * PAGE_SIZE;
-  const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1);
+  const { data, error, count } = await (await filteredQuery(supabase, filters, true)).query.range(from, from + PAGE_SIZE - 1);
   if (error) {
     if (error.code === '42P01') return { rows: [], total: 0 }; // migration not applied yet
     throw new Error(`Could not read payments: ${error.message}`);
   }
-  const raw = (data ?? []) as unknown as RawRow[];
-  const unlinked = [...new Set(raw.filter((r) => !r.clients).map((r) => r.phone))];
-  const ageStops = new Map<string, AgeStop>();
-  if (unlinked.length) {
-    const { data: stops } = await supabase.from('age_stops').select(AGE_STOP_COLUMNS).in('phone', unlinked);
-    for (const s of (stops ?? []) as AgeStop[]) ageStops.set(s.phone, s);
+  return { rows: await enrich(supabase, (data ?? []) as unknown as RawRow[]), total: count ?? 0 };
+}
+
+export const EXPORT_LIMIT = 10_000;
+
+/** Every payment matching the filters, for the Excel export: newest first, read 1,000 at a time. */
+export async function exportPayments(filters: Omit<PaymentFilters, 'page'>): Promise<PaymentListRow[]> {
+  const { profile } = await requireStaff();
+  if (!canViewPayments(profile.role)) return [];
+  const supabase = await createClient();
+
+  const raw: RawRow[] = [];
+  for (let from = 0; from < EXPORT_LIMIT; from += 1000) {
+    const { data, error } = await (await filteredQuery(supabase, filters, false)).query.range(from, from + 999);
+    if (error) throw new Error(`Could not read payments: ${error.message}`);
+    raw.push(...((data ?? []) as unknown as RawRow[]));
+    if (!data || data.length < 1000) break;
   }
-  return { rows: raw.map((r) => toRow(r, ageStops)), total: count ?? 0 };
+  // In chunks, so the phone lists stay short in the request URL.
+  const rows: PaymentListRow[] = [];
+  for (let i = 0; i < raw.length; i += 200) rows.push(...(await enrich(supabase, raw.slice(i, i + 200))));
+  return rows;
 }
 
 const AGE_STOP_COLUMNS = 'phone, full_name, age, first_at, last_at';
@@ -241,33 +354,35 @@ export interface PaymentSummary {
   receivedPaise: number;
   receivedThisMonthPaise: number;
   paidCount: number;
-  failedCount: number;
-  openCount: number;
-  notStartedCount: number;
-  refundNeededCount: number;
+  /** Payments per stage (all time). */
+  stages: Record<PaymentStage, number>;
 }
 
-/** Totals for the summary cards (all payments, independent of the table filters). */
+/** Totals for the summary cards and the stage counts (all payments, independent of the table filters). */
 export async function paymentSummary(): Promise<PaymentSummary> {
-  const empty = { receivedPaise: 0, receivedThisMonthPaise: 0, paidCount: 0, failedCount: 0, openCount: 0, notStartedCount: 0, refundNeededCount: 0 };
+  const stages = Object.fromEntries(PAYMENT_STAGES.map((s) => [s, 0])) as Record<PaymentStage, number>;
+  const empty: PaymentSummary = { receivedPaise: 0, receivedThisMonthPaise: 0, paidCount: 0, stages };
   const { profile } = await requireStaff();
   if (!canViewPayments(profile.role)) return empty;
   const supabase = await createClient();
-  const { data, error } = await supabase.from('payments').select('status, refund_status, attempt_id, amount_paise, paid_at');
+  const { data, error } = await supabase.from('payments').select('status, refund_status, claimed_at, amount_paise, paid_at, attempts(status)');
   if (error) return empty;
   const monthStart = periodStart('month')!;
-  type Row = { status: PaymentStatus; refund_status: RefundStatus | null; attempt_id: string | null; amount_paise: number; paid_at: string | null };
-  return (data as Row[]).reduce((s, p) => {
-    if (p.status === 'paid' && p.refund_status === 'needed') s.refundNeededCount += 1;
-    else if (p.status === 'paid' && !p.refund_status && !p.attempt_id) s.notStartedCount += 1;
+  type Row = {
+    status: PaymentStatus;
+    refund_status: RefundStatus | null;
+    claimed_at: string | null;
+    amount_paise: number;
+    paid_at: string | null;
+    attempts: { status: string } | null;
+  };
+  return (data as unknown as Row[]).reduce((s, p) => {
+    s.stages[paymentStage({ ...p, attempt: p.attempts })] += 1;
     // Refunded money is not counted as received.
-    if (p.status === 'paid' && p.refund_status === 'refunded') return s;
-    if (p.status === 'paid') {
-      s.paidCount += 1;
-      s.receivedPaise += p.amount_paise;
-      if (p.paid_at && p.paid_at >= monthStart) s.receivedThisMonthPaise += p.amount_paise;
-    } else if (p.status === 'failed') s.failedCount += 1;
-    else s.openCount += 1;
+    if (p.status !== 'paid' || p.refund_status === 'refunded') return s;
+    s.paidCount += 1;
+    s.receivedPaise += p.amount_paise;
+    if (p.paid_at && p.paid_at >= monthStart) s.receivedThisMonthPaise += p.amount_paise;
     return s;
   }, empty);
 }

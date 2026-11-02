@@ -1,39 +1,31 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CircleAlert, CircleCheck, Clock, IndianRupee, Search, SearchX } from 'lucide-react';
+import { CircleAlert, IndianRupee, PhoneCall, Search, SearchX, ShoppingCart } from 'lucide-react';
 import { requireStaff } from '../../lib/auth';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { PaymentsTable } from '../../components/payments/PaymentsTable';
+import { ExportDialog } from '../../components/payments/ExportDialog';
 import { formatAmount } from '../../components/payments/format';
 import {
   PAGE_SIZE,
   PAYMENT_PERIODS,
-  PAYMENT_VIEWS,
+  PAYMENT_LISTS,
+  STAGE_LABELS,
   canViewPayments,
   listPayments,
   paymentSummary,
   type PaymentFilters,
   type PaymentPeriod,
-  type PaymentView,
+  type PaymentList,
 } from '../../lib/services/payments';
 import { Button, ButtonLink, Card, cn, inputClasses } from '../../components/brand';
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_LABELS: Record<PaymentView | 'all', string> = {
-  all: 'All',
-  paid: 'Paid',
-  not_started: 'Paid, not started',
-  refund_needed: 'Refund needed',
-  refunded: 'Refunded',
-  created: 'Not completed',
-  failed: 'Failed',
-};
-
-function Metric({ label, value, detail, icon }: { label: string; value: string; detail?: string; icon: React.ReactNode }) {
-  return (
-    <Card className="flex items-center gap-4 p-4 sm:p-5">
+function Metric({ label, value, detail, icon, href }: { label: string; value: string; detail?: string; icon: React.ReactNode; href?: string }) {
+  const card = (
+    <Card className={cn('flex h-full items-center gap-4 p-4 sm:p-5', href && 'transition-colors hover:border-teal')}>
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-mist text-teal sm:h-12 sm:w-12">{icon}</div>
       <div className="min-w-0">
         <p className="text-[14px] font-medium text-ink-muted">{label}</p>
@@ -41,6 +33,13 @@ function Metric({ label, value, detail, icon }: { label: string; value: string; 
         {detail && <p className="mt-0.5 text-[13px] text-ink-muted">{detail}</p>}
       </div>
     </Card>
+  );
+  return href ? (
+    <Link href={href} className="block rounded-card">
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }
 
@@ -55,7 +54,7 @@ export default async function PaymentsPage({
 
   const sp = await searchParams;
   const filters: PaymentFilters = {
-    status: (PAYMENT_VIEWS as string[]).includes(sp.status ?? '') ? (sp.status as PaymentView) : 'all',
+    status: (PAYMENT_LISTS as string[]).includes(sp.status ?? '') ? (sp.status as PaymentList) : 'all',
     period: PAYMENT_PERIODS.some((p) => p.id === sp.period) ? (sp.period as PaymentPeriod) : 'all',
     q: (sp.q ?? '').slice(0, 80),
     page: Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1),
@@ -82,33 +81,67 @@ export default async function PaymentsPage({
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
-      <PageHeader title="Payments" description="Assessment purchases through Razorpay. A purchase belongs to the number it was paid for until someone logs in with it." />
+      <PageHeader
+        title="Payments"
+        description="Assessment purchases through Razorpay. A purchase belongs to the number it was paid for until someone logs in with it."
+        actions={
+          <ExportDialog
+            stages={(['all', ...PAYMENT_LISTS] as const).map((s) => ({
+              id: s,
+              label: STAGE_LABELS[s],
+              count: s === 'all' ? Object.values(summary.stages).reduce((a, b) => a + b, 0) : s === 'paid' ? summary.paidCount : summary.stages[s],
+            }))}
+            periods={PAYMENT_PERIODS}
+            initialStatus={filters.status}
+            initialPeriod={filters.period}
+          />
+        }
+      />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <Metric
           label="Received"
           value={formatAmount(summary.receivedPaise)}
-          detail={`${summary.paidCount} paid ${summary.paidCount === 1 ? 'payment' : 'payments'}`}
+          detail={`${summary.paidCount} paid · ${formatAmount(summary.receivedThisMonthPaise)} this month`}
           icon={<IndianRupee size={22} strokeWidth={2} aria-hidden />}
         />
         <Metric
-          label="This month"
-          value={formatAmount(summary.receivedThisMonthPaise)}
-          icon={<CircleCheck size={22} strokeWidth={2} aria-hidden />}
+          label="Paid, not logged in"
+          value={String(summary.stages.not_logged_in)}
+          detail="Call: log in with the number they paid from"
+          href={href({ status: 'not_logged_in', page: '1' })}
+          icon={<PhoneCall size={22} strokeWidth={2} aria-hidden />}
         />
         <Metric
-          label="Paid, not started"
-          value={String(summary.notStartedCount)}
-          detail={`${summary.openCount} checkouts not completed`}
-          icon={<Clock size={22} strokeWidth={2} aria-hidden />}
+          label="Logged in, not started"
+          value={String(summary.stages.not_started)}
+          detail="Call: press Start on Home"
+          href={href({ status: 'not_started', page: '1' })}
+          icon={<PhoneCall size={22} strokeWidth={2} aria-hidden />}
         />
         <Metric
-          label="Refund needed"
-          value={String(summary.refundNeededCount)}
-          detail={`${summary.failedCount} failed`}
-          icon={<CircleAlert size={22} strokeWidth={2} aria-hidden />}
+          label="Payment not made"
+          value={String(summary.stages.not_paid)}
+          detail="Tried to pay, did not finish"
+          href={href({ status: 'not_paid', page: '1' })}
+          icon={<ShoppingCart size={22} strokeWidth={2} aria-hidden />}
         />
       </div>
+
+      {summary.stages.refund_needed > 0 && (
+        <Link
+          href={href({ status: 'refund_needed', page: '1' })}
+          className="mb-6 flex min-h-11 items-center gap-3 rounded-card border border-sand bg-cream p-4 text-[14px] text-ink-soft hover:border-teal"
+        >
+          <CircleAlert size={20} strokeWidth={2} className="shrink-0 text-coral-deep" aria-hidden />
+          <span>
+            <span className="font-semibold text-coral-deep">
+              {summary.stages.refund_needed} {summary.stages.refund_needed === 1 ? 'refund' : 'refunds'} needed.
+            </span>{' '}
+            Refund in the Razorpay dashboard, then mark it refunded here.
+          </span>
+        </Link>
+      )}
 
       {/* Filters */}
       <Card className="mb-6 space-y-4 p-4">
@@ -139,9 +172,10 @@ export default async function PaymentsPage({
         </form>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <nav aria-label="Status" className="flex flex-wrap gap-2">
-            {(['all', ...PAYMENT_VIEWS] as const).map((s) => (
+            {(['all', ...PAYMENT_LISTS] as const).map((s) => (
               <Link key={s} href={href({ status: s, page: '1' })} aria-current={filters.status === s ? 'page' : undefined} className={chip(filters.status === s)}>
-                {STATUS_LABELS[s]}
+                {STAGE_LABELS[s]}
+                {s !== 'all' && <span className="ml-1.5 text-[13px] font-normal text-ink-muted">{s === 'paid' ? summary.paidCount : summary.stages[s]}</span>}
               </Link>
             ))}
           </nav>

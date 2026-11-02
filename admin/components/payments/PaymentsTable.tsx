@@ -4,8 +4,8 @@ import { useCallback, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import type { PaymentListRow } from '../../lib/services/payments';
 import { PaymentSheet } from './PaymentSheet';
-import { PaymentStatusPill, paymentState } from './PaymentStatusPill';
-import { formatAmount, formatDate, formatTime, methodLabel } from './format';
+import { AssessmentPill, PaymentPill, assessmentLabel, paymentLabel } from './PaymentStatusPill';
+import { clientName, formatAmount, formatDate, formatTime, methodLabel } from './format';
 
 // Payments as table rows (stacked cards on narrow screens). A row opens the side sheet; the open
 // payment is kept in the URL (?payment=) so the view can be shared or reloaded.
@@ -39,7 +39,13 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
   const rowProps = (p: PaymentListRow) => ({
     tabIndex: 0,
     role: 'button' as const,
-    'aria-label': `Payment ${formatAmount(p.amount_paise, p.currency)} from ${p.client?.full_name ?? p.age_stop?.full_name ?? p.phone}, ${paymentState(p)}`,
+    'aria-label': [
+      `Payment ${formatAmount(p.amount_paise, p.currency)} from ${clientName(p) ?? p.phone}`,
+      paymentLabel(p).label,
+      assessmentLabel(p)?.label,
+    ]
+      .filter(Boolean)
+      .join(', '),
     onClick: (e: React.MouseEvent<HTMLElement>) => open(p.id, e.currentTarget),
     onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -64,7 +70,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <p className="truncate font-semibold text-ink">
-                  {p.client?.full_name ?? (p.age_stop ? `Under 18 · ${p.age_stop.full_name ?? p.phone}` : p.phone)}
+                  {clientName(p) ?? p.phone}
                 </p>
                 <p className="shrink-0 font-heading font-semibold text-ink">{formatAmount(p.amount_paise, p.currency)}</p>
               </div>
@@ -73,7 +79,8 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                 {p.attempt?.report_id ? ` · ${p.attempt.report_id}` : ''}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
-                <PaymentStatusPill state={paymentState(p)} />
+                <PaymentPill payment={p} />
+                <AssessmentPill payment={p} />
                 <span>
                   {formatDate(when(p))}, {formatTime(when(p))}
                 </span>
@@ -93,7 +100,8 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
               <th className="whitespace-nowrap px-5 py-3 font-semibold">Client</th>
               <th className="whitespace-nowrap px-5 py-3 font-semibold">Assessment</th>
               <th className="whitespace-nowrap px-5 py-3 text-right font-semibold">Amount</th>
-              <th className="whitespace-nowrap px-5 py-3 font-semibold">Status</th>
+              <th className="whitespace-nowrap px-5 py-3 font-semibold">Payment</th>
+              <th className="whitespace-nowrap px-5 py-3 font-semibold">Assessment</th>
               <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[60rem]:table-cell">Method</th>
               <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[70rem]:table-cell">Razorpay ID</th>
               <th className="px-3 py-3">
@@ -115,7 +123,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                 </td>
                 <td className="px-5 py-3.5">
                   <p className="font-semibold text-ink">
-                    {p.client?.full_name ?? (p.age_stop ? `Under 18 · ${p.age_stop.full_name ?? 'no name'}` : 'Not logged in yet')}
+                    {clientName(p) ?? 'Not logged in yet'}
                   </p>
                   <p className="font-mono text-[12px] text-ink-muted">{p.phone}</p>
                 </td>
@@ -127,7 +135,10 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                   {formatAmount(p.amount_paise, p.currency)}
                 </td>
                 <td className="px-5 py-3.5">
-                  <PaymentStatusPill state={paymentState(p)} />
+                  <PaymentPill payment={p} />
+                </td>
+                <td className="px-5 py-3.5">
+                  <AssessmentPill payment={p} />
                 </td>
                 <td className="hidden whitespace-nowrap px-5 py-3.5 text-ink-soft @[60rem]:table-cell">{methodLabel(p.method)}</td>
                 <td className="hidden whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-muted @[70rem]:table-cell">

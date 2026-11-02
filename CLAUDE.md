@@ -232,9 +232,16 @@ results with you"). The client never sees a report in the app.
   transaction, so report IDs have no gaps even on a double tap). Never call `next_report_id()` separately
   from the insert.
 - Admin → Payments (`/payments`): super admins and coordinators only (nav, page guard and RLS
-  `can_view_payments()`); counsellors never see payments. Filters include Paid, not started and Refund
-  needed; a paid purchase that is not started can be moved to another number (logged in `payment_moves`) or
-  marked refunded (after refunding in the Razorpay dashboard).
+  `can_view_payments()`); counsellors never see payments. Each row shows two pills, Payment (Paid / Not
+  paid / Payment failed / Refund needed / Refunded) and Assessment (Not logged in / Not started / In progress
+  / Completed). The filters: Paid (all money received, not refunded; matches the Received card), then calling
+  lists, one stage per purchase (`paymentStage`): Paid, not logged in · Logged in, not started · In progress
+  · Completed · Payment not made ("Paid on a later try" when the number paid for the same test afterwards) ·
+  Refund needed · Refunded. Rows not linked to a client show the name of the client registered with that
+  number, if any. **Export to Excel** asks which list and
+  period, then downloads an .xlsx built on request (`/payments/export`, `admin/lib/xlsx.ts`, no library,
+  nothing stored). A paid purchase that is not started can be moved to another number (logged in
+  `payment_moves`) or marked refunded (after refunding in the Razorpay dashboard).
 - Report IDs identify assessments; they are **not** GST invoice numbers (open: a gap-free invoice series per
   financial year, April–March, for paid payments only). Checkout name/description: "My Fit Brain" / "MFB
   Assessment" only. Keys: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-side

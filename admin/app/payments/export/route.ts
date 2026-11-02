@@ -1,0 +1,81 @@
+import { requireStaff } from '../../../lib/auth';
+import {
+  PAYMENT_PERIODS,
+  PAYMENT_LISTS,
+  STAGE_LABELS,
+  canViewPayments,
+  exportPayments,
+  paymentStage,
+  type PaymentListRow,
+  type PaymentPeriod,
+  type PaymentList,
+} from '../../../lib/services/payments';
+import { buildXlsx, type XlsxCell } from '../../../lib/xlsx';
+import { assessmentLabel, paymentLabel } from '../../../components/payments/PaymentStatusPill';
+import { clientName, formatDateTime, methodLabel } from '../../../components/payments/format';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// The Payments list as an Excel file for the calling team: one stage (or all) and a period, chosen in
+// the Export dialog. Super admins and coordinators only. Built on request; nothing is stored.
+
+const COLUMNS: { header: string; width: number; value: (p: PaymentListRow) => XlsxCell }[] = [
+  { header: 'Status', width: 22, value: (p) => STAGE_LABELS[paymentStage(p)] },
+  { header: 'Payment', width: 15, value: (p) => paymentLabel(p).label },
+  { header: 'Assessment', width: 15, value: (p) => assessmentLabel(p)?.label ?? '' },
+  { header: 'Name', width: 24, value: (p) => clientName(p) ?? 'Not logged in yet' },
+  { header: 'Mobile (paid for)', width: 17, value: (p) => p.phone },
+  { header: 'Email', width: 28, value: (p) => (p.client ?? p.registered)?.email ?? '' },
+  { header: 'Gender', width: 10, value: (p) => (p.client ?? p.registered)?.gender ?? '' },
+  { header: 'Age', width: 6, value: (p) => (p.client ?? p.registered)?.age ?? p.age_stop?.age ?? null },
+  { header: 'City', width: 14, value: (p) => (p.client ?? p.registered)?.city ?? '' },
+  { header: 'State', width: 14, value: (p) => (p.client ?? p.registered)?.state ?? '' },
+  { header: 'Assessment name', width: 26, value: (p) => p.test_name },
+  { header: 'Report ID', width: 18, value: (p) => p.attempt?.report_id ?? '' },
+  { header: 'Amount (₹)', width: 11, value: (p) => p.amount_paise / 100 },
+  { header: 'Method', width: 11, value: (p) => (p.method ? methodLabel(p.method) : '') },
+  { header: 'Checkout opened', width: 20, value: (p) => formatDateTime(p.created_at) },
+  { header: 'Paid at', width: 20, value: (p) => (p.paid_at ? formatDateTime(p.paid_at) : '') },
+  { header: 'Logged in at', width: 20, value: (p) => (p.claimed_at ? formatDateTime(p.claimed_at) : '') },
+  { header: 'Assessment started', width: 20, value: (p) => (p.attempt?.started_at ? formatDateTime(p.attempt.started_at) : '') },
+  { header: 'Assessment completed', width: 20, value: (p) => (p.attempt?.completed_at ? formatDateTime(p.attempt.completed_at) : '') },
+  { header: 'Paid later', width: 10, value: (p) => (p.paid_later ? 'Yes' : '') },
+  { header: 'Why the payment failed', width: 30, value: (p) => p.failure_reason ?? '' },
+  { header: 'Razorpay payment ID', width: 22, value: (p) => p.provider_payment_id ?? '' },
+  { header: 'Razorpay order ID', width: 24, value: (p) => p.provider_order_id },
+];
+
+export async function GET(request: Request) {
+  const { profile } = await requireStaff();
+  if (!canViewPayments(profile.role)) return new Response('Not allowed', { status: 403 });
+
+  const sp = new URL(request.url).searchParams;
+  const status = (PAYMENT_LISTS as string[]).includes(sp.get('status') ?? '') ? (sp.get('status') as PaymentList) : 'all';
+  const period = PAYMENT_PERIODS.some((p) => p.id === sp.get('period')) ? (sp.get('period') as PaymentPeriod) : 'all';
+
+  let rows: PaymentListRow[];
+  try {
+    rows = await exportPayments({ status, period, q: '' });
+  } catch (err) {
+    console.error('Payments export failed:', err);
+    return new Response('The export could not be prepared.', { status: 500 });
+  }
+
+  const file = buildXlsx({
+    name: 'Payments',
+    columns: COLUMNS.map(({ header, width }) => ({ header, width })),
+    rows: rows.map((p) => COLUMNS.map((c) => c.value(p))),
+  });
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const name = `payments-${status.replace(/_/g, '-')}-${period}-${today}.xlsx`;
+
+  return new Response(new Uint8Array(file), {
+    headers: {
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${name}"`,
+      'Cache-Control': 'private, no-store',
+      'X-Robots-Tag': 'noindex',
+    },
+  });
+}

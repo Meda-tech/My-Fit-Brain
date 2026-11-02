@@ -1,4 +1,5 @@
 // Shared display helpers for the Payments page (client and server components).
+import type { PaymentListRow } from '../../lib/services/payments';
 
 export { formatAmount } from './amount';
 
@@ -33,7 +34,15 @@ export function methodLabel(method: string | null): string {
 }
 
 export const ATTEMPT_STATUS_LABELS: Record<string, string> = {
-  paid: 'Paid, not started',
+  paid: 'Started, consent not given yet',
   in_progress: 'In progress',
   completed: 'Completed',
 };
+
+/** Who the purchase is for: the linked client, else the client registered with the number, else the under-18 record. */
+export function clientName(p: Pick<PaymentListRow, 'client' | 'registered' | 'age_stop'>): string | null {
+  const c = p.client ?? p.registered;
+  if (c) return c.full_name;
+  if (p.age_stop) return `Under 18 · ${p.age_stop.full_name ?? 'no name'}`;
+  return null;
+}
