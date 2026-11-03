@@ -11,13 +11,16 @@ import {
   PAGE_SIZE,
   PAYMENT_PERIODS,
   PAYMENT_LISTS,
+  PAYMENT_METHOD_FILTERS,
   STAGE_LABELS,
+  cleanDate,
   canViewPayments,
   listPayments,
   paymentSummary,
   type PaymentFilters,
   type PaymentPeriod,
   type PaymentList,
+  type PaymentMethodFilter,
 } from '../../lib/services/payments';
 import { Button, ButtonLink, Card, cn, inputClasses } from '../../components/brand';
 
@@ -46,7 +49,7 @@ function Metric({ label, value, detail, icon, href }: { label: string; value: st
 export default async function PaymentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; period?: string; q?: string; page?: string; payment?: string }>;
+  searchParams: Promise<{ status?: string; period?: string; method?: string; from?: string; to?: string; q?: string; page?: string; payment?: string }>;
 }) {
   const { profile } = await requireStaff();
   // Super admins and coordinators only (RLS enforces the same).
@@ -56,17 +59,32 @@ export default async function PaymentsPage({
   const filters: PaymentFilters = {
     status: (PAYMENT_LISTS as string[]).includes(sp.status ?? '') ? (sp.status as PaymentList) : 'all',
     period: PAYMENT_PERIODS.some((p) => p.id === sp.period) ? (sp.period as PaymentPeriod) : 'all',
+    method: PAYMENT_METHOD_FILTERS.some((m) => m.id === sp.method) ? (sp.method as PaymentMethodFilter | 'all') : 'all',
+    from: cleanDate(sp.from),
+    to: cleanDate(sp.to),
     q: (sp.q ?? '').slice(0, 80),
     page: Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1),
   };
   const [{ rows, total }, summary] = await Promise.all([listPayments(filters), paymentSummary()]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const href = (patch: Partial<Record<'status' | 'period' | 'q' | 'page', string>>) => {
-    const next = { status: filters.status, period: filters.period, q: filters.q, page: String(filters.page), ...patch };
+  const href = (patch: Partial<Record<'status' | 'period' | 'method' | 'from' | 'to' | 'q' | 'page', string>>) => {
+    const next = {
+      status: filters.status,
+      period: filters.period,
+      method: filters.method,
+      from: filters.from,
+      to: filters.to,
+      q: filters.q,
+      page: String(filters.page),
+      ...patch,
+    };
     const params = new URLSearchParams();
     if (next.status && next.status !== 'all') params.set('status', next.status);
     if (next.period && next.period !== 'all') params.set('period', next.period);
+    if (next.method && next.method !== 'all') params.set('method', next.method);
+    if (next.from) params.set('from', next.from);
+    if (next.to) params.set('to', next.to);
     if (next.q) params.set('q', next.q);
     if (next.page && next.page !== '1') params.set('page', next.page);
     const qs = params.toString();
@@ -83,7 +101,7 @@ export default async function PaymentsPage({
     <AdminShell fullName={profile.full_name} role={profile.role}>
       <PageHeader
         title="Payments"
-        description="Assessment purchases through Razorpay. A purchase belongs to the number it was paid for until someone logs in with it."
+        description="Assessment purchases: Razorpay, and offline payments recorded on a client's profile. A Razorpay purchase belongs to the number it was paid for until someone logs in with it."
         actions={
           <ExportDialog
             stages={(['all', ...PAYMENT_LISTS] as const).map((s) => ({
@@ -94,6 +112,7 @@ export default async function PaymentsPage({
             periods={PAYMENT_PERIODS}
             initialStatus={filters.status}
             initialPeriod={filters.period}
+            extra={{ method: filters.method, from: filters.from, to: filters.to }}
           />
         }
       />
@@ -148,6 +167,9 @@ export default async function PaymentsPage({
         <form method="GET" action="/payments" className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {filters.status !== 'all' && <input type="hidden" name="status" value={filters.status} />}
           {filters.period !== 'all' && <input type="hidden" name="period" value={filters.period} />}
+          {filters.method !== 'all' && <input type="hidden" name="method" value={filters.method} />}
+          {filters.from && <input type="hidden" name="from" value={filters.from} />}
+          {filters.to && <input type="hidden" name="to" value={filters.to} />}
           <div className="relative flex-1">
             <Search size={18} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3.5 top-3.75 text-teal" />
             <input
@@ -155,7 +177,7 @@ export default async function PaymentsPage({
               name="q"
               aria-label="Search payments"
               defaultValue={filters.q}
-              placeholder="Client name, paid-for mobile, email, report ID or Razorpay ID"
+              placeholder="Client name, paid-for mobile, email, report ID, Razorpay ID or reference"
               className={`${inputClasses} pl-10`}
             />
           </div>
@@ -163,22 +185,29 @@ export default async function PaymentsPage({
             <Button type="submit" variant="secondary" className="flex-1 sm:flex-none">
               Search
             </Button>
-            {(filters.q || filters.status !== 'all' || filters.period !== 'all') && (
+            {(filters.q || filters.status !== 'all' || filters.period !== 'all' || filters.method !== 'all' || filters.from || filters.to) && (
               <ButtonLink href="/payments" variant="ghost">
                 Clear
               </ButtonLink>
             )}
           </div>
         </form>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <nav aria-label="Status" className="flex flex-wrap gap-2">
-            {(['all', ...PAYMENT_LISTS] as const).map((s) => (
-              <Link key={s} href={href({ status: s, page: '1' })} aria-current={filters.status === s ? 'page' : undefined} className={chip(filters.status === s)}>
-                {STAGE_LABELS[s]}
-                {s !== 'all' && <span className="ml-1.5 text-[13px] font-normal text-ink-muted">{s === 'paid' ? summary.paidCount : summary.stages[s]}</span>}
-              </Link>
-            ))}
-          </nav>
+        <nav aria-label="Status" className="flex flex-wrap gap-2">
+          {(['all', ...PAYMENT_LISTS] as const).map((s) => (
+            <Link key={s} href={href({ status: s, page: '1' })} aria-current={filters.status === s ? 'page' : undefined} className={chip(filters.status === s)}>
+              {STAGE_LABELS[s]}
+              {s !== 'all' && <span className="ml-1.5 text-[13px] font-normal text-ink-muted">{s === 'paid' ? summary.paidCount : summary.stages[s]}</span>}
+            </Link>
+          ))}
+        </nav>
+        <nav aria-label="Method" className="flex flex-wrap gap-2">
+          {PAYMENT_METHOD_FILTERS.map((m) => (
+            <Link key={m.id} href={href({ method: m.id, page: '1' })} aria-current={filters.method === m.id ? 'page' : undefined} className={chip(filters.method === m.id)}>
+              {m.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <nav aria-label="Period" className="flex flex-wrap gap-2">
             {PAYMENT_PERIODS.map((p) => (
               <Link key={p.id} href={href({ period: p.id, page: '1' })} aria-current={filters.period === p.id ? 'page' : undefined} className={chip(filters.period === p.id)}>
@@ -186,6 +215,24 @@ export default async function PaymentsPage({
               </Link>
             ))}
           </nav>
+          {/* Date range (India time, both days included): on the date paid, else the date created. */}
+          <form method="GET" action="/payments" className="flex flex-wrap items-end gap-2">
+            {filters.status !== 'all' && <input type="hidden" name="status" value={filters.status} />}
+            {filters.period !== 'all' && <input type="hidden" name="period" value={filters.period} />}
+            {filters.method !== 'all' && <input type="hidden" name="method" value={filters.method} />}
+            {filters.q && <input type="hidden" name="q" value={filters.q} />}
+            <label className="text-[13px] text-ink-muted">
+              From
+              <input type="date" name="from" defaultValue={filters.from} className={`${inputClasses} mt-1 min-h-11 w-40`} />
+            </label>
+            <label className="text-[13px] text-ink-muted">
+              To
+              <input type="date" name="to" defaultValue={filters.to} className={`${inputClasses} mt-1 min-h-11 w-40`} />
+            </label>
+            <Button type="submit" variant="secondary" size="sm">
+              Apply dates
+            </Button>
+          </form>
         </div>
       </Card>
 

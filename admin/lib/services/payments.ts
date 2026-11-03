@@ -2,10 +2,13 @@ import { createClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
 import { normalizePhoneNumber } from '../phone';
+import { OFFLINE_METHODS, OFFLINE_METHOD_LABELS, parseCancelReason, type OfflineMethod } from '../offline-payments';
 
-// Payments for the admin Payments page. Super admins and coordinators only: the page checks the role
-// and RLS (can_view_payments()) enforces it in the database. Reads use the staff session; the two staff
-// actions (move to another number, mark refunded) write with the service role after the role check.
+// Payments for the admin Payments page: Razorpay and offline (recorded by staff with a proof) in one
+// list. Super admins and coordinators only: the page checks the role and RLS (can_view_payments())
+// enforces it in the database. Reads use the staff session; the staff actions (move to another number,
+// mark refunded, cancel an offline payment) write with the service role after the role check.
+// Recording an offline payment lives in ./offline-payments.ts.
 //
 // A payment is a purchase owned by a phone number (pay first, log in later). It is linked to a client
 // when someone logs in with that number; the assessment is created when the client presses Start.
@@ -16,16 +19,17 @@ export function canViewPayments(role: string): boolean {
   return (PAYMENT_ROLES as readonly string[]).includes(role);
 }
 
-export type PaymentStatus = 'created' | 'paid' | 'failed';
+export type PaymentStatus = 'created' | 'paid' | 'failed' | 'cancelled';
+export type PaymentProvider = 'razorpay' | 'offline';
 export type RefundStatus = 'needed' | 'refunded';
 
 /**
  * Where a purchase stands, in the words the calling team uses. One stage per row:
  * paid but nobody logged in with the number yet → logged in but not started → in progress → completed;
- * or the payment was never made; or the purchase is (to be) refunded.
+ * or the payment was never made; or the purchase is (to be) refunded; or an offline payment was cancelled.
  */
-export type PaymentStage = 'not_logged_in' | 'not_started' | 'in_progress' | 'completed' | 'not_paid' | 'refund_needed' | 'refunded';
-export const PAYMENT_STAGES: PaymentStage[] = ['not_logged_in', 'not_started', 'in_progress', 'completed', 'not_paid', 'refund_needed', 'refunded'];
+export type PaymentStage = 'not_logged_in' | 'not_started' | 'in_progress' | 'completed' | 'not_paid' | 'refund_needed' | 'refunded' | 'cancelled';
+export const PAYMENT_STAGES: PaymentStage[] = ['not_logged_in', 'not_started', 'in_progress', 'completed', 'not_paid', 'refund_needed', 'refunded', 'cancelled'];
 
 /** The filters: every stage, plus "Paid" (all money received: paid and not refunded, any stage). */
 export type PaymentList = 'paid' | PaymentStage;
@@ -41,7 +45,16 @@ export const STAGE_LABELS: Record<PaymentList | 'all', string> = {
   not_paid: 'Payment not made',
   refund_needed: 'Refund needed',
   refunded: 'Refunded',
+  cancelled: 'Cancelled',
 };
+
+/** Method filter: Razorpay (any method inside the checkout), or one of the offline methods. */
+export type PaymentMethodFilter = 'razorpay' | OfflineMethod;
+export const PAYMENT_METHOD_FILTERS: { id: PaymentMethodFilter | 'all'; label: string }[] = [
+  { id: 'all', label: 'All methods' },
+  { id: 'razorpay', label: 'Razorpay' },
+  ...OFFLINE_METHODS.map((m) => ({ id: m, label: OFFLINE_METHOD_LABELS[m] })),
+];
 
 export function paymentStage(p: {
   status: PaymentStatus;
@@ -49,6 +62,7 @@ export function paymentStage(p: {
   claimed_at: string | null;
   attempt: { status: string } | null;
 }): PaymentStage {
+  if (p.status === 'cancelled') return 'cancelled';
   if (p.status !== 'paid') return 'not_paid';
   if (p.refund_status === 'needed') return 'refund_needed';
   if (p.refund_status === 'refunded') return 'refunded';
@@ -79,6 +93,8 @@ export interface PaymentAttempt {
 
 export interface PaymentListRow {
   id: string;
+  /** razorpay = paid online; offline = recorded by staff with a proof (UPI, bank transfer, other). */
+  provider: PaymentProvider;
   status: PaymentStatus;
   refund_status: RefundStatus | null;
   /** The phone the purchase belongs to (E.164). */
@@ -94,6 +110,14 @@ export interface PaymentListRow {
   paid_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Offline: UPI transaction ID / bank UTR / other reference. */
+  reference: string | null;
+  note: string | null;
+  proof_url: string | null;
+  recorded_by_name: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  cancelled_by_name: string | null;
   test_code: string;
   test_name: string;
   client: PaymentClient | null;
@@ -130,6 +154,10 @@ export const PAYMENT_PERIODS: { id: PaymentPeriod; label: string }[] = [
 export interface PaymentFilters {
   status: PaymentList | 'all';
   period: PaymentPeriod;
+  method: PaymentMethodFilter | 'all';
+  /** Date range in India time, YYYY-MM-DD, both inclusive ('' = open). On the date paid, else the date created. */
+  from: string;
+  to: string;
   q: string;
   page: number;
 }
@@ -137,23 +165,37 @@ export interface PaymentFilters {
 export const PAGE_SIZE = 50;
 
 const COLUMNS = `
-  id, status, refund_status, phone, claimed_at, amount_paise, currency, method, provider_order_id, provider_payment_id, failure_code,
+  id, provider, status, refund_status, phone, claimed_at, amount_paise, currency, method, provider_order_id, provider_payment_id, failure_code,
   failure_reason, paid_at, created_at, updated_at, test_code,
+  reference, note, proof_url, recorded_by, cancelled_at, cancel_reason, cancelled_by,
   questionnaires(name_en),
   clients(id, full_name, phone, email, gender, age, city, state),
   attempts(id, report_id, status, consent_at, started_at, completed_at, questionnaire_versions(number))
 `;
 
-type RawRow = Omit<PaymentListRow, 'test_name' | 'client' | 'attempt' | 'age_stop' | 'paid_later' | 'registered'> & {
+type RawRow = Omit<
+  PaymentListRow,
+  'test_name' | 'client' | 'attempt' | 'age_stop' | 'paid_later' | 'registered' | 'recorded_by_name' | 'cancelled_by_name'
+> & {
+  recorded_by: string | null;
+  cancelled_by: string | null;
   questionnaires: { name_en: string } | null;
   clients: PaymentClient | null;
   attempts: (Omit<PaymentAttempt, 'version_number'> & { questionnaire_versions: { number: number } | null }) | null;
 };
 
-function toRow(r: RawRow, ageStops: Map<string, AgeStop>, paidLater: Set<string>, registered: Map<string, PaymentClient>): PaymentListRow {
-  const { questionnaires, clients, attempts, ...rest } = r;
+function toRow(
+  r: RawRow,
+  ageStops: Map<string, AgeStop>,
+  paidLater: Set<string>,
+  registered: Map<string, PaymentClient>,
+  staffNames: Map<string, string>
+): PaymentListRow {
+  const { questionnaires, clients, attempts, recorded_by, cancelled_by, ...rest } = r;
   return {
     ...rest,
+    recorded_by_name: recorded_by ? (staffNames.get(recorded_by) ?? 'Staff member') : null,
+    cancelled_by_name: cancelled_by ? (staffNames.get(cancelled_by) ?? 'Staff member') : null,
     paid_later: paidLater.has(r.id),
     registered: clients ? null : (registered.get(r.phone.slice(-10)) ?? null),
     age_stop: clients ? null : (ageStops.get(r.phone) ?? null),
@@ -182,6 +224,26 @@ function periodStart(period: PaymentPeriod, now = new Date()): string | null {
   if (period === 'month') return new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), 1) - 330 * 60_000).toISOString();
   const days = period === '7d' ? 7 : 30;
   return new Date(midnight(ist) - (days - 1) * 86_400_000).toISOString();
+}
+
+/** A YYYY-MM-DD that exists, or ''. */
+export function cleanDate(text: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text ?? '');
+  if (!m) return '';
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? text! : '';
+}
+
+/**
+ * PostgREST filter for a date range in India time (both days inclusive): on the date paid, or on the
+ * date created when there is no payment date (not paid). Null when the range is open on both ends.
+ */
+function dateRange(from: string, to: string): string | null {
+  const start = from ? new Date(`${from}T00:00:00+05:30`).toISOString() : null;
+  const end = to ? new Date(new Date(`${to}T00:00:00+05:30`).getTime() + 86_400_000).toISOString() : null;
+  if (!start && !end) return null;
+  const within = (column: string) => [start && `${column}.gte."${start}"`, end && `${column}.lt."${end}"`].filter(Boolean).join(',');
+  return `and(${within('paid_at')}),and(paid_at.is.null,${within('created_at')})`;
 }
 
 // Characters that would change a PostgREST filter expression are removed from search text.
@@ -223,9 +285,17 @@ async function filteredQuery(supabase: Supabase, filters: Omit<PaymentFilters, '
     case 'refunded':
       query = query.eq('status', 'paid').eq('refund_status', filters.status === 'refund_needed' ? 'needed' : 'refunded');
       break;
+    case 'cancelled':
+      query = query.eq('status', 'cancelled');
+      break;
   }
+  if (filters.method === 'razorpay') query = query.eq('provider', 'razorpay');
+  else if (filters.method !== 'all') query = query.eq('provider', 'offline').eq('method', filters.method);
+
   const since = periodStart(filters.period);
   if (since) query = query.gte('created_at', since);
+  const range = dateRange(filters.from, filters.to);
+  if (range) query = query.or(range);
 
   const q = clean(filters.q);
   if (q) {
@@ -241,7 +311,7 @@ async function filteredQuery(supabase: Supabase, filters: Omit<PaymentFilters, '
     ]);
     const clientIds = (clientsRes.data ?? []).map((c: { id: string }) => c.id);
     const attemptIds = (attemptsRes.data ?? []).map((a: { id: string }) => a.id);
-    const parts = [`provider_order_id.ilike.%${q}%`, `provider_payment_id.ilike.%${q}%`];
+    const parts = [`provider_order_id.ilike.%${q}%`, `provider_payment_id.ilike.%${q}%`, `reference.ilike.%${q}%`];
     if (digits.length >= 4) parts.push(`phone.ilike.%${digits}%`);
     if (clientIds.length) parts.push(`client_id.in.(${clientIds.join(',')})`);
     if (attemptIds.length) parts.push(`attempt_id.in.(${attemptIds.join(',')})`);
@@ -261,14 +331,18 @@ async function enrich(supabase: Supabase, raw: RawRow[], strict = false): Promis
   const unpaidPhones = [...new Set(unpaid.map((r) => r.phone))];
   // Client phones are stored as +91…; older rows may hold 91… or the 10 digits.
   const phoneForms = unlinked.flatMap((p) => [p, p.replace(/^\+/, ''), p.slice(-10)]);
-  const [stopsRes, paidRes, clientsRes] = await Promise.all([
+  // Staff names (recorded / cancelled by). Coordinators cannot read other profiles under RLS, so the
+  // names are read with the service role; every caller has already checked the role.
+  const staffIds = [...new Set(raw.flatMap((r) => [r.recorded_by, r.cancelled_by]).filter((v): v is string => !!v))];
+  const [stopsRes, paidRes, clientsRes, staffRes] = await Promise.all([
     unlinked.length ? supabase.from('age_stops').select(AGE_STOP_COLUMNS).in('phone', unlinked) : null,
     unpaidPhones.length ? supabase.from('payments').select('phone, test_code, created_at').eq('status', 'paid').in('phone', unpaidPhones) : null,
     unlinked.length
       ? supabase.from('clients').select('id, full_name, phone, email, gender, age, city, state').in('phone', phoneForms).not('auth_user_id', 'is', null)
       : null,
+    staffIds.length ? createAdminClient().from('profiles').select('id, full_name').in('id', staffIds) : null,
   ]);
-  const lookupError = stopsRes?.error ?? paidRes?.error ?? clientsRes?.error;
+  const lookupError = stopsRes?.error ?? paidRes?.error ?? clientsRes?.error ?? staffRes?.error;
   if (strict && lookupError) throw new Error(`Could not read payment details: ${lookupError.message}`);
   const ageStops = new Map<string, AgeStop>();
   for (const s of (stopsRes?.data ?? []) as AgeStop[]) ageStops.set(s.phone, s);
@@ -280,7 +354,8 @@ async function enrich(supabase: Supabase, raw: RawRow[], strict = false): Promis
       .filter((r) => paid.some((p) => p.phone === r.phone && p.test_code === r.test_code && p.created_at > r.created_at))
       .map((r) => r.id)
   );
-  return raw.map((r) => toRow(r, ageStops, paidLater, registered));
+  const staffNames = new Map(((staffRes?.data ?? []) as { id: string; full_name: string }[]).map((s) => [s.id, s.full_name]));
+  return raw.map((r) => toRow(r, ageStops, paidLater, registered, staffNames));
 }
 
 export async function listPayments(filters: PaymentFilters): Promise<{ rows: PaymentListRow[]; total: number }> {
@@ -539,10 +614,35 @@ export async function markRefunded(paymentId: string): Promise<string | null> {
     .from('payments')
     .update({ refund_status: 'refunded' })
     .eq('id', paymentId)
+    .eq('provider', 'razorpay')
     .eq('status', 'paid')
     .is('attempt_id', null)
     .select('id')
     .maybeSingle();
   if (error || !data) return 'Only a paid purchase that is not started can be marked refunded.';
+  return null;
+}
+
+/**
+ * "Cancel payment" (e.g. an offline payment recorded by mistake): the row stays in the list with status
+ * cancelled, the reason, who and when. Only an offline payment that is paid and not started; the
+ * database guard enforces the same. Nothing is deleted, and the proof stays in Drive.
+ */
+export async function cancelPayment(paymentId: string, rawReason: unknown): Promise<string | null> {
+  const staffId = await paymentStaffId();
+  if (!staffId) return 'Only super admins and coordinators can cancel payments.';
+  const reason = parseCancelReason(rawReason);
+  if (!reason.ok) return reason.error;
+  const { data, error } = await createAdminClient()
+    .from('payments')
+    .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_by: staffId, cancel_reason: reason.reason })
+    .eq('id', paymentId)
+    .eq('provider', 'offline')
+    .eq('status', 'paid')
+    .is('attempt_id', null)
+    .is('refund_status', null)
+    .select('id')
+    .maybeSingle();
+  if (error || !data) return 'Only an offline payment that is not started can be cancelled.';
   return null;
 }

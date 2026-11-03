@@ -9,6 +9,11 @@ import { listClientAttempts } from '../../../lib/services/attempts';
 import { AttemptsList } from '../../../components/attempts/AttemptsList';
 import { formatDisplayPhone } from '../../../lib/phone';
 import { ButtonLink, Card, Pill } from '../../../components/brand';
+import { OfflinePaymentDialog } from '../../../components/payments/OfflinePaymentDialog';
+import { formatAmount } from '../../../components/payments/amount';
+import { canViewPayments } from '../../../lib/services/payments';
+import { payableQuestionnaires } from '../../../lib/services/offline-payments';
+import { ASSESSMENT_PRICE_PAISE, indiaToday } from '../../../lib/offline-payments';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +43,9 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
 
   const isLinked = !!client.auth_user_id;
   const attempts = await listClientAttempts(client.id);
+  // Offline payments: super admins and coordinators only.
+  const canRecordPayment = canViewPayments(profile.role);
+  const payable = canRecordPayment ? await payableQuestionnaires() : [];
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
@@ -56,10 +64,21 @@ export default async function ClientDetailPage({ params }: ClientDetailPageProps
           </>
         }
         actions={
-          <ButtonLink href="/clients/new" variant="secondary">
-            <UserPlus size={18} strokeWidth={2} aria-hidden />
-            <span>New client</span>
-          </ButtonLink>
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            {canRecordPayment && (
+              <OfflinePaymentDialog
+                clientId={client.id}
+                questionnaires={payable}
+                price={formatAmount(ASSESSMENT_PRICE_PAISE)}
+                today={indiaToday()}
+                staffName={profile.full_name}
+              />
+            )}
+            <ButtonLink href="/clients/new" variant="secondary">
+              <UserPlus size={18} strokeWidth={2} aria-hidden />
+              <span>New client</span>
+            </ButtonLink>
+          </div>
         }
       />
 

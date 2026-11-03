@@ -108,12 +108,21 @@ deploys). Never prefix a secret with `NEXT_PUBLIC_`: those are sent to the brows
 | `NEXT_PUBLIC_CLIENTS_URL` | `https://www.myfitbrain.app` | no |
 | `NEXT_PUBLIC_ADMIN_URL` | `https://admin.myfitbrain.app` | no |
 | `GOOGLE_SHEETS_SYNC_TOKEN` | exactly 64 characters: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | **yes** |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Google Cloud → IAM & Admin → Service Accounts → the account's email | no |
+| `GOOGLE_PRIVATE_KEY` | `private_key` from the service account's JSON key (one line with `\n`, or real line breaks) | **yes** |
+| `GOOGLE_DRIVE_FOLDER_ID` | the Shared Drive ID (or a folder ID inside it) from its Drive URL | no |
 
 `GOOGLE_SHEETS_SYNC_TOKEN` protects the Google Sheets feed
 `GET https://admin.myfitbrain.app/api/integrations/google-sheets/payments` (header
 `Authorization: Bearer <token>`; optional `?from=` inclusive and `?to=` exclusive, ISO 8601 with a time
 zone). It never expires: to change it, set a new value here, redeploy and update the Apps Script. Unset
 or not 64 characters → every request gets 401.
+
+The three `GOOGLE_*` service-account variables store offline payment proofs in Google Drive
+(`admin/lib/google/drive.ts`). Setup once: in the Google Cloud project enable the **Google Drive API**; create a
+service account and a JSON key; in Google Drive open the Shared Drive → Manage members → add the service account's
+email as **Content manager**. Missing or invalid values → staff see "Proof storage is not set up. Ask a super
+admin." and no offline payment is saved. Set the same three in `admin/.env.local` for local work.
 
 After changing a variable, **redeploy** (Deployments → ⋯ → Redeploy): variables are read at build and
 start-up.

@@ -94,7 +94,7 @@ export interface PaymentReceipt {
 export async function paymentReceipt(client: ClientProfile, attemptId: string): Promise<PaymentReceipt | null> {
   const { data, error } = await createAdminClient()
     .from('payments')
-    .select('amount_paise, currency, method, provider_payment_id, paid_at')
+    .select('amount_paise, currency, method, provider, reference, provider_payment_id, paid_at')
     .eq('attempt_id', attemptId)
     .eq('client_id', client.id)
     .eq('status', 'paid')
@@ -103,7 +103,8 @@ export async function paymentReceipt(client: ClientProfile, attemptId: string): 
   return {
     amount: formatPrice(data.amount_paise),
     method: data.method,
-    paymentId: data.provider_payment_id,
+    // Offline payments (recorded by staff): the UPI / bank reference the client knows.
+    paymentId: data.provider === 'offline' && data.reference ? data.reference : data.provider_payment_id,
     paidAt: data.paid_at,
   };
 }
