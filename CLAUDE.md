@@ -248,6 +248,24 @@ results with you"). The client never sees a report in the app.
   only, checked timing-safe before any read; unset → 401 for all). Optional `from` (inclusive) / `to`
   (exclusive), ISO 8601 with a zone: purchases whose payment, assessment or client (`updated_at`) or
   under-18 record (`last_at`) changed in the window (`readPaymentsForSync`). Over 20,000 rows → 422.
+- **Offline payments** (UPI to our number, bank transfer, other; no cash; migration
+  `20261103000000_offline_payments.sql`, checks `docs/tasks/18-offline-payments-verify.sql`): super admins and
+  coordinators press **Add offline payment** on a client's profile (live, switched-on questionnaire; the fixed price,
+  read-only; method; date paid; reference required; proof JPG/PNG/WebP/PDF ≤ 4 MB required, type checked from the
+  bytes; optional note). The proof is uploaded to Google Drive FIRST; if that fails nothing is saved. Then a paid row
+  in `payments` (`provider = 'offline'`, `reference`, `recorded_by`, `proof_file_id`, `proof_url`, order and payment ID
+  `offline_<id>`), linked to the client, so Home shows Start at once. A reference already used is a warning, never a
+  block. **Cancel payment** (offline, paid, not started; reason required): status `cancelled`, the row stays with
+  who / when / why. Razorpay payments keep Mark refunded. The Payments list shows both, with method (Razorpay / UPI
+  / Bank transfer / Other), reference, proof link and recorded by; filters for method and a date range (date paid,
+  else created); the Excel export follows them.
+- **Google Drive** (proofs; all Google code in `admin/lib/google/drive.ts`, `uploadProof(file, paymentId)`): a
+  **service account** (no OAuth, nothing stored in the database), scope `drive`, `supportsAllDrives`, uploads into
+  `GOOGLE_DRIVE_FOLDER_ID` (a Shared Drive where the service account is Content manager). File name = payment ID +
+  date, never the client's name. Env (admin, server only): `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`
+  (literal \n become newlines), `GOOGLE_DRIVE_FOLDER_ID`. Missing env → "Proof storage is not set up. Ask a super
+  admin."; failed upload → "Proof could not be uploaded. Please try again."; Google's real error is logged on the
+  server only. No Google settings page; coordinators see nothing about Google.
 - Report IDs identify assessments; they are **not** GST invoice numbers (open: a gap-free invoice series per
   financial year, April–March, for paid payments only). Checkout name/description: "My Fit Brain" / "MFB
   Assessment" only. Keys: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-side
@@ -469,4 +487,12 @@ existing migrations, `.env*` files.
   in Admin → Questionnaires (or import + publish `intimacy.json`, which carries the six Intimacy questions).
 - Done: **Pay first, log in later** (`/pay/<code>`, purchases owned by a phone, claim at login, Start
   creates the attempt). Run `20261031000000_pay_first.sql`, checks `docs/tasks/13-pay-first-verify.sql`.
+- Launch cleanup (owner request 2026-10-31, one time): `docs/tasks/17-launch-cleanup.sql` deletes all test
+  payments, assessments, clients, under-18 records, coordinators, counsellors and their logins; questionnaires
+  and super admins are kept. Checks `docs/tasks/17-launch-cleanup-verify.sql`. Not a migration; never rerun.
+- Done: **Offline payments with proof** and proof storage in a Google Shared Drive. Run
+  `20261103000000_offline_payments.sql` (replaces the CHECK rules on `payments.provider` / `payments.status` with
+  wider ones, owner-approved 2026-11-03; no data removed), then `20261103000001_drop_google_drive_connection.sql`
+  (drops only the unused OAuth token table, owner-approved for that step only), checks
+  `docs/tasks/18-offline-payments-verify.sql`; then set the three `GOOGLE_*` service-account variables.
 - Next: Task 07 — polish.
