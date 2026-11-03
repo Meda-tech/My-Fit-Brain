@@ -24,6 +24,9 @@ const METHODS: Record<string, string> = {
   wallet: 'Wallet',
   emi: 'EMI',
   paylater: 'Pay later',
+  // Offline payments recorded by staff.
+  bank_transfer: 'Bank transfer',
+  other: 'Other',
 };
 
 export function CompletedView({ details }: { details: CompletedDetails | null }) {

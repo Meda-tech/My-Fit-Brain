@@ -4,11 +4,12 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
-import { markRefundedAction, movePurchaseAction } from '../../app/payments/actions';
+import { cancelPaymentAction, markRefundedAction, movePurchaseAction } from '../../app/payments/actions';
+import { CANCEL_REASON_MAX_LENGTH } from '../../lib/offline-payments';
 import { Button, cn, inputClasses, labelClasses } from '../brand';
 import type { PaymentListRow } from '../../lib/services/payments';
 import { AssessmentPill, PaymentPill } from './PaymentStatusPill';
-import { ATTEMPT_STATUS_LABELS, formatAmount, formatDateTime, methodLabel } from './format';
+import { ATTEMPT_STATUS_LABELS, formatAmount, formatDateTime, paymentMethodLabel } from './format';
 
 // Side sheet with everything about one payment. Slides in from the right; Esc, the close button or
 // the backdrop closes it. Focus moves into the sheet and back to the row on close.
@@ -96,6 +97,12 @@ function SheetBody({
             {p.failure_code ? ` (${p.failure_code})` : ''}
           </p>
         )}
+        {p.status === 'cancelled' && (
+          <p className="rounded-input border border-sand bg-cream p-3 text-[14px] text-ink-soft">
+            <span className="font-semibold text-ink">Cancelled</span> {formatDateTime(p.cancelled_at)}
+            {p.cancelled_by_name ? ` by ${p.cancelled_by_name}` : ''}. Reason: {p.cancel_reason}
+          </p>
+        )}
 
         <Section title="Purchase">
           <Row label="Paid for number">
@@ -169,12 +176,43 @@ function SheetBody({
 
         <Section title="Payment details">
           <Row label="Amount">{formatAmount(p.amount_paise, p.currency)}</Row>
-          <Row label="Method">{methodLabel(p.method)}</Row>
-          <Row label="Started at">{formatDateTime(p.created_at)}</Row>
-          <Row label="Paid at">{formatDateTime(p.paid_at)}</Row>
+          <Row label="Method">{paymentMethodLabel(p)}</Row>
+          {p.provider === 'offline' ? (
+            <>
+              <Row label="Reference">{p.reference ? <CopyText value={p.reference} /> : '—'}</Row>
+              <Row label="Date paid">{formatDateTime(p.paid_at)}</Row>
+              <Row label="Proof">
+                {p.proof_url ? (
+                  <a
+                    href={p.proof_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-teal hover:underline"
+                  >
+                    Open in Drive
+                    <ExternalLink size={15} strokeWidth={2} aria-hidden />
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </Row>
+              <Row label="Recorded by">{p.recorded_by_name ?? '—'}</Row>
+              <Row label="Recorded at">{formatDateTime(p.created_at)}</Row>
+              {p.note && <Row label="Note">{p.note}</Row>}
+              <Row label="Our reference">
+                <CopyText value={p.id} />
+              </Row>
+            </>
+          ) : (
+            <>
+              <Row label="Started at">{formatDateTime(p.created_at)}</Row>
+              <Row label="Paid at">{formatDateTime(p.paid_at)}</Row>
+            </>
+          )}
           <Row label="Last update">{formatDateTime(p.updated_at)}</Row>
         </Section>
 
+        {p.provider === 'razorpay' && (
         <Section title="Razorpay">
           <Row label="Payment ID">
             {p.provider_payment_id ? <CopyText value={p.provider_payment_id} /> : '—'}
@@ -197,19 +235,26 @@ function SheetBody({
             </a>
           )}
         </Section>
+        )}
       </div>
     </>
   );
 }
 
-/** Move to another number / mark refunded: only for a paid purchase that is not started. */
+/**
+ * Only for a paid purchase that is not started: move to another number; then mark refunded (Razorpay)
+ * or cancel with a reason (offline; the row stays, nothing is deleted).
+ */
 function PurchaseActions({ payment: p }: { payment: PaymentListRow }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [moving, setMoving] = useState(false);
+  const [mode, setMode] = useState<'idle' | 'move' | 'cancel'>('idle');
   const [phone, setPhone] = useState('');
+  const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   if (p.status !== 'paid' || p.attempt || p.refund_status === 'refunded') return null;
+  const moving = mode === 'move';
+  const setMoving = (on: boolean) => setMode(on ? 'move' : 'idle');
 
   const run = (action: () => Promise<{ error: string | null }>) => {
     setError(null);
@@ -219,11 +264,56 @@ function PurchaseActions({ payment: p }: { payment: PaymentListRow }) {
         setError(error);
         return;
       }
-      setMoving(false);
+      setMode('idle');
       setPhone('');
+      setReason('');
       router.refresh();
     });
   };
+
+  if (mode === 'cancel') {
+    return (
+      <section className="space-y-3">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(() => cancelPaymentAction(p.id, reason));
+          }}
+          className="space-y-2 rounded-card border border-sand p-4"
+        >
+          <label htmlFor="cancel-reason" className={labelClasses}>
+            Why is this payment cancelled?
+          </label>
+          <textarea
+            id="cancel-reason"
+            required
+            minLength={3}
+            maxLength={CANCEL_REASON_MAX_LENGTH}
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className={`${inputClasses} py-2.5`}
+          />
+          <p className="text-[13px] text-ink-muted">
+            The payment stays in the list as cancelled, with the reason, your name and the time. The client can no longer start it.
+          </p>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" loading={pending} loadingText="Cancelling…">
+              Cancel payment
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setMode('idle')} disabled={pending}>
+              Keep payment
+            </Button>
+          </div>
+        </form>
+        {error && (
+          <p role="alert" className="text-[14px] text-coral-deep">
+            {error}
+          </p>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-3">
@@ -271,19 +361,27 @@ function PurchaseActions({ payment: p }: { payment: PaymentListRow }) {
           <Button type="button" variant="secondary" size="sm" onClick={() => setMoving(true)} disabled={pending}>
             Move purchase to another number
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={pending}
-            onClick={() => {
-              if (window.confirm('Mark this purchase as refunded? Do this only after the money was returned in Razorpay. It cannot be undone.')) {
-                run(() => markRefundedAction(p.id));
-              }
-            }}
-          >
-            Mark refunded
-          </Button>
+          {p.provider === 'offline' ? (
+            p.refund_status === null && (
+              <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => setMode('cancel')}>
+                Cancel payment
+              </Button>
+            )
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={() => {
+                if (window.confirm('Mark this purchase as refunded? Do this only after the money was returned in Razorpay. It cannot be undone.')) {
+                  run(() => markRefundedAction(p.id));
+                }
+              }}
+            >
+              Mark refunded
+            </Button>
+          )}
         </div>
       )}
       {error && (

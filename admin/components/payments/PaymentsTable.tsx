@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ExternalLink } from 'lucide-react';
 import type { PaymentListRow } from '../../lib/services/payments';
 import { PaymentSheet } from './PaymentSheet';
 import { AssessmentPill, PaymentPill, assessmentLabel, paymentLabel } from './PaymentStatusPill';
-import { clientName, formatAmount, formatDate, formatTime, methodLabel } from './format';
+import { clientName, formatAmount, formatDate, formatTime, paymentMethodLabel, paymentReference } from './format';
 
 // Payments as table rows (stacked cards on narrow screens). A row opens the side sheet; the open
 // payment is kept in the URL (?payment=) so the view can be shared or reloaded.
@@ -78,6 +78,10 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                 {p.test_name}
                 {p.attempt?.report_id ? ` · ${p.attempt.report_id}` : ''}
               </p>
+              <p className="mt-0.5 text-[13px] text-ink-muted">
+                {paymentMethodLabel(p)}
+                {p.provider === 'offline' && p.reference ? ` · ${p.reference}` : ''}
+              </p>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
                 <PaymentPill payment={p} />
                 <AssessmentPill payment={p} />
@@ -100,10 +104,11 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
               <th className="whitespace-nowrap px-5 py-3 font-semibold">Client</th>
               <th className="whitespace-nowrap px-5 py-3 font-semibold">Assessment</th>
               <th className="whitespace-nowrap px-5 py-3 text-right font-semibold">Amount</th>
-              <th className="whitespace-nowrap px-5 py-3 font-semibold">Payment</th>
-              <th className="whitespace-nowrap px-5 py-3 font-semibold">Assessment</th>
-              <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[60rem]:table-cell">Method</th>
-              <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[70rem]:table-cell">Razorpay ID</th>
+              <th className="whitespace-nowrap px-5 py-3 font-semibold">Method</th>
+              <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[64rem]:table-cell">Reference</th>
+              <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[64rem]:table-cell">Proof</th>
+              <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[76rem]:table-cell">Recorded by</th>
+              <th className="whitespace-nowrap px-5 py-3 font-semibold">Status</th>
               <th className="px-3 py-3">
                 <span className="sr-only">Open</span>
               </th>
@@ -134,15 +139,35 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                 <td className="whitespace-nowrap px-5 py-3.5 text-right font-heading font-semibold text-ink">
                   {formatAmount(p.amount_paise, p.currency)}
                 </td>
-                <td className="px-5 py-3.5">
-                  <PaymentPill payment={p} />
+                <td className="whitespace-nowrap px-5 py-3.5 text-ink-soft">{paymentMethodLabel(p)}</td>
+                <td className="hidden max-w-48 truncate px-5 py-3.5 font-mono text-[12px] text-ink-muted @[64rem]:table-cell">
+                  {paymentReference(p) || '—'}
+                </td>
+                <td className="hidden px-5 py-3.5 @[64rem]:table-cell">
+                  {p.proof_url ? (
+                    <a
+                      href={p.proof_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      className="inline-flex min-h-11 items-center gap-1 font-semibold text-teal hover:underline"
+                    >
+                      Open
+                      <ExternalLink size={14} strokeWidth={2} aria-hidden />
+                    </a>
+                  ) : (
+                    <span className="text-ink-muted">—</span>
+                  )}
+                </td>
+                <td className="hidden px-5 py-3.5 text-ink-soft @[76rem]:table-cell">
+                  {p.recorded_by_name ?? <span className="text-ink-muted">Online</span>}
                 </td>
                 <td className="px-5 py-3.5">
-                  <AssessmentPill payment={p} />
-                </td>
-                <td className="hidden whitespace-nowrap px-5 py-3.5 text-ink-soft @[60rem]:table-cell">{methodLabel(p.method)}</td>
-                <td className="hidden whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-muted @[70rem]:table-cell">
-                  {p.provider_payment_id ?? p.provider_order_id}
+                  <div className="flex flex-col items-start gap-1.5">
+                    <PaymentPill payment={p} />
+                    <AssessmentPill payment={p} />
+                  </div>
                 </td>
                 <td className="px-3 py-3.5 text-right">
                   <ChevronRight size={18} strokeWidth={2} className="inline text-teal" aria-hidden />

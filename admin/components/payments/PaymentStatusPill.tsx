@@ -13,6 +13,7 @@ type Row = Pick<PaymentListRow, 'status' | 'refund_status' | 'claimed_at' | 'att
 export function paymentLabel(p: Row): { label: string; className: string } {
   if (p.status === 'created') return { label: 'Not paid', className: MUTED };
   if (p.status === 'failed') return { label: 'Payment failed', className: MUTED };
+  if (p.status === 'cancelled') return { label: 'Cancelled', className: MUTED };
   if (p.refund_status === 'needed') return { label: 'Refund needed', className: ACT };
   if (p.refund_status === 'refunded') return { label: 'Refunded', className: MUTED };
   return { label: 'Paid', className: CALM };

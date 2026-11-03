@@ -6,16 +6,19 @@ import { Button, cn } from '../brand';
 import type { PaymentPeriod, PaymentList } from '../../lib/services/payments';
 
 // "Export to Excel": first asks which list (a stage, or all) and which period, then downloads the
-// file from /payments/export. The choice starts from the filters on screen.
+// file from /payments/export. The choice starts from the filters on screen; the method and date range
+// on screen are applied too.
 
 interface Props {
   stages: { id: PaymentList | 'all'; label: string; count: number }[];
   periods: { id: PaymentPeriod; label: string }[];
   initialStatus: PaymentList | 'all';
   initialPeriod: PaymentPeriod;
+  /** Filters on screen passed through as they are (method, from, to). */
+  extra?: Record<string, string>;
 }
 
-export function ExportDialog({ stages, periods, initialStatus, initialPeriod }: Props) {
+export function ExportDialog({ stages, periods, initialStatus, initialPeriod, extra = {} }: Props) {
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLButtonElement | null>(null);
   const first = useRef<HTMLInputElement>(null);
@@ -79,6 +82,11 @@ export function ExportDialog({ stages, periods, initialStatus, initialPeriod }: 
             </div>
 
             <form method="GET" action="/payments/export" onSubmit={() => setTimeout(close, 0)} className="space-y-5">
+              {Object.entries(extra)
+                .filter(([, v]) => v && v !== 'all')
+                .map(([k, v]) => (
+                  <input key={k} type="hidden" name={k} value={v} />
+                ))}
               <fieldset>
                 <legend className="mb-2 text-[14px] font-semibold text-ink">Which data?</legend>
                 <div className="space-y-2">
@@ -112,7 +120,7 @@ export function ExportDialog({ stages, periods, initialStatus, initialPeriod }: 
                     </label>
                   ))}
                 </div>
-                <p className="mt-2 text-[13px] text-ink-muted">Counts above are for all time. The period uses the date the checkout was opened.</p>
+                <p className="mt-2 text-[13px] text-ink-muted">Counts above are for all time. The period uses the date the payment was created; the method and dates chosen on the page apply too.</p>
               </fieldset>
 
               <p className="rounded-input border border-sand bg-cream p-3 text-[13px] text-ink-soft">

@@ -1,5 +1,6 @@
 // Shared display helpers for the Payments page (client and server components).
 import type { PaymentListRow } from '../../lib/services/payments';
+import { OFFLINE_METHOD_LABELS, type OfflineMethod } from '../../lib/offline-payments';
 
 export { formatAmount } from './amount';
 
@@ -31,6 +32,18 @@ const METHODS: Record<string, string> = {
 export function methodLabel(method: string | null): string {
   if (!method) return '—';
   return METHODS[method] ?? method;
+}
+
+/** Razorpay (with the method used inside the checkout), or the offline method: UPI / Bank transfer / Other. */
+export function paymentMethodLabel(p: Pick<PaymentListRow, 'provider' | 'method'>): string {
+  if (p.provider === 'offline') return OFFLINE_METHOD_LABELS[p.method as OfflineMethod] ?? p.method ?? 'Offline';
+  return p.method ? `Razorpay · ${methodLabel(p.method)}` : 'Razorpay';
+}
+
+/** The payment's reference: the offline reference typed by staff, else the Razorpay payment / order ID. */
+export function paymentReference(p: Pick<PaymentListRow, 'provider' | 'reference' | 'provider_payment_id' | 'provider_order_id'>): string {
+  if (p.provider === 'offline') return p.reference ?? '';
+  return p.provider_payment_id ?? p.provider_order_id;
 }
 
 export const ATTEMPT_STATUS_LABELS: Record<string, string> = {

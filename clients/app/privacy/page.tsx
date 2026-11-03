@@ -33,6 +33,8 @@ export default function PrivacyPage() {
             <strong>Payment records:</strong> the Razorpay order and payment IDs, amount, payment method type, status
             and time. Your card, UPI or bank details go directly to Razorpay; we never see or store them. To stop misuse
             of the payment page, we keep a scrambled code made from your internet address (never the address itself).
+            If you pay us directly by UPI or bank transfer instead, our team records the payment reference, date and
+            method, and keeps the payment screenshot or receipt you share as proof for our accounts.
           </li>
           <li>
             <strong>Cookies:</strong> only what the app needs to keep you signed in and remember your language. We do
@@ -81,7 +83,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Service providers</strong> who help us run the service, only for that purpose: secure cloud
-            hosting and database, the SMS provider that sends your OTP, and Razorpay for payments.
+            hosting and database, the SMS provider that sends your OTP, Razorpay for payments, and Google Drive, where
+            proofs of direct payments are stored for our accounts team.
           </li>
         </ul>
         <p>We share information with authorities only when the law requires it.</p>
