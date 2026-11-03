@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CircleAlert, IndianRupee, PhoneCall, Search, SearchX, ShoppingCart } from 'lucide-react';
+import { ChevronDown, CircleAlert, IndianRupee, PhoneCall, Search, SearchX, ShoppingCart, SlidersHorizontal } from 'lucide-react';
 import { requireStaff } from '../../lib/auth';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
@@ -22,7 +22,7 @@ import {
   type PaymentList,
   type PaymentMethodFilter,
 } from '../../lib/services/payments';
-import { Button, ButtonLink, Card, cn, inputClasses } from '../../components/brand';
+import { Button, ButtonLink, Card, cn, inputClasses, labelClasses } from '../../components/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +67,14 @@ export default async function PaymentsPage({
   };
   const [{ rows, total }, summary] = await Promise.all([listPayments(filters), paymentSummary()]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // What the collapsed "More filters" row filters by (shown in its title; it opens when not empty).
+  const day = (d: string) => new Date(`${d}T00:00:00+05:30`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+  const moreFilters = [
+    filters.method !== 'all' ? PAYMENT_METHOD_FILTERS.find((m) => m.id === filters.method)?.label : null,
+    filters.period !== 'all' ? PAYMENT_PERIODS.find((p) => p.id === filters.period)?.label : null,
+    filters.from || filters.to ? `${filters.from ? day(filters.from) : 'start'} – ${filters.to ? day(filters.to) : 'today'}` : null,
+  ].filter((v): v is string => !!v);
 
   const href = (patch: Partial<Record<'status' | 'period' | 'method' | 'from' | 'to' | 'q' | 'page', string>>) => {
     const next = {
@@ -163,77 +171,87 @@ export default async function PaymentsPage({
       )}
 
       {/* Filters */}
-      <Card className="mb-6 space-y-4 p-4">
-        <form method="GET" action="/payments" className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      {/* One GET form: search, status chips (links), and the collapsible method / period / date filters. */}
+      <Card className="mb-6 p-4">
+        <form method="GET" action="/payments" className="space-y-4">
           {filters.status !== 'all' && <input type="hidden" name="status" value={filters.status} />}
-          {filters.period !== 'all' && <input type="hidden" name="period" value={filters.period} />}
-          {filters.method !== 'all' && <input type="hidden" name="method" value={filters.method} />}
-          {filters.from && <input type="hidden" name="from" value={filters.from} />}
-          {filters.to && <input type="hidden" name="to" value={filters.to} />}
-          <div className="relative flex-1">
-            <Search size={18} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3.5 top-3.75 text-teal" />
-            <input
-              type="search"
-              name="q"
-              aria-label="Search payments"
-              defaultValue={filters.q}
-              placeholder="Client name, paid-for mobile, email, report ID, Razorpay ID or reference"
-              className={`${inputClasses} pl-10`}
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search size={18} strokeWidth={2} aria-hidden className="pointer-events-none absolute left-3.5 top-3.75 text-teal" />
+              <input
+                type="search"
+                name="q"
+                aria-label="Search payments"
+                defaultValue={filters.q}
+                placeholder="Client name, paid-for mobile, email, report ID, Razorpay ID or reference"
+                className={`${inputClasses} pl-10`}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" variant="secondary" className="flex-1 sm:flex-none">
+                Search
+              </Button>
+              {(filters.q || filters.status !== 'all' || moreFilters.length > 0) && (
+                <ButtonLink href="/payments" variant="ghost">
+                  Clear
+                </ButtonLink>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button type="submit" variant="secondary" className="flex-1 sm:flex-none">
-              Search
-            </Button>
-            {(filters.q || filters.status !== 'all' || filters.period !== 'all' || filters.method !== 'all' || filters.from || filters.to) && (
-              <ButtonLink href="/payments" variant="ghost">
-                Clear
-              </ButtonLink>
-            )}
-          </div>
-        </form>
-        <nav aria-label="Status" className="flex flex-wrap gap-2">
-          {(['all', ...PAYMENT_LISTS] as const).map((s) => (
-            <Link key={s} href={href({ status: s, page: '1' })} aria-current={filters.status === s ? 'page' : undefined} className={chip(filters.status === s)}>
-              {STAGE_LABELS[s]}
-              {s !== 'all' && <span className="ml-1.5 text-[13px] font-normal text-ink-muted">{s === 'paid' ? summary.paidCount : summary.stages[s]}</span>}
-            </Link>
-          ))}
-        </nav>
-        <nav aria-label="Method" className="flex flex-wrap gap-2">
-          {PAYMENT_METHOD_FILTERS.map((m) => (
-            <Link key={m.id} href={href({ method: m.id, page: '1' })} aria-current={filters.method === m.id ? 'page' : undefined} className={chip(filters.method === m.id)}>
-              {m.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <nav aria-label="Period" className="flex flex-wrap gap-2">
-            {PAYMENT_PERIODS.map((p) => (
-              <Link key={p.id} href={href({ period: p.id, page: '1' })} aria-current={filters.period === p.id ? 'page' : undefined} className={chip(filters.period === p.id)}>
-                {p.label}
+
+          <nav aria-label="Status" className="flex flex-wrap gap-2">
+            {(['all', ...PAYMENT_LISTS] as const).map((s) => (
+              <Link key={s} href={href({ status: s, page: '1' })} aria-current={filters.status === s ? 'page' : undefined} className={chip(filters.status === s)}>
+                {STAGE_LABELS[s]}
+                {s !== 'all' && <span className="ml-1.5 text-[13px] font-normal text-ink-muted">{s === 'paid' ? summary.paidCount : summary.stages[s]}</span>}
               </Link>
             ))}
           </nav>
-          {/* Date range (India time, both days included): on the date paid, else the date created. */}
-          <form method="GET" action="/payments" className="flex flex-wrap items-end gap-2">
-            {filters.status !== 'all' && <input type="hidden" name="status" value={filters.status} />}
-            {filters.period !== 'all' && <input type="hidden" name="period" value={filters.period} />}
-            {filters.method !== 'all' && <input type="hidden" name="method" value={filters.method} />}
-            {filters.q && <input type="hidden" name="q" value={filters.q} />}
-            <label className="text-[13px] text-ink-muted">
-              From
-              <input type="date" name="from" defaultValue={filters.from} className={`${inputClasses} mt-1 min-h-11 w-40`} />
-            </label>
-            <label className="text-[13px] text-ink-muted">
-              To
-              <input type="date" name="to" defaultValue={filters.to} className={`${inputClasses} mt-1 min-h-11 w-40`} />
-            </label>
-            <Button type="submit" variant="secondary" size="sm">
-              Apply dates
-            </Button>
-          </form>
-        </div>
+
+          {/* Collapsed unless one of these is in use. */}
+          <details open={moreFilters.length > 0} className="group rounded-card border border-sand">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-[14px] font-semibold text-teal [&::-webkit-details-marker]:hidden">
+              <SlidersHorizontal size={16} strokeWidth={2} aria-hidden />
+              More filters
+              {moreFilters.length > 0 && <span className="truncate font-normal text-ink-muted">· {moreFilters.join(' · ')}</span>}
+              <ChevronDown size={16} strokeWidth={2} aria-hidden className="ml-auto shrink-0 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="grid grid-cols-1 gap-3 border-t border-sand p-4 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end">
+              <label className={labelClasses}>
+                Method
+                <select name="method" defaultValue={filters.method} className={`${inputClasses} mt-1.5 min-h-11`}>
+                  {PAYMENT_METHOD_FILTERS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={labelClasses}>
+                Period
+                <select name="period" defaultValue={filters.period} className={`${inputClasses} mt-1.5 min-h-11`}>
+                  {PAYMENT_PERIODS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {/* Date range (India time, both days included): on the date paid, else the date created. */}
+              <label className={labelClasses}>
+                From
+                <input type="date" name="from" defaultValue={filters.from} className={`${inputClasses} mt-1.5 min-h-11`} />
+              </label>
+              <label className={labelClasses}>
+                To
+                <input type="date" name="to" defaultValue={filters.to} className={`${inputClasses} mt-1.5 min-h-11`} />
+              </label>
+              <Button type="submit" variant="secondary" size="sm" className="lg:mb-0.5">
+                Apply
+              </Button>
+            </div>
+          </details>
+        </form>
       </Card>
 
       {/* Table */}
