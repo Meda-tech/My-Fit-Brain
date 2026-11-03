@@ -147,12 +147,13 @@ export function CounsellorView({ view, alerts }: { view: ViewData | null; alerts
                   <p className="text-[14px] font-semibold text-teal">{group.section}</p>
                   <ul className="mt-1 divide-y divide-sand text-[14px]">
                     {group.items.map((a, i) => (
-                      <li key={i} className="flex items-start justify-between gap-4 py-1.5">
-                        <span className="text-ink-soft">
+                      // Long answers (several choices) wrap within half the row; stacked on narrow screens.
+                      <li key={i} className="flex flex-col gap-0.5 py-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                        <span className="min-w-0 flex-1 text-ink-soft">
                           <span className="mr-2 text-ink-muted">{a.number}</span>
                           {a.question}
                         </span>
-                        <span className="shrink-0 text-right text-ink">
+                        <span className="min-w-0 wrap-break-word text-ink sm:max-w-1/2 sm:text-right">
                           {a.answer}
                           {a.skipped && <span className="ml-1 text-[12px] text-ink-muted">(not counted)</span>}
                         </span>
