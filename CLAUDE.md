@@ -13,7 +13,8 @@ contradict it. Task briefs live in `docs/tasks/` and are executed one at a time.
 ## Permanent rule: never delete data
 
 Never delete database data and never write SQL that deletes, drops or truncates anything without asking the
-owner first and getting a yes for that specific file. The one-time reset of Task 11 (file
+owner first and getting a yes for that specific file. This protects **production**; on the staging database
+(fake data only, see "Database rules") Claude may run anything. The one-time reset of Task 11 (file
 `20261026000000_reset_question_bank.sql`) was allowed once and is over. Every SQL file that would remove
 something must say so in plain words at its top. Verification SQL is `select` only.
 
@@ -44,10 +45,16 @@ MyFitBrain/
 │  ├─ questionnaires/         README.md (the JSON format and the system), ai-prompt.md (behind Copy AI prompt),
 │  │                          intimacy.json · mind.json (starting drafts converted from the workbooks)
 │  ├─ questionbank/           the two developer workbooks (.xlsx) and decisions.md — history only
-│  ├─ deploy/                 vercel.md (two Vercel projects), new-supabase-project.md (exact SQL order)
+│  ├─ deploy/                 vercel.md (two Vercel projects), new-supabase-project.md (exact SQL order),
+│  │                          staging.md (staging DB + dashboard checklist), production-log.md (files on prod)
 │  ├─ tasks/                  task briefs, findings and verify SQL per task
 │  └─ rebrand-audit.md        produced by task 01
-└─ supabase/migrations/       paste-ready SQL, one BEGIN … COMMIT per file (never edit an applied one)
+└─ supabase/
+   ├─ migrations/             paste-ready SQL, one BEGIN … COMMIT per file (never edit an applied one)
+   ├─ baseline/               schema-only export of production (no data), the starting point of staging
+   ├─ staging-migrate.ps1     applies new migrations / runs one SQL file on STAGING only
+   ├─ seed-staging.sql        fake staging data (staff logins, questionnaires, clients, purchases)
+   └─ .env.db                 PROD_DB_URL, STAGING_DB_URL, STAGING_STAFF_PASSWORD — git-ignored, never print
 ```
 
 ### Brand files inside the apps
@@ -435,9 +442,19 @@ so copy the master file there before using a new combination.
 ## Database rules
 
 - Never edit an applied migration. Add a new timestamped file in `supabase/migrations/`.
-- The owner runs SQL in the Supabase dashboard SQL Editor. Write migrations paste-ready (one
-  `BEGIN … COMMIT`), plus a separate verification SQL file (`select` only). Do not apply them or start a
-  local database. Always list which files to run, in order.
+- **Two databases** (`docs/deploy/staging.md`): production `tmifixelvfdtutsakwor` (real data) and staging
+  `ndlqjmcpmkkulpinwbxe` (fake data only). Connection strings in `supabase/.env.db` (git-ignored; never print
+  them, never pass them on a command line — the scripts hand them to Docker as environment variables).
+- **Every database change** = a new file in `supabase/migrations/`, paste-ready (one `BEGIN … COMMIT`), plus
+  a separate verification SQL file (`select` only). Then:
+  1. **Staging: Claude applies it** — `powershell -File supabase/staging-migrate.ps1` (runs only the files
+     staging does not have yet), and runs the verify file with `-Run <file>`. Anything may run on staging.
+  2. **Production: Claude never connects to change anything.** Tell the owner exactly: "paste file X into the
+     production SQL Editor" (in order), and add X under "Waiting for production" in
+     `docs/deploy/production-log.md`; move it to "Already on production" with the date once the owner
+     confirms it ran.
+- `PROD_DB_URL` is for read-only, schema-only exports (`supabase db dump`, no data) and nothing else. Never
+  read production client data. No local database.
 - Never delete data or write deleting SQL without asking first (see the permanent rule at the top).
 - Gender, relationship status, staff roles and age limits come only from `lib/options.ts` in each app
   (stored values = English strings; labels via i18n).
@@ -495,4 +512,8 @@ existing migrations, `.env*` files.
   wider ones, owner-approved 2026-11-03; no data removed), then `20261103000001_drop_google_drive_connection.sql`
   (drops only the unused OAuth token table, owner-approved for that step only), checks
   `docs/tasks/18-offline-payments-verify.sql`; then set the three `GOOGLE_*` service-account variables.
+- Done: **Staging database** (2026-11-04): built from a schema-only export of production
+  (`supabase/baseline/`), all 22 migrations recorded, fake data from `supabase/seed-staging.sql`. Dashboard
+  settings still to copy by hand: checklist in `docs/deploy/staging.md`. Files on production:
+  `docs/deploy/production-log.md`.
 - Next: Task 07 — polish.
