@@ -179,7 +179,7 @@ function SheetBody({
           <Row label="Method">{paymentMethodLabel(p)}</Row>
           {p.provider === 'offline' ? (
             <>
-              <Row label="Reference">{p.reference ? <CopyText value={p.reference} /> : '—'}</Row>
+              <Row label="Reference ID">{p.reference ? <CopyText value={p.reference} /> : '—'}</Row>
               <Row label="Date paid">{formatDateTime(p.paid_at)}</Row>
               <Row label="Proof">
                 {p.proof_url ? (

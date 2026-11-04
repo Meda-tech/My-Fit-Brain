@@ -105,7 +105,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
               <th className="whitespace-nowrap px-5 py-3 font-semibold">Assessment</th>
               <th className="whitespace-nowrap px-5 py-3 text-right font-semibold">Amount</th>
               <th className="whitespace-nowrap px-5 py-3 font-semibold">Method</th>
-              <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[64rem]:table-cell">Reference</th>
+              <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[64rem]:table-cell">Reference ID</th>
               <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[64rem]:table-cell">Proof</th>
               <th className="hidden whitespace-nowrap px-5 py-3 font-semibold @[76rem]:table-cell">Recorded by</th>
               <th className="whitespace-nowrap px-5 py-3 font-semibold">Status</th>

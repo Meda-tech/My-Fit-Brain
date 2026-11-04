@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- STAGING ONLY — fake test data. NEVER run this on production.
 -- ==============================================================================
 -- Run it with:  powershell -File supabase/staging-migrate.ps1 -Run supabase/seed-staging.sql

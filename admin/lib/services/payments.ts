@@ -643,6 +643,6 @@ export async function cancelPayment(paymentId: string, rawReason: unknown): Prom
     .is('refund_status', null)
     .select('id')
     .maybeSingle();
-  if (error || !data) return 'Only an offline payment that is not started can be cancelled.';
+  if (error || !data) return 'Only a manual payment that is not started can be cancelled.';
   return null;
 }

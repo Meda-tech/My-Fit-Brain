@@ -1,5 +1,6 @@
 // Rules for offline payments (UPI to our number, bank transfer, other), recorded by staff on a client's
-// profile with a payment screenshot or PDF as proof. No Next.js, database or Google imports, so the
+// profile with a payment screenshot or PDF as proof. Staff see them as "manual payments"; the code and
+// the database keep the name offline (payments.provider = 'offline'). No Next.js, database or Google imports, so the
 // checks are unit-tested on their own (admin/test/offline-payments.test.ts).
 
 /**
@@ -15,12 +16,6 @@ export const OFFLINE_METHOD_LABELS: Record<OfflineMethod, string> = {
   upi: 'UPI',
   bank_transfer: 'Bank transfer',
   other: 'Other',
-};
-
-export const REFERENCE_HINTS: Record<OfflineMethod, string> = {
-  upi: 'UPI transaction ID',
-  bank_transfer: 'Bank UTR number',
-  other: 'Reference',
 };
 
 export const PROOF_MAX_BYTES = 4 * 1024 * 1024;
@@ -122,8 +117,8 @@ export function parseOfflinePayment(
   const paid = paidAtFor(typeof fields.paidOn === 'string' ? fields.paidOn : '', now);
   if (!paid.ok) return paid;
   const reference = cleanReference(typeof fields.reference === 'string' ? fields.reference : '');
-  if (!reference) return { ok: false, error: 'Enter the payment reference (UPI transaction ID, bank UTR or other).' };
-  if (reference.length > REFERENCE_MAX_LENGTH) return { ok: false, error: `The reference can be at most ${REFERENCE_MAX_LENGTH} characters.` };
+  if (!reference) return { ok: false, error: 'Enter the reference ID (UPI transaction ID, bank UTR or other).' };
+  if (reference.length > REFERENCE_MAX_LENGTH) return { ok: false, error: `The reference ID can be at most ${REFERENCE_MAX_LENGTH} characters.` };
   const note = typeof fields.note === 'string' ? fields.note.trim() : '';
   if (note.length > NOTE_MAX_LENGTH) return { ok: false, error: `The note can be at most ${NOTE_MAX_LENGTH} characters.` };
   return { ok: true, value: { code, method: method as OfflineMethod, reference, note: note || null, paidAt: paid.paidAt } };

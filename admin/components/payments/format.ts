@@ -36,7 +36,7 @@ export function methodLabel(method: string | null): string {
 
 /** Razorpay (with the method used inside the checkout), or the offline method: UPI / Bank transfer / Other. */
 export function paymentMethodLabel(p: Pick<PaymentListRow, 'provider' | 'method'>): string {
-  if (p.provider === 'offline') return OFFLINE_METHOD_LABELS[p.method as OfflineMethod] ?? p.method ?? 'Offline';
+  if (p.provider === 'offline') return OFFLINE_METHOD_LABELS[p.method as OfflineMethod] ?? p.method ?? 'Manual';
   return p.method ? `Razorpay · ${methodLabel(p.method)}` : 'Razorpay';
 }
 

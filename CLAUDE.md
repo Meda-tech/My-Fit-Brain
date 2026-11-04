@@ -257,7 +257,8 @@ results with you"). The client never sees a report in the app.
   under-18 record (`last_at`) changed in the window (`readPaymentsForSync`). Over 20,000 rows → 422.
 - **Offline payments** (UPI to our number, bank transfer, other; no cash; migration
   `20261103000000_offline_payments.sql`, checks `docs/tasks/18-offline-payments-verify.sql`): super admins and
-  coordinators press **Add offline payment** on a client's profile (live, switched-on questionnaire; the fixed price,
+  coordinators press **Add manual payment** on a client's profile (staff see "manual payment" and
+  "Reference ID" everywhere; code and database keep `offline`) (live, switched-on questionnaire; the fixed price,
   read-only; method; date paid; reference required; proof JPG/PNG/WebP/PDF ≤ 4 MB required, type checked from the
   bytes; optional note). The proof is uploaded to Google Drive FIRST; if that fails nothing is saved. Then a paid row
   in `payments` (`provider = 'offline'`, `reference`, `recorded_by`, `proof_file_id`, `proof_url`, order and payment ID

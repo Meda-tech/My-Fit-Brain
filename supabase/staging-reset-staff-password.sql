@@ -1,4 +1,4 @@
-﻿-- STAGING ONLY. Sets the three fake staff logins (superadmin/coordinator/counsellor@example.com) to the
+-- STAGING ONLY. Sets the three fake staff logins (superadmin/coordinator/counsellor@example.com) to the
 -- password STAGING_STAFF_PASSWORD from supabase/.env.db. Changes nothing else; deletes nothing.
 -- Run: powershell -File supabase/staging-migrate.ps1 -Run supabase/staging-reset-staff-password.sql
 

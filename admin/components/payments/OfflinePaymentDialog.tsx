@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, X } from 'lucide-react';
+import { FileText, Plus, Upload, X } from 'lucide-react';
 import { recordOfflinePaymentAction, referenceUsedAction } from '../../app/clients/[id]/actions';
 import { Button, Notice, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import {
@@ -12,13 +12,14 @@ import {
   OFFLINE_METHOD_LABELS,
   PROOF_ACCEPT,
   PROOF_MAX_BYTES,
-  REFERENCE_HINTS,
   REFERENCE_MAX_LENGTH,
   type OfflineMethod,
 } from '../../lib/offline-payments';
 
-// "Add offline payment" on a client's profile (super admins and coordinators). The proof is uploaded
-// first; if that fails nothing is saved. A reference used before only shows a warning.
+// "Add manual payment" on a client's profile (super admins and coordinators). Stored as provider
+// 'offline'; staff only ever see "manual". The proof is uploaded first; if that fails nothing is saved.
+// A reference used before only shows a warning. The form fits on one screen on a laptop: two columns,
+// header and footer fixed; only on small screens does the middle part scroll.
 
 interface Props {
   clientId: string;
@@ -32,11 +33,16 @@ interface Props {
 
 const PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
+function fileSize(bytes: number): string {
+  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function OfflinePaymentDialog({ clientId, questionnaires, price, today, staffName }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<OfflineMethod>('upi');
+  const [proof, setProof] = useState<{ name: string; size: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usedCount, setUsedCount] = useState(0);
   const [saved, setSaved] = useState<{ paymentId: string; duplicate: boolean } | null>(null);
@@ -49,8 +55,13 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
       if (e.key === 'Escape' && !pending) setOpen(false);
     };
     window.addEventListener('keydown', onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     first.current?.focus();
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+    };
   }, [open, pending]);
 
   const close = () => {
@@ -58,6 +69,8 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
     setOpen(false);
     setError(null);
     setUsedCount(0);
+    setProof(null);
+    setMethod('upi');
     opener.current?.focus();
   };
 
@@ -71,11 +84,11 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const proof = form.get('proof');
+    const file = form.get('proof');
     // Quick checks here; the server checks the real file type again.
-    if (!(proof instanceof File) || proof.size === 0) return setError('Add the payment proof (screenshot or PDF).');
-    if (proof.size > PROOF_MAX_BYTES) return setError('The proof is larger than 4 MB. Please upload a smaller file.');
-    if (proof.type && !PROOF_TYPES.includes(proof.type)) return setError('The proof must be a JPG, PNG, WebP image or a PDF.');
+    if (!(file instanceof File) || file.size === 0) return setError('Add the payment proof (screenshot or PDF).');
+    if (file.size > PROOF_MAX_BYTES) return setError('The proof is larger than 4 MB. Please upload a smaller file.');
+    if (file.type && !PROOF_TYPES.includes(file.type)) return setError('The proof must be a JPG, PNG, WebP image or a PDF.');
     setError(null);
     startTransition(async () => {
       try {
@@ -84,6 +97,7 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
         setSaved({ paymentId: result.paymentId, duplicate: result.duplicateReference });
         setOpen(false);
         setUsedCount(0);
+        setProof(null);
         router.refresh();
       } catch {
         setError('Proof could not be uploaded. Please try again.');
@@ -105,13 +119,13 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
         title={questionnaires.length === 0 ? 'No assessment can be bought right now.' : undefined}
       >
         <Plus size={18} strokeWidth={2} aria-hidden />
-        <span>Add offline payment</span>
+        <span>Add manual payment</span>
       </Button>
 
       {saved && (
         <Notice title="Payment recorded." className="order-last basis-full sm:max-w-120" role="status">
           The client can start the assessment from Home now.{' '}
-          {saved.duplicate && <span className="font-semibold text-coral-deep">The same reference is on another payment; please check. </span>}
+          {saved.duplicate && <span className="font-semibold text-coral-deep">The same reference ID is on another payment; please check. </span>}
           <Link href={`/payments?payment=${saved.paymentId}`} className="font-semibold text-teal hover:underline">
             View in Payments
           </Link>
@@ -119,20 +133,23 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
           <div className="absolute inset-0 bg-night/40" onClick={close} />
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="offline-payment-title"
-            className="relative max-h-full w-full max-w-130 overflow-y-auto rounded-card bg-white p-5 shadow-card sm:p-6"
+            aria-labelledby="manual-payment-title"
+            className="relative flex max-h-dvh w-full flex-col rounded-t-card bg-white shadow-card sm:max-h-[calc(100dvh-2rem)] sm:max-w-3xl sm:rounded-card"
           >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 id="offline-payment-title" className="font-heading text-[22px] font-semibold text-teal">
-                  Add offline payment
-                </h2>
-                <p className="mt-1 text-[14px] text-ink-muted">For a payment made outside Razorpay. No cash payments.</p>
+            <div className="flex items-start justify-between gap-3 border-b border-sand px-5 pt-5 pb-4 sm:px-6">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <h2 id="manual-payment-title" className="font-heading text-[22px] font-semibold text-teal">
+                    Add manual payment
+                  </h2>
+                  <span className="rounded-full bg-mist px-3 py-1 text-[14px] font-semibold text-teal">{price}</span>
+                </div>
+                <p className="mt-1 text-[14px] text-ink-muted">A payment made outside Razorpay, at the fixed price. No cash payments.</p>
               </div>
               <button
                 type="button"
@@ -144,109 +161,134 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
               </button>
             </div>
 
-            <form onSubmit={submit} className="space-y-4" noValidate>
-              <div>
-                <label htmlFor="op-code" className={labelClasses}>
-                  Assessment
-                </label>
-                <select id="op-code" name="code" ref={first} required className={inputClasses} defaultValue={questionnaires[0]?.code}>
-                  {questionnaires.map((q) => (
-                    <option key={q.code} value={q.code}>
-                      {q.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="op-amount" className={labelClasses}>
-                  Amount
-                </label>
-                <input id="op-amount" value={price} readOnly aria-readonly className={`${inputClasses} bg-cream`} />
-                <p className={helpTextClasses}>The fixed price of the assessment. No discounts.</p>
-              </div>
-
-              <fieldset>
-                <legend className={labelClasses}>Method</legend>
-                <div className="flex flex-wrap gap-2">
-                  {OFFLINE_METHODS.map((m) => (
-                    <label
-                      key={m}
-                      className="flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-sand px-4 text-[14px] text-ink has-checked:border-teal has-checked:bg-mist has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-coral"
-                    >
-                      <input type="radio" name="method" value={m} checked={method === m} onChange={() => setMethod(m)} className="sr-only" />
-                      {OFFLINE_METHOD_LABELS[m]}
-                    </label>
-                  ))}
+            <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col" noValidate>
+              <div className="grid min-h-0 flex-1 gap-x-5 gap-y-4 overflow-y-auto px-5 py-5 sm:grid-cols-2 sm:px-6">
+                <div>
+                  <label htmlFor="mp-code" className={labelClasses}>
+                    Assessment
+                  </label>
+                  <select id="mp-code" name="code" ref={first} required className={inputClasses} defaultValue={questionnaires[0]?.code}>
+                    {questionnaires.map((q) => (
+                      <option key={q.code} value={q.code}>
+                        {q.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </fieldset>
 
-              <div>
-                <label htmlFor="op-date" className={labelClasses}>
-                  Date paid
-                </label>
-                <input id="op-date" name="paidOn" type="date" required defaultValue={today} max={today} className={inputClasses} />
-              </div>
+                <div>
+                  <label htmlFor="mp-date" className={labelClasses}>
+                    Date paid
+                  </label>
+                  <input id="mp-date" name="paidOn" type="date" required defaultValue={today} max={today} className={inputClasses} />
+                </div>
 
-              <div>
-                <label htmlFor="op-reference" className={labelClasses}>
-                  {REFERENCE_HINTS[method]}
-                </label>
-                <input
-                  id="op-reference"
-                  name="reference"
-                  required
-                  maxLength={REFERENCE_MAX_LENGTH}
-                  autoComplete="off"
-                  onBlur={(e) => checkReference(e.target.value)}
-                  onChange={() => usedCount && setUsedCount(0)}
-                  className={`${inputClasses} font-mono`}
-                />
-                {usedCount > 0 && (
-                  <p role="status" className="mt-1.5 text-[13px] font-semibold text-coral-deep">
-                    This reference is already on {usedCount === 1 ? 'another payment' : `${usedCount} other payments`}. Check before saving; you can
-                    still save.
-                  </p>
+                <fieldset className="sm:col-span-2">
+                  <legend className={labelClasses}>Method</legend>
+                  <div className="grid grid-cols-3 gap-1 rounded-input border border-sand bg-cream p-1">
+                    {OFFLINE_METHODS.map((m) => (
+                      <label
+                        key={m}
+                        className="flex min-h-11 cursor-pointer items-center justify-center rounded-[6px] px-2 text-[15px] font-medium text-ink-soft transition-colors hover:text-teal has-checked:bg-white has-checked:font-semibold has-checked:text-teal has-checked:shadow-card has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-coral"
+                      >
+                        <input type="radio" name="method" value={m} checked={method === m} onChange={() => setMethod(m)} className="sr-only" />
+                        {OFFLINE_METHOD_LABELS[m]}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+
+                <div>
+                  <label htmlFor="mp-reference" className={labelClasses}>
+                    Reference ID
+                  </label>
+                  <input
+                    id="mp-reference"
+                    name="reference"
+                    required
+                    maxLength={REFERENCE_MAX_LENGTH}
+                    autoComplete="off"
+                    placeholder="e.g. 4123 9876 5432"
+                    aria-describedby="mp-reference-help"
+                    onBlur={(e) => checkReference(e.target.value)}
+                    onChange={() => usedCount && setUsedCount(0)}
+                    className={`${inputClasses} font-mono`}
+                  />
+                  {usedCount > 0 ? (
+                    <p id="mp-reference-help" role="status" className="mt-1.5 text-[13px] font-semibold text-coral-deep">
+                      Already on {usedCount === 1 ? 'another payment' : `${usedCount} other payments`}. Check before saving; you can still save.
+                    </p>
+                  ) : (
+                    <p id="mp-reference-help" className={helpTextClasses}>
+                      UPI transaction ID, bank UTR or other reference.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="mp-note" className={labelClasses}>
+                    Note <span className="font-normal text-ink-muted">(optional)</span>
+                  </label>
+                  <input id="mp-note" name="note" maxLength={NOTE_MAX_LENGTH} autoComplete="off" className={inputClasses} />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <span id="mp-proof-label" className={labelClasses}>
+                    Proof
+                  </span>
+                  <label
+                    htmlFor="mp-proof"
+                    className={`flex min-h-16 cursor-pointer items-center gap-3 rounded-input border border-dashed px-4 py-3 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-coral ${
+                      proof ? 'border-teal bg-mist' : 'border-sand bg-cream hover:border-teal'
+                    }`}
+                  >
+                    <input
+                      id="mp-proof"
+                      name="proof"
+                      type="file"
+                      required
+                      accept={PROOF_ACCEPT}
+                      aria-labelledby="mp-proof-label"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        setProof(f ? { name: f.name, size: f.size } : null);
+                      }}
+                      className="sr-only"
+                    />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-teal">
+                      {proof ? <FileText size={20} strokeWidth={2} aria-hidden /> : <Upload size={20} strokeWidth={2} aria-hidden />}
+                    </span>
+                    {proof ? (
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-semibold text-ink">{proof.name}</span>
+                        <span className="block text-[13px] text-ink-muted">{fileSize(proof.size)} · click to choose another file</span>
+                      </span>
+                    ) : (
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] font-semibold text-teal">Choose screenshot or PDF</span>
+                        <span className="block text-[13px] text-ink-muted">JPG, PNG, WebP or PDF, up to 4 MB. Saved in the company Google Drive.</span>
+                      </span>
+                    )}
+                  </label>
+                </div>
+
+                {error && (
+                  <Notice variant="error" role="alert" className="sm:col-span-2">
+                    {error}
+                  </Notice>
                 )}
               </div>
 
-              <div>
-                <label htmlFor="op-proof" className={labelClasses}>
-                  Proof
-                </label>
-                <input
-                  id="op-proof"
-                  name="proof"
-                  type="file"
-                  required
-                  accept={PROOF_ACCEPT}
-                  className="block w-full text-[14px] text-ink-soft file:mr-3 file:min-h-11 file:rounded-full file:border-0 file:bg-mist file:px-4 file:font-heading file:font-semibold file:text-teal hover:file:bg-sand"
-                />
-                <p className={helpTextClasses}>Screenshot (JPG, PNG, WebP) or PDF, up to 4 MB. Saved in the company Google Drive.</p>
-              </div>
-
-              <div>
-                <label htmlFor="op-note" className={labelClasses}>
-                  Note <span className="font-normal text-ink-muted">(optional)</span>
-                </label>
-                <textarea id="op-note" name="note" rows={2} maxLength={NOTE_MAX_LENGTH} className={`${inputClasses} py-2.5`} />
-              </div>
-
-              <p className="text-[13px] text-ink-muted">Recorded by {staffName}.</p>
-
-              {error && (
-                <Notice variant="error" role="alert">
-                  {error}
-                </Notice>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                <Button type="submit" loading={pending} loadingText="Uploading proof…">
-                  Save payment
-                </Button>
-                <Button type="button" variant="ghost" onClick={close} disabled={pending}>
-                  Cancel
-                </Button>
+              <div className="flex flex-col-reverse gap-3 border-t border-sand px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <p className="text-[13px] text-ink-muted">Recorded by {staffName}</p>
+                <div className="flex gap-2">
+                  <Button type="button" variant="ghost" onClick={close} disabled={pending}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" loading={pending} loadingText="Uploading proof…">
+                    Save payment
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

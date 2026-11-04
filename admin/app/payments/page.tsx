@@ -109,7 +109,7 @@ export default async function PaymentsPage({
     <AdminShell fullName={profile.full_name} role={profile.role}>
       <PageHeader
         title="Payments"
-        description="Assessment purchases: Razorpay, and offline payments recorded on a client's profile. A Razorpay purchase belongs to the number it was paid for until someone logs in with it."
+        description="Assessment purchases: Razorpay, and manual payments recorded on a client's profile. A Razorpay purchase belongs to the number it was paid for until someone logs in with it."
         actions={
           <ExportDialog
             stages={(['all', ...PAYMENT_LISTS] as const).map((s) => ({
