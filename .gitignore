@@ -15,6 +15,9 @@ next-env.d.ts
 # Environment and secrets (only the .env.example templates are committed)
 .env*
 !.env.example
+# Database connection strings (production + staging)
+supabase/.env.db
+supabase/.temp/
 *.pem
 *.key
 
