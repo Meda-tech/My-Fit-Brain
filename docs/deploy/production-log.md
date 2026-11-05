@@ -48,4 +48,6 @@ token table).
 
 Files that are on staging but not yet on production. Paste them into the production SQL Editor in this order.
 
-_None._
+| # | File | On staging since | Checks |
+|---|---|---|---|
+| 23 | `20261105000000_attempt_conclusions.sql` | 2026-11-05 | `docs/tasks/20-conclusions-verify.sql` |

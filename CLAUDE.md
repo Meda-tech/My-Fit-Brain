@@ -290,6 +290,17 @@ results with you"). The client never sees a report in the app.
   safety alerts only (RLS `can_view_reports()` on answers, results and client details).
 - The counsellor view is computed from the pinned version, the stored answers and the stored result
   (`counsellorView` in `@mfb/questionnaire`); nothing is re-scored.
+- **Counsellor's conclusion** (migration `20261105000000_attempt_conclusions.sql`, checks
+  `docs/tasks/20-conclusions-verify.sql`): at the bottom of `/attempts/<id>`, super admins and counsellors
+  write free text about a **completed** assessment and edit it at any time (plain text, up to 20,000
+  characters, an empty line = new paragraph; `admin/lib/conclusion.ts`, `lib/services/conclusions.ts`). One
+  row per attempt in `attempt_conclusions` with the first author and the last editor (name kept as it was);
+  a save is refused when someone else saved in between. Never deleted (trigger). Read only under
+  `can_view_reports()`; never in the report, the PDF or any notification; coordinators and clients never see it.
+- **Assessments** (`/assessments`, sidebar, all staff): every attempt with its client, newest first; status
+  chips (Paid, not started · In progress · Completed, plus **Needs conclusion** for super admins and
+  counsellors), a test filter and search (name, mobile, email, report ID). Alerts show as pills; the
+  conclusion column only for report roles. Opening a row shows what the role allows.
 - Report PDFs are never stored: built on request by `admin/app/attempts/[id]/pdf/route.ts` with
   `@react-pdf/renderer` from the stored report, `Cache-Control: no-store`, file name = report ID. Five parts
   (cover · snapshot · plan · what sessions will work on · next step; empty parts left out), layout per
@@ -517,4 +528,6 @@ existing migrations, `.env*` files.
   (`supabase/baseline/`), all 22 migrations recorded, fake data from `supabase/seed-staging.sql`. Dashboard
   settings still to copy by hand: checklist in `docs/deploy/staging.md`. Files on production:
   `docs/deploy/production-log.md`.
+- Done (staging): **Counsellor's conclusion and the Assessments page**. Run
+  `20261105000000_attempt_conclusions.sql` on production, checks `docs/tasks/20-conclusions-verify.sql`.
 - Next: Task 07 — polish.
