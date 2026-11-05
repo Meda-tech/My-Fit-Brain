@@ -8,13 +8,14 @@ import { AttemptStatusPill, formatDateTime } from '../../../components/attempts/
 import { AlertsList, CounsellorView } from '../../../components/attempts/CounsellorView';
 import { DownloadPdfButton } from '../../../components/attempts/DownloadPdfButton';
 import { ClientDetailsAnswers } from '../../../components/attempts/ClientDetailsAnswers';
+import { ConclusionEditor } from '../../../components/attempts/ConclusionEditor';
 import { canViewReports, getAttemptDetail } from '../../../lib/services/attempts';
 import { Card, Notice, Pill } from '../../../components/brand';
 
 export const dynamic = 'force-dynamic';
 
-// One attempt: the counsellor view and the PDF download (super admins and counsellors). Coordinators see
-// the alerts only. The client never sees any of this.
+// One attempt: the counsellor view, the PDF download and the counsellor's conclusion (super admins and
+// counsellors). Coordinators see the alerts only. The client never sees any of this.
 export default async function AttemptPage({ params }: { params: Promise<{ id: string }> }) {
   const { profile } = await requireStaff();
   const { id } = await params;
@@ -53,11 +54,12 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
           )}
           <CounsellorView view={view} alerts={detail.alerts} />
           {detail.details && <ClientDetailsAnswers details={detail.details} />}
+          <ConclusionEditor attemptId={attempt.id} initial={detail.conclusion} canWrite={attempt.status === 'completed'} />
         </div>
       ) : (
         <div className="max-w-202 space-y-6">
           <Notice variant="info" icon={<Lock size={18} strokeWidth={2} aria-hidden />}>
-            Answers, results and the PDF are visible to counsellors and super admins only.
+            Answers, results, the PDF and the counsellor&rsquo;s conclusion are visible to counsellors and super admins only.
           </Notice>
           <Card className="p-5 sm:p-6">
             <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-muted">Safety alerts</h3>

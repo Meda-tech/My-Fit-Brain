@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
+  ClipboardList,
   BookOpen,
   ShieldCheck,
   LogOut,
@@ -98,6 +99,7 @@ export function AdminShellClient({
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/clients', label: 'Clients', icon: Users },
+    { href: '/assessments', label: 'Assessments', icon: ClipboardList },
     { href: '/questionnaires', label: 'Questionnaires', icon: BookOpen },
     // Payments: super admins and coordinators only (RLS: can_view_payments()).
     ...(role === 'super_admin' || role === 'coordinator'
@@ -173,7 +175,9 @@ export function AdminShellClient({
           </p>
           <ul className="space-y-1">
             {navItems.map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(`${href}/`);
+              // One assessment lives at /attempts/<id>; it belongs to Assessments.
+              const active =
+                pathname === href || pathname.startsWith(`${href}/`) || (href === '/assessments' && pathname.startsWith('/attempts/'));
               return (
                 <li key={href}>
                   <Link
