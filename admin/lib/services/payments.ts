@@ -54,8 +54,8 @@ export type PaymentMethodFilter = 'razorpay' | 'manual' | OfflineMethod;
 export const PAYMENT_METHOD_FILTERS: { id: PaymentMethodFilter | 'all'; label: string }[] = [
   { id: 'all', label: 'All methods' },
   { id: 'razorpay', label: 'Razorpay' },
-  { id: 'manual', label: 'Manual (all)' },
-  ...OFFLINE_METHODS.map((m) => ({ id: m, label: `Manual · ${OFFLINE_METHOD_LABELS[m]}` })),
+  { id: 'manual', label: 'Manual' },
+  ...OFFLINE_METHODS.map((m) => ({ id: m, label: OFFLINE_METHOD_LABELS[m] })),
 ];
 
 export function paymentStage(p: {

@@ -266,8 +266,8 @@ results with you"). The client never sees a report in the app.
   block. **Cancel payment** (offline, paid, not started; reason required): status `cancelled`, the row stays with
   who / when / why. Razorpay payments keep Mark refunded. The Payments list shows both, with method (Razorpay / UPI
   / Bank transfer / Other), reference, proof link and recorded by; manual payments carry a solid teal **Manual**
-  pill. Filters for method (Razorpay, Manual (all), or one manual method; the **Manual only** chip beside the
-  status chips is the shortcut) and a date range (date paid, else created); the Excel export follows them.
+  pill. Filters for method (Razorpay, Manual = every manual payment, UPI, Bank transfer, Other) and a date range
+  (date paid, else created); the Excel export follows them.
 - **Google Drive** (proofs; all Google code in `admin/lib/google/drive.ts`, `uploadProof(file, paymentId)`): a
   **service account** (no OAuth, nothing stored in the database), scope `drive`, `supportsAllDrives`, uploads into
   `GOOGLE_DRIVE_FOLDER_ID` (a Shared Drive where the service account is Content manager). File name = payment ID +

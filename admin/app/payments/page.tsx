@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ChevronDown, CircleAlert, HandCoins, IndianRupee, PhoneCall, Search, SearchX, ShoppingCart, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, CircleAlert, IndianRupee, PhoneCall, Search, SearchX, ShoppingCart, SlidersHorizontal } from 'lucide-react';
 import { requireStaff } from '../../lib/auth';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
@@ -206,16 +206,6 @@ export default async function PaymentsPage({
                 {s !== 'all' && <span className="ml-1.5 text-[13px] font-normal text-ink-muted">{s === 'paid' ? summary.paidCount : summary.stages[s]}</span>}
               </Link>
             ))}
-            {/* Method shortcut, apart from the stages: on = only payments recorded by staff; works with any stage. */}
-            <span aria-hidden className="mx-1 hidden w-px self-stretch bg-sand sm:block" />
-            <Link
-              href={href({ method: filters.method === 'manual' ? 'all' : 'manual', page: '1' })}
-              aria-pressed={filters.method === 'manual'}
-              className={chip(filters.method === 'manual')}
-            >
-              <HandCoins size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
-              Manual only
-            </Link>
           </nav>
 
           {/* Collapsed unless one of these is in use. */}
