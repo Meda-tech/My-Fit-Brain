@@ -252,7 +252,7 @@ results with you"). The client never sees a report in the app.
 - Google Sheets feed (read only): `GET /api/integrations/google-sheets/payments` in the admin app returns
   purchase_id (the payments row id, the sheet's key), payment_time (paid, else tried; India time), test code,
   status, payment, assessment, name, mobile (the same values as the Excel export, both use
-  `lib/payment-fields.ts`) and last_update, oldest payment first. An unpaid try followed by a later try for
+  `lib/payment-fields.ts`) and last_update, newest payment first. An unpaid try followed by a later try for
   the same number and test is left out and listed in `removed` (`lib/integrations/sheets-rows.ts`). `Authorization: Bearer` + `GOOGLE_SHEETS_SYNC_TOKEN` (64 characters, server env
   only, checked timing-safe before any read; unset → 401 for all). Optional `from` (inclusive) / `to`
   (exclusive), ISO 8601 with a zone: purchases whose payment, assessment or client (`updated_at`) or

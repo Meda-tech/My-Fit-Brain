@@ -41,8 +41,8 @@ export function latest(...times: (string | null | undefined)[]): string {
   return times.filter((t): t is string => !!t).reduce((a, b) => (new Date(b) > new Date(a) ? b : a));
 }
 
-/** Oldest payment first (paid time, else the time of the try); same time → by id, so the order never changes. */
+/** Newest payment first (paid time, else the time of the try); same time → by id, so the order never changes. */
 export function byPaymentTime<T extends { id: string; time: string }>(a: T, b: T): number {
-  const d = new Date(a.time).getTime() - new Date(b.time).getTime();
+  const d = new Date(b.time).getTime() - new Date(a.time).getTime();
   return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }

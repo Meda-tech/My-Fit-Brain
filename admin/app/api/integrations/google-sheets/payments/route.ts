@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 // checked before anything is read. Optional ?from= (inclusive) and ?to= (exclusive): purchases whose
 // shown values may have changed in that window (see readPaymentsForSync).
 //
-// One row per purchase, oldest payment first, keyed by purchase_id (the payments row id; never
+// One row per purchase, newest payment first, keyed by purchase_id (the payments row id; never
 // changes). status, payment, assessment, name and mobile are the same values as the Excel export.
 // An unpaid try followed by a later try for the same number and test is left out of `data`, and its
 // id is listed in `removed` so the sheet can delete a row it already has (see sheets-rows.ts).

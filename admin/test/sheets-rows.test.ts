@@ -45,12 +45,12 @@ describe('times and order', () => {
     expect(latest('2026-11-05T04:30:00Z', null, '2026-11-06T04:30:00Z', undefined)).toBe('2026-11-06T04:30:00Z');
   });
 
-  it('sorts oldest first, then by id', () => {
+  it('sorts newest first, then by id', () => {
     const rows = [
       { id: 'b', time: '2026-11-05T05:00:00Z' },
       { id: 'c', time: '2026-11-04T05:00:00Z' },
       { id: 'a', time: '2026-11-05T05:00:00Z' },
     ];
-    expect(rows.sort(byPaymentTime).map((r) => r.id)).toEqual(['c', 'a', 'b']);
+    expect(rows.sort(byPaymentTime).map((r) => r.id)).toEqual(['a', 'b', 'c']);
   });
 });
