@@ -529,6 +529,6 @@ existing migrations, `.env*` files.
   (`supabase/baseline/`), all 22 migrations recorded, fake data from `supabase/seed-staging.sql`. Dashboard
   settings still to copy by hand: checklist in `docs/deploy/staging.md`. Files on production:
   `docs/deploy/production-log.md`.
-- Done (staging): **Counsellor's conclusion and the Assessments page**. Run
-  `20261105000000_attempt_conclusions.sql` on production, checks `docs/tasks/20-conclusions-verify.sql`.
+- Done: **Counsellor's conclusion and the Assessments page** (`20261105000000_attempt_conclusions.sql`, on
+  production 2026-11-05; checks `docs/tasks/20-conclusions-verify.sql`).
 - Next: Task 07 — polish.

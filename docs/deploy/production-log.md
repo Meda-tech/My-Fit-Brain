@@ -36,6 +36,7 @@ token table).
 | 20 | `20261031000004_age_stops.sql` | before 2026-11-04 |
 | 21 | `20261103000000_offline_payments.sql` | before 2026-11-04 |
 | 22 | `20261103000001_drop_google_drive_connection.sql` | before 2026-11-04 |
+| 23 | `20261105000000_attempt_conclusions.sql` | 2026-11-05 (owner confirmed) |
 
 ## One-time data fixes (not migrations)
 
@@ -50,4 +51,4 @@ Files that are on staging but not yet on production. Paste them into the product
 
 | # | File | On staging since | Checks |
 |---|---|---|---|
-| 23 | `20261105000000_attempt_conclusions.sql` | 2026-11-05 | `docs/tasks/20-conclusions-verify.sql` |
+| — | none | | |
