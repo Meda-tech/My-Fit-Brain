@@ -49,11 +49,13 @@ export const STAGE_LABELS: Record<PaymentList | 'all', string> = {
 };
 
 /** Method filter: Razorpay (any method inside the checkout), or one of the offline methods. */
-export type PaymentMethodFilter = 'razorpay' | OfflineMethod;
+// 'manual' = every payment recorded by staff (provider 'offline'), whatever its method.
+export type PaymentMethodFilter = 'razorpay' | 'manual' | OfflineMethod;
 export const PAYMENT_METHOD_FILTERS: { id: PaymentMethodFilter | 'all'; label: string }[] = [
   { id: 'all', label: 'All methods' },
   { id: 'razorpay', label: 'Razorpay' },
-  ...OFFLINE_METHODS.map((m) => ({ id: m, label: OFFLINE_METHOD_LABELS[m] })),
+  { id: 'manual', label: 'Manual (all)' },
+  ...OFFLINE_METHODS.map((m) => ({ id: m, label: `Manual · ${OFFLINE_METHOD_LABELS[m]}` })),
 ];
 
 export function paymentStage(p: {
@@ -290,6 +292,7 @@ async function filteredQuery(supabase: Supabase, filters: Omit<PaymentFilters, '
       break;
   }
   if (filters.method === 'razorpay') query = query.eq('provider', 'razorpay');
+  else if (filters.method === 'manual') query = query.eq('provider', 'offline');
   else if (filters.method !== 'all') query = query.eq('provider', 'offline').eq('method', filters.method);
 
   const since = periodStart(filters.period);
