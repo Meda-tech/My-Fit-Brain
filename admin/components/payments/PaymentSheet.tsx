@@ -8,7 +8,7 @@ import { cancelPaymentAction, markRefundedAction, movePurchaseAction } from '../
 import { CANCEL_REASON_MAX_LENGTH } from '../../lib/offline-payments';
 import { Button, cn, inputClasses, labelClasses } from '../brand';
 import type { PaymentListRow } from '../../lib/services/payments';
-import { AssessmentPill, PaymentPill } from './PaymentStatusPill';
+import { AssessmentPill, ManualPill, PaymentPill } from './PaymentStatusPill';
 import { ATTEMPT_STATUS_LABELS, formatAmount, formatDateTime, paymentMethodLabel } from './format';
 
 // Side sheet with everything about one payment. Slides in from the right; Esc, the close button or
@@ -74,6 +74,7 @@ function SheetBody({
             {formatAmount(p.amount_paise, p.currency)}
           </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+            <ManualPill provider={p.provider} />
             <PaymentPill payment={p} />
             <AssessmentPill payment={p} />
             <span>{p.status === 'paid' ? formatDateTime(p.paid_at) : formatDateTime(p.created_at)}</span>

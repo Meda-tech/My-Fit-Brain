@@ -1,3 +1,4 @@
+import { HandCoins } from 'lucide-react';
 import { cn } from '../brand';
 import type { PaymentListRow } from '../../lib/services/payments';
 
@@ -48,6 +49,20 @@ export function PaymentPill({ payment }: { payment: Row }) {
     <span className="inline-flex flex-col items-start gap-1">
       <StatusPill {...paymentLabel(payment)} />
       <span className="text-[12px] text-ink-muted">Paid on a later try</span>
+    </span>
+  );
+}
+
+/** Marks a payment recorded by staff (provider 'offline'), so it stands out from Razorpay ones at a glance. */
+export function ManualPill({ provider }: { provider: PaymentListRow['provider'] }) {
+  if (provider !== 'offline') return null;
+  return (
+    <span
+      title="Manual payment, recorded by staff"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-teal px-2.5 py-0.5 text-[12px] font-semibold text-white"
+    >
+      <HandCoins size={13} strokeWidth={2} aria-hidden />
+      Manual
     </span>
   );
 }
