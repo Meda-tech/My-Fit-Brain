@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import type { PaymentListRow } from '../../lib/services/payments';
 import { PaymentSheet } from './PaymentSheet';
-import { AssessmentPill, PaymentPill, assessmentLabel, paymentLabel } from './PaymentStatusPill';
+import { AssessmentPill, ManualPill, PaymentPill, assessmentLabel, paymentLabel } from './PaymentStatusPill';
 import { clientName, formatAmount, formatDate, formatTime, paymentMethodLabel, paymentReference } from './format';
 
 // Payments as table rows (stacked cards on narrow screens). A row opens the side sheet; the open
@@ -40,7 +40,7 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
     tabIndex: 0,
     role: 'button' as const,
     'aria-label': [
-      `Payment ${formatAmount(p.amount_paise, p.currency)} from ${clientName(p) ?? p.phone}`,
+      `${p.provider === 'offline' ? 'Manual payment' : 'Payment'} ${formatAmount(p.amount_paise, p.currency)} from ${clientName(p) ?? p.phone}`,
       paymentLabel(p).label,
       assessmentLabel(p)?.label,
     ]
@@ -78,9 +78,12 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                 {p.test_name}
                 {p.attempt?.report_id ? ` · ${p.attempt.report_id}` : ''}
               </p>
-              <p className="mt-0.5 text-[13px] text-ink-muted">
-                {paymentMethodLabel(p)}
-                {p.provider === 'offline' && p.reference ? ` · ${p.reference}` : ''}
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-ink-muted">
+                <ManualPill provider={p.provider} />
+                <span>
+                  {paymentMethodLabel(p)}
+                  {p.provider === 'offline' && p.reference ? ` · ${p.reference}` : ''}
+                </span>
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
                 <PaymentPill payment={p} />
@@ -139,7 +142,12 @@ export function PaymentsTable({ rows, initialSelected }: { rows: PaymentListRow[
                 <td className="whitespace-nowrap px-5 py-3.5 text-right font-heading font-semibold text-ink">
                   {formatAmount(p.amount_paise, p.currency)}
                 </td>
-                <td className="whitespace-nowrap px-5 py-3.5 text-ink-soft">{paymentMethodLabel(p)}</td>
+                <td className="whitespace-nowrap px-5 py-3.5 text-ink-soft">
+                  <div className="flex flex-col items-start gap-1">
+                    <ManualPill provider={p.provider} />
+                    <span>{paymentMethodLabel(p)}</span>
+                  </div>
+                </td>
                 <td className="hidden max-w-48 truncate px-5 py-3.5 font-mono text-[12px] text-ink-muted @[64rem]:table-cell">
                   {paymentReference(p) || '—'}
                 </td>
