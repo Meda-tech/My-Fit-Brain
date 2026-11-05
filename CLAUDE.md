@@ -250,8 +250,10 @@ results with you"). The client never sees a report in the app.
   nothing stored). A paid purchase that is not started can be moved to another number (logged in
   `payment_moves`) or marked refunded (after refunding in the Razorpay dashboard).
 - Google Sheets feed (read only): `GET /api/integrations/google-sheets/payments` in the admin app returns
-  status, payment, assessment, name, mobile per purchase, the same values as the Excel export (both use
-  `lib/payment-fields.ts`). `Authorization: Bearer` + `GOOGLE_SHEETS_SYNC_TOKEN` (64 characters, server env
+  purchase_id (the payments row id, the sheet's key), payment_time (paid, else tried; India time), test code,
+  status, payment, assessment, name, mobile (the same values as the Excel export, both use
+  `lib/payment-fields.ts`) and last_update, oldest payment first. An unpaid try followed by a later try for
+  the same number and test is left out and listed in `removed` (`lib/integrations/sheets-rows.ts`). `Authorization: Bearer` + `GOOGLE_SHEETS_SYNC_TOKEN` (64 characters, server env
   only, checked timing-safe before any read; unset → 401 for all). Optional `from` (inclusive) / `to`
   (exclusive), ISO 8601 with a zone: purchases whose payment, assessment or client (`updated_at`) or
   under-18 record (`last_at`) changed in the window (`readPaymentsForSync`). Over 20,000 rows → 422.

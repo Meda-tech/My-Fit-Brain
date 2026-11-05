@@ -3,6 +3,7 @@ import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
 import { normalizePhoneNumber } from '../phone';
 import { OFFLINE_METHODS, OFFLINE_METHOD_LABELS, parseCancelReason, type OfflineMethod } from '../offline-payments';
+import type { Try } from '../integrations/sheets-rows';
 
 // Payments for the admin Payments page: Razorpay and offline (recorded by staff with a proof) in one
 // list. Super admins and coordinators only: the page checks the role and RLS (can_view_payments())
@@ -478,6 +479,20 @@ export async function readPaymentsForSync(db: Supabase, range: { from?: string; 
   const rows: PaymentListRow[] = [];
   for (const part of chunks(raw)) rows.push(...(await enrich(db, part, true)));
   return rows.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+}
+
+/**
+ * Every try (any status, any time) of the given numbers, for the Sheets rule "an unpaid try followed by
+ * a later try for the same number and test is left out" (replacedTries).
+ */
+export async function readTriesForSync(db: Supabase, phones: string[]): Promise<Try[]> {
+  const out: Try[] = [];
+  for (const part of chunks([...new Set(phones)])) {
+    out.push(
+      ...(await readAll<Try>((a, b) => db.from('payments').select('id, phone, test_code, status, created_at').in('phone', part).order('id').range(a, b)))
+    );
+  }
+  return out;
 }
 
 const AGE_STOP_COLUMNS = 'phone, full_name, age, first_at, last_at';
