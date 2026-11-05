@@ -162,8 +162,15 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
             ))}
           </div>
           <p className="mt-5 border-t border-sand pt-3 text-[13px] text-ink-muted" aria-live="polite">
-            {justSaved ? 'Saved. ' : ''}Last edited by {saved.updated_by_name} · {formatDateTime(saved.updated_at)}
-            {saved.updated_at !== saved.created_at && <> · first written {formatDateTime(saved.created_at)}</>}
+            {justSaved ? 'Saved. ' : ''}Last edited by {saved.updated_by_name}
+            <Dot />
+            {formatDateTime(saved.updated_at)}
+            {saved.updated_at !== saved.created_at && (
+              <>
+                <Dot />
+                First written {formatDateTime(saved.created_at)}
+              </>
+            )}
           </p>
         </div>
       ) : (
@@ -177,4 +184,9 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
       )}
     </Card>
   );
+}
+
+/** A solid separator dot; the "·" character stays too faint at caption size. */
+function Dot() {
+  return <span aria-hidden className="mx-2 inline-block h-1 w-1 rounded-full bg-ink align-middle" />;
 }

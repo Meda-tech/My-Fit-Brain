@@ -1,6 +1,6 @@
-import { AlertTriangle, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ShieldAlert } from 'lucide-react';
 import type { CounsellorView as ViewData } from '@mfb/questionnaire';
-import { Card, Notice, Pill } from '../brand';
+import { Card, Notice, Pill, buttonClasses } from '../brand';
 import type { AttemptAlert } from '../../lib/services/attempts';
 import { formatDateTime } from './AttemptStatusPill';
 
@@ -89,39 +89,6 @@ export function CounsellorView({ view, alerts }: { view: ViewData | null; alerts
             </p>
           </Section>
 
-          <Section title="Sections">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-[14px]">
-                <thead>
-                  <tr className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
-                    <th className={th}>Section</th>
-                    <th className={th}>Score</th>
-                    <th className={th}>Range</th>
-                    <th className={th}>Answered</th>
-                    <th className={th}>Skipped</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-sand">
-                  {view.sections.map((s) => (
-                    <tr key={s.id}>
-                      <td className={td}>
-                        {s.title}
-                        {view.main?.title === s.title && s.scored && <Pill className="ml-2">main</Pill>}
-                        {!s.scored && <Pill tone="quiet" className="ml-2">not scored</Pill>}
-                      </td>
-                      <td className={td}>{s.score === null ? (s.scored ? 'Not enough answers' : '—') : `${s.score}%`}</td>
-                      <td className={td}>{s.range ?? '—'}</td>
-                      <td className={td}>
-                        {s.answered} / {s.shownQuestions}
-                      </td>
-                      <td className={td}>{s.skipped}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Section>
-
           <Section title="Notable answers (highest first)">
             {view.notable.length === 0 ? (
               <p className="text-[14px] text-ink-muted">No answers with a value.</p>
@@ -140,30 +107,74 @@ export function CounsellorView({ view, alerts }: { view: ViewData | null; alerts
             )}
           </Section>
 
-          <Section title="All answers">
-            <div className="space-y-4">
-              {view.answers.map((group) => (
-                <div key={group.section}>
-                  <p className="text-[14px] font-semibold text-teal">{group.section}</p>
-                  <ul className="mt-1 divide-y divide-sand text-[14px]">
-                    {group.items.map((a, i) => (
-                      // Long answers (several choices) wrap within half the row; stacked on narrow screens.
-                      <li key={i} className="flex flex-col gap-0.5 py-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                        <span className="min-w-0 flex-1 text-ink-soft">
-                          <span className="mr-2 text-ink-muted">{a.number}</span>
-                          {a.question}
-                        </span>
-                        <span className="min-w-0 wrap-break-word text-ink sm:max-w-1/2 sm:text-right">
-                          {a.answer}
-                          {a.skipped && <span className="ml-1 text-[12px] text-ink-muted">(not counted)</span>}
-                        </span>
-                      </li>
+          {/* Section scores and every answer stay folded until asked for; the summary above comes first. */}
+          <details className="group space-y-5 border-t border-sand pt-5">
+            <summary
+              className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'cursor-pointer list-none [&::-webkit-details-marker]:hidden' })}
+            >
+              <ChevronDown size={16} strokeWidth={2} className="transition-transform group-open:rotate-180" aria-hidden />
+              <span className="group-open:hidden">Show all answers</span>
+              <span className="hidden group-open:inline">Hide all answers</span>
+            </summary>
+
+            <Section title="Sections">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-[14px]">
+                  <thead>
+                    <tr className="border-b border-sand text-[12px] uppercase tracking-[0.06em] text-ink-muted">
+                      <th className={th}>Section</th>
+                      <th className={th}>Score</th>
+                      <th className={th}>Range</th>
+                      <th className={th}>Answered</th>
+                      <th className={th}>Skipped</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand">
+                    {view.sections.map((s) => (
+                      <tr key={s.id}>
+                        <td className={td}>
+                          {s.title}
+                          {view.main?.title === s.title && s.scored && <Pill className="ml-2">main</Pill>}
+                          {!s.scored && <Pill tone="quiet" className="ml-2">not scored</Pill>}
+                        </td>
+                        <td className={td}>{s.score === null ? (s.scored ? 'Not enough answers' : '—') : `${s.score}%`}</td>
+                        <td className={td}>{s.range ?? '—'}</td>
+                        <td className={td}>
+                          {s.answered} / {s.shownQuestions}
+                        </td>
+                        <td className={td}>{s.skipped}</td>
+                      </tr>
                     ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </Section>
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+
+            <Section title="All answers">
+              <div className="space-y-4">
+                {view.answers.map((group) => (
+                  <div key={group.section}>
+                    <p className="text-[14px] font-semibold text-teal">{group.section}</p>
+                    <ul className="mt-1 divide-y divide-sand text-[14px]">
+                      {group.items.map((a, i) => (
+                        // Long answers (several choices) wrap within half the row; stacked on narrow screens.
+                        <li key={i} className="flex flex-col gap-0.5 py-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                          <span className="min-w-0 flex-1 text-ink-soft">
+                            <span className="mr-2 text-ink-muted">{a.number}</span>
+                            {a.question}
+                          </span>
+                          <span className="min-w-0 wrap-break-word text-ink sm:max-w-1/2 sm:text-right">
+                            {a.answer}
+                            {a.skipped && <span className="ml-1 text-[12px] text-ink-muted">(not counted)</span>}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </details>
         </>
       )}
     </Card>
