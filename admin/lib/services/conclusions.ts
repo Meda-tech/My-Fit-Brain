@@ -5,7 +5,7 @@ import { CONCLUSION_COLUMNS, canViewReports } from './attempts';
 
 // The counsellor's conclusion on a completed assessment (table attempt_conclusions). Written and edited at
 // any time by super admins and counsellors, through the server (service role); read in getAttemptDetail
-// under RLS (can_view_reports()). Printed at the end of the report PDF ("Summary and suggestions"); never
+// under RLS (can_view_reports()). Printed at the end of the report PDF ("Overall Summary & Suggested Support Plan"); never
 // in any notification.
 
 const STALE =

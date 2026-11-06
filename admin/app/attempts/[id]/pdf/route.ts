@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 // The report as a PDF, generated on request for super admins and counsellors and sent straight to the
 // browser. Nothing is stored. File name = report ID. The counsellor's saved conclusion, if any, is printed
-// last as "Summary and suggestions".
+// last as "Overall Summary & Suggested Support Plan" (always English).
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { profile } = await requireStaff();
   if (!canViewReports(profile.role)) return new Response('Not allowed', { status: 403 });

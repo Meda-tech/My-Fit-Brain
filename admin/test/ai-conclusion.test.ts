@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CounsellorView, Report } from '@mfb/questionnaire';
 import { CONCLUSION_SYSTEM_PROMPT, MAX_NOTABLE, buildConclusionInput, conclusionFromAi } from '../lib/ai/conclusion-prompt';
-import { bulletLines } from '../lib/conclusion';
+import { conclusionBlocks } from '../lib/conclusion';
 
 vi.mock('server-only', () => ({}));
 
@@ -58,7 +58,7 @@ describe('buildConclusionInput', () => {
 
   it('sends scores, plan, focus, notes and the typed details on single lines', () => {
     const text = input();
-    expect(text).toContain('Write in: English');
+    expect(text).not.toContain('Write in');
     expect(text).toContain('Client: age 31, Female, Married');
     expect(text).toContain('- Stress: 72 High — Stress is taking a lot of your energy.');
     expect(text).toContain('- Sleep: not enough answers');
@@ -83,31 +83,61 @@ describe('buildConclusionInput', () => {
     expect(text).not.toMatch(/self-harm|unsafe|home safety/i);
     expect(text).not.toContain('Plan:');
   });
-
-  it('asks for Hindi when the report is in Hindi', () => {
-    expect(input({ report: { ...report, lang: 'hi' } })).toContain('Write in: Hindi');
-  });
 });
 
 describe('conclusionFromAi', () => {
-  it('turns the JSON into paragraphs and bullet lines', () => {
-    const out = conclusionFromAi(JSON.stringify({ summary: 'You took a step.', approach: 'In  sessions\nwe will talk.', steps: ['Sleep at one time.', '- Walk daily.'] }));
-    expect(out).toEqual({ ok: true, body: 'You took a step.\n\nIn sessions we will talk.\n\n• Sleep at one time.\n• Walk daily.' });
+  it('builds summary, the support plan with labels, and the closing', () => {
+    const out = conclusionFromAi(
+      JSON.stringify({
+        summary: 'Your responses indicate  stress\nat work.',
+        support: [
+          { label: 'CBT-Based Support:', text: 'Manage pressure.' },
+          { label: 'Relaxation Techniques', text: 'Calm the body.' },
+        ],
+        closing: 'Progress will be reviewed across the eight weekly sessions.',
+      })
+    );
+    expect(out).toEqual({
+      ok: true,
+      body: [
+        'Your responses indicate stress at work.',
+        '',
+        'Suggested Support Plan',
+        '• CBT-Based Support: Manage pressure.',
+        '• Relaxation Techniques: Calm the body.',
+        '',
+        'Progress will be reviewed across the eight weekly sessions.',
+      ].join('\n'),
+    });
   });
 
   it('accepts a fenced answer and refuses a broken one', () => {
-    expect(conclusionFromAi('```json\n{"summary":"a","approach":"b","steps":[]}\n```')).toEqual({ ok: true, body: 'a\n\nb' });
+    expect(conclusionFromAi('```json\n{"summary":"a","support":["- b"],"closing":""}\n```')).toEqual({
+      ok: true,
+      body: 'a\n\nSuggested Support Plan\n• b',
+    });
     expect(conclusionFromAi('not json').ok).toBe(false);
-    expect(conclusionFromAi({ summary: 'a' }).ok).toBe(false);
+    expect(conclusionFromAi({ summary: 'a', support: [] }).ok).toBe(false);
   });
 });
 
-describe('bulletLines', () => {
-  it('reads a list only when every line is a bullet', () => {
-    expect(bulletLines('• one\n• two')).toEqual(['one', 'two']);
-    expect(bulletLines('text\n• two')).toBeNull();
+describe('conclusionBlocks', () => {
+  it('reads paragraphs, a heading above a list, and bold labels', () => {
+    const body = ['Para one.', '', 'Suggested Support Plan', '● CBT-Based Support: Manage pressure.', '• Plain point', '', 'Closing.'].join('\n');
+    expect(conclusionBlocks(body)).toEqual([
+      { kind: 'text', text: 'Para one.' },
+      { kind: 'heading', text: 'Suggested Support Plan' },
+      { kind: 'bullets', items: [{ label: 'CBT-Based Support', text: 'Manage pressure.' }, { label: null, text: 'Plain point' }] },
+      { kind: 'text', text: 'Closing.' },
+    ]);
+  });
+
+  it('keeps a full sentence above a list as text, and "Your sessions will focus on:" as a heading', () => {
+    expect(conclusionBlocks('A sentence.\n• x')[0]).toEqual({ kind: 'text', text: 'A sentence.' });
+    expect(conclusionBlocks('Your sessions will focus on:\n• x')[0]).toEqual({ kind: 'heading', text: 'Your sessions will focus on' });
   });
 });
+
 
 describe('prompt', () => {
   it('keeps the copy rules', () => {

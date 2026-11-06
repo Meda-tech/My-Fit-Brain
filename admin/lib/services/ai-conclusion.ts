@@ -1,5 +1,5 @@
 import 'server-only';
-import { counsellorView, pick } from '@mfb/questionnaire';
+import { buildReport, counsellorView, pick } from '@mfb/questionnaire';
 import { requireStaff } from '../auth';
 import { createClient } from '../supabase/server';
 import { AiNotConfiguredError, generateJson } from '../ai/gemini';
@@ -31,7 +31,12 @@ export async function draftConclusion(attemptId: string): Promise<{ error: strin
   const view = detail.definition && detail.answers ? counsellorView(detail.definition, detail.answers, detail.result) : null;
   const input = buildConclusionInput({
     questionnaire: detail.attempt.questionnaire_name,
-    report: detail.report,
+    // Always English for the AI: the same report rebuilt in English from the pinned version and the stored
+    // result (input only; the stored report is never changed or rebuilt for display).
+    report:
+      detail.report.lang === 'en' || !detail.definition || !detail.result
+        ? detail.report
+        : buildReport(detail.definition, detail.result, { lang: 'en', clientName: '', reportId: '', completedAt: detail.report.date }),
     view,
     client: { age: c.age ?? null, gender: c.gender ?? null, relationship: c.marital_status ?? null },
     details: (detail.details ?? []).map((d) => ({ question: pick(d.question, 'en'), answer: d.answer })),

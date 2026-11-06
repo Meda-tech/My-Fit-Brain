@@ -2,22 +2,23 @@ import 'server-only';
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { Report } from '@mfb/questionnaire';
 import { colour, pdfAssets } from './assets';
-import { bulletLines, conclusionParagraphs } from '../conclusion';
+import { CONCLUSION_PDF_HEADING, conclusionBlocks } from '../conclusion';
 
 // The report PDF, laid out on brand/MFB_Assessment_Report_Template_A4.pdf: a cover page (endorsed logo,
 // bindu dot, title, Prepared for / Date / Report ID, founder seal, teal disclaimer band) and content
 // pages (logo header, numbered teal sections, mist cards with bars, "Space to speak." footer). Five
 // parts, the same for every questionnaire; parts with no content are left out. Every sentence comes
-// from the stored report, except the last part, "Summary and suggestions": the counsellor's saved
-// conclusion, printed as written (left out when none is saved). Only the labels below are UI words.
+// from the stored report, except the last part, "Overall Summary & Suggested Support Plan": the
+// counsellor's saved conclusion, always in English (Latin fonts, also in a Hindi report), printed as
+// written (left out when none is saved). Only the labels below are UI words.
 // Generated on request and never stored.
 
 const FOOTER_LINE = 'My Fit Brain · Space to speak.';
 const BRAND_LINE = 'Space to speak.';
 
 const LABELS = {
-  en: { preparedFor: 'PREPARED FOR', date: 'DATE', reportId: 'REPORT ID', sessions: 'sessions', notEnough: 'Not enough answers', conclusion: 'Summary and suggestions' },
-  hi: { preparedFor: 'किसके लिए', date: 'तारीख', reportId: 'रिपोर्ट ID', sessions: 'सेशन', notEnough: 'पर्याप्त जवाब नहीं', conclusion: 'सारांश और सुझाव' },
+  en: { preparedFor: 'PREPARED FOR', date: 'DATE', reportId: 'REPORT ID', sessions: 'sessions', notEnough: 'Not enough answers' },
+  hi: { preparedFor: 'किसके लिए', date: 'तारीख', reportId: 'रिपोर्ट ID', sessions: 'सेशन', notEnough: 'पर्याप्त जवाब नहीं' },
 };
 
 let fontsReady = false;
@@ -101,7 +102,10 @@ const s = StyleSheet.create({
   planText: { fontWeight: 500, fontSize: 11.5, lineHeight: 1.55, color: colour.ink },
   planNote: { fontSize: 10, lineHeight: 1.5, color: colour['ink-soft'], marginTop: 8 },
   conclusion: { backgroundColor: colour.mist, borderLeftWidth: 3, borderLeftColor: colour.teal, borderTopRightRadius: 9, borderBottomRightRadius: 9, paddingVertical: 16, paddingHorizontal: 19 },
-  conclusionPara: { fontSize: 10.5, lineHeight: 1.65, color: colour.ink, marginBottom: 9 },
+  conclusionPara: { fontFamily: 'DM Sans', fontSize: 10.5, lineHeight: 1.65, color: colour.ink, marginBottom: 10 },
+  conclusionHeading: { fontFamily: 'Poppins', fontWeight: 600, fontSize: 11.5, color: colour.teal, marginBottom: 7 },
+  conclusionBullet: { fontFamily: 'DM Sans', flex: 1, fontSize: 10.5, lineHeight: 1.6, color: colour.ink },
+  conclusionLabel: { fontWeight: 700, color: colour.ink },
 });
 
 function formatDate(iso: string, lang: 'en' | 'hi'): string {
@@ -126,7 +130,7 @@ export function ReportPdf({ report: r, conclusion }: ReportPdfProps) {
   const body = { fontFamily: bodyFont };
   const head = { fontFamily: headFont };
 
-  const sections: { heading: string; body: React.ReactNode; keep?: boolean }[] = [];
+  const sections: { heading: string; body: React.ReactNode; keep?: boolean; headFont?: string }[] = [];
   if (r.snapshot.areas.length) {
     sections.push({
       heading: r.snapshot.heading,
@@ -177,27 +181,40 @@ export function ReportPdf({ report: r, conclusion }: ReportPdfProps) {
     });
   }
   if (r.closing) sections.push({ heading: r.closing.heading, keep: true, body: <Text style={[s.body, body]}>{r.closing.text}</Text> });
-  const paragraphs = conclusion?.trim() ? conclusionParagraphs(conclusion) : [];
-  if (paragraphs.length) {
+  const blocks = conclusion?.trim() ? conclusionBlocks(conclusion) : [];
+  if (blocks.length) {
     sections.push({
-      heading: t.conclusion,
+      heading: CONCLUSION_PDF_HEADING,
+      headFont: 'Poppins',
       body: (
         <View style={s.conclusion}>
-          {paragraphs.map((p, i) => {
-            const bullets = bulletLines(p);
-            const last = i === paragraphs.length - 1;
-            return bullets ? (
-              <View key={i} style={{ marginBottom: last ? 0 : 6 }}>
-                {bullets.map((b, j) => (
-                  <View key={j} style={s.bulletRow} wrap={false}>
-                    <View style={s.bullet} />
-                    <Text style={[s.bulletText, body, { color: colour.ink }]}>{b}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text key={i} style={[s.conclusionPara, body, last ? { marginBottom: 0 } : {}]}>
-                {p}
+          {blocks.map((b, i) => {
+            const last = i === blocks.length - 1;
+            if (b.kind === 'heading') {
+              return (
+                <Text key={i} style={s.conclusionHeading} minPresenceAhead={40}>
+                  {b.text}
+                </Text>
+              );
+            }
+            if (b.kind === 'bullets') {
+              return (
+                <View key={i} style={{ marginBottom: last ? 0 : 8 }}>
+                  {b.items.map((item, j) => (
+                    <View key={j} style={s.bulletRow} wrap={false}>
+                      <View style={s.bullet} />
+                      <Text style={s.conclusionBullet}>
+                        {item.label && <Text style={s.conclusionLabel}>{item.label}: </Text>}
+                        {item.text}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            }
+            return (
+              <Text key={i} style={[s.conclusionPara, last ? { marginBottom: 0 } : {}]}>
+                {b.text}
               </Text>
             );
           })}
@@ -249,7 +266,7 @@ export function ReportPdf({ report: r, conclusion }: ReportPdfProps) {
 
         {sections.map((sec, i) => (
           <View key={i} style={s.section} wrap={!sec.keep}>
-            <Text style={[s.h2, head]} minPresenceAhead={110}>
+            <Text style={[s.h2, sec.headFont ? { fontFamily: sec.headFont } : head]} minPresenceAhead={110}>
               {++n}. {sec.heading}
             </Text>
             {sec.body}

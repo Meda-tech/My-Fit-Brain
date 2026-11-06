@@ -2,6 +2,9 @@
 
 export const CONCLUSION_MAX_LENGTH = 20_000;
 
+/** The PDF heading of the conclusion, always in English (owner decision 2026-11-06). */
+export const CONCLUSION_PDF_HEADING = 'Overall Summary & Suggested Support Plan';
+
 export interface Conclusion {
   body: string;
   created_at: string;
@@ -30,9 +33,44 @@ export function conclusionParagraphs(body: string): string[] {
   return body.split(/\n\s*\n/).filter((p) => p.trim() !== '');
 }
 
-/** Lines of a paragraph when every line is a "• " / "- " bullet, else null (the PDF prints these as a list). */
-export function bulletLines(paragraph: string): string[] | null {
-  const lines = paragraph.split('\n').map((l) => l.trim()).filter(Boolean);
-  if (!lines.length || !lines.every((l) => /^[•\-*]\s+/.test(l))) return null;
-  return lines.map((l) => l.replace(/^[•\-*]\s+/, ''));
+export type ConclusionBlock =
+  | { kind: 'text'; text: string }
+  | { kind: 'heading'; text: string }
+  | { kind: 'bullets'; items: { label: string | null; text: string }[] };
+
+const BULLET = /^[•●▪*-]\s+/;
+
+/**
+ * The conclusion as blocks for the PDF: paragraphs, bullet lists ("• ", "● ", "- " or "* "; a leading
+ * "Label:" is printed bold) and short headings (a line without a full stop right above a list, such as
+ * "Suggested Support Plan" or "Your sessions will focus on:").
+ */
+export function conclusionBlocks(body: string): ConclusionBlock[] {
+  const blocks: ConclusionBlock[] = [];
+  for (const paragraph of conclusionParagraphs(body)) {
+    const lines = paragraph.split('\n').map((l) => l.trim()).filter(Boolean);
+    let text: string[] = [];
+    const flush = () => {
+      if (text.length) blocks.push({ kind: 'text', text: text.join('\n') });
+      text = [];
+    };
+    lines.forEach((l, i) => {
+      if (BULLET.test(l)) {
+        flush();
+        const item = l.replace(BULLET, '');
+        const m = item.match(/^([^:.]{2,48}):\s+(.+)$/);
+        const entry = m ? { label: m[1].trim(), text: m[2] } : { label: null, text: item };
+        const last = blocks[blocks.length - 1];
+        if (last?.kind === 'bullets') last.items.push(entry);
+        else blocks.push({ kind: 'bullets', items: [entry] });
+      } else if (BULLET.test(lines[i + 1] ?? '') && l.length <= 60 && !/[.!?]$/.test(l)) {
+        flush();
+        blocks.push({ kind: 'heading', text: l.replace(/:$/, '') });
+      } else {
+        text.push(l);
+      }
+    });
+    flush();
+  }
+  return blocks;
 }

@@ -300,11 +300,15 @@ results with you"). The client never sees a report in the app.
   row per attempt in `attempt_conclusions` with the first author and the last editor (name kept as it was);
   a save is refused when someone else saved in between. Never deleted (trigger). Read only under
   `can_view_reports()`; coordinators and clients never see it in the apps, never in any notification. **Printed
-  last in the report PDF as "Summary and suggestions" / "सारांश और सुझाव"** (owner decision 2026-11-06), so it
-  is written for the client to read; left out when none is saved.
+  last in the report PDF as "Overall Summary & Suggested Support Plan"**, always in English, also in a Hindi
+  report (owner decisions 2026-11-06), so it is written for the client to read; left out when none is saved.
+  Lines "• Label: text" print as bullets with a bold label; a short line above them as a subheading.
 - **Draft with AI** (owner request 2026-11-06): a button on the conclusion fills the editor with a Google
-  Gemini draft (about 200 words, addressed to the client as "you": summary · how the sessions will work ·
-  2–3 first steps, in the report's language). Nothing is saved until the counsellor reads, edits and saves.
+  Gemini draft in English (about 200 words, addressed to the client as "you"), in the counsellors' own
+  shape: a summary paragraph ("Your responses indicate…", concerns, context from the client's words,
+  strengths) · "Suggested Support Plan" with 4–5 "Label: sentence" points · a closing paragraph (progress
+  across the sessions; a fitting doctor's follow-up only when the client reported something physical or
+  medical). The input is always English (a Hindi report is rebuilt in English for the AI only). Nothing is saved until the counsellor reads, edits and saves.
   Prompt, compact markdown input and answer format in `admin/lib/ai/conclusion-prompt.ts` (tests
   `admin/test/ai-conclusion.test.ts`), the call in `admin/lib/ai/gemini.ts` (Interactions API, plain fetch, `store: false`), the service in
   `lib/services/ai-conclusion.ts`. Sent: age, gender, relationship status, the report's areas / plan / focus,
@@ -319,8 +323,8 @@ results with you"). The client never sees a report in the app.
   conclusion column only for report roles. Opening a row shows what the role allows.
 - Report PDFs are never stored: built on request by `admin/app/attempts/[id]/pdf/route.ts` with
   `@react-pdf/renderer` from the stored report, `Cache-Control: no-store`, file name = report ID. Six parts
-  (cover · snapshot · plan · what sessions will work on · next step · summary and suggestions = the saved
-  counsellor's conclusion; empty parts left out), layout per
+  (cover · snapshot · plan · what sessions will work on · next step · overall summary & suggested support
+  plan = the saved counsellor's conclusion, in English; empty parts left out), layout per
   `brand/MFB_Assessment_Report_Template_A4.pdf` in `admin/lib/report-pdf/`. Colours from
   `brand/mfb-tokens.json`, fonts from `admin/app/fonts`, logos from `admin/assets/report-pdf/`. Hindi PDFs
   need `NotoSansDevanagari-Regular.ttf` / `-Bold.ttf` (OFL) in `admin/app/fonts/` — registered when present.

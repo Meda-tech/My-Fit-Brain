@@ -9,8 +9,8 @@ import { formatDateTime } from './AttemptStatusPill';
 
 // The counsellor's conclusion on a completed assessment: super admins and counsellors write it after going
 // through the answers and edit it whenever they want. Plain text; an empty line starts a new paragraph.
-// Printed at the end of the report PDF as "Summary and suggestions", so it is written for the client to
-// read. "Draft with AI" fills the box with a Gemini draft; nothing is saved until the counsellor saves.
+// Printed at the end of the report PDF as "Overall Summary & Suggested Support Plan", always in English,
+// so it is written for the client to read. "Draft with AI" fills the box with a Gemini draft; nothing is saved until the counsellor saves.
 // Never in any notification; coordinators and clients never see it in the apps.
 
 interface ConclusionEditorProps {
@@ -118,7 +118,7 @@ export function ConclusionEditor({ attemptId, initial, canWrite, aiEnabled }: Co
             <span>Counsellor&rsquo;s conclusion</span>
           </h2>
           <p className="mt-1 text-[13px] text-ink-muted">
-            Printed at the end of the report PDF as &ldquo;Summary and suggestions&rdquo;. Write it for the client to read.
+            Printed at the end of the report PDF as &ldquo;Overall Summary &amp; Suggested Support Plan&rdquo;. Write it in English, for the client to read.
           </p>
         </div>
         {saved && !editing && canWrite && (
@@ -154,7 +154,7 @@ export function ConclusionEditor({ attemptId, initial, canWrite, aiEnabled }: Co
               }
               if (e.key === 'Escape') cancel();
             }}
-            placeholder={'A short summary for the client, how the sessions will work, and two or three first steps.\n\nLeave an empty line to start a new paragraph.'}
+            placeholder={'Your responses indicate ...\n\nSuggested Support Plan\n• CBT-Based Support: ...\n• Relaxation Techniques: ...\n\nProgress will be reviewed gradually across the sessions ...'}
             aria-describedby="conclusion-help"
             aria-invalid={!!error || tooLong}
             disabled={pending || drafting}
