@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer';
 import type { ReactElement } from 'react';
 import { requireStaff } from '../../../../lib/auth';
-import { canViewReports, getAttemptDetail } from '../../../../lib/services/attempts';
+import { canViewReports, getAttemptDetail, reportInEnglish } from '../../../../lib/services/attempts';
 import { ReportPdf } from '../../../../lib/report-pdf/ReportPdf';
 
 export const runtime = 'nodejs';
@@ -17,11 +17,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const detail = await getAttemptDetail(id);
-  if (!detail?.report) return new Response('Report not found', { status: 404 });
+  // Always English: a report stored in Hindi (before 2026-11-06) is turned into English from the stored result.
+  const report = detail ? reportInEnglish(detail) : null;
+  if (!detail || !report) return new Response('Report not found', { status: 404 });
 
   let pdf: Buffer;
   try {
-    const element = createElement(ReportPdf, { report: detail.report, conclusion: detail.conclusion?.body ?? null }) as unknown as ReactElement<DocumentProps>;
+    const element = createElement(ReportPdf, { report, conclusion: detail.conclusion?.body ?? null }) as unknown as ReactElement<DocumentProps>;
     pdf = await renderToBuffer(element);
   } catch (err) {
     // Shows in the deployment's function logs (Vercel → project → Logs).

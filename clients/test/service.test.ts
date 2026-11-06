@@ -152,12 +152,13 @@ describe('submit', () => {
     expect(result.sections.filter((s) => s.shown && s.scored).map((s) => s.id)).toEqual(['s_core', 's_a', 's_b']);
     expect(result.main).not.toBeNull();
     expect(result.plan).not.toBeNull();
-    expect(report.lang).toBe('hi');
-    expect(report.title).toBe('MFB इंटिमेसी असेसमेंट');
+    // Answered in Hindi, report in English.
+    expect(report.lang).toBe('en');
+    expect(report.title).toBe(intimacy.title.en);
     expect(report.clientName).toBe('Asha Verma');
     expect(report.reportId).toBe('MFB-IA-2026-00001');
     expect(report.snapshot.areas).toHaveLength(3);
-    expect(report.plan?.note).toBe('आपका काउंसलर आपके साथ फ़ॉर्मेट की पुष्टि करेगा।');
+    expect(report.plan?.note).toBe('Your counsellor will confirm the format with you.');
     const attempt = (await store.getAttempt(a.id))!;
     expect(attempt.status).toBe('completed');
     expect(attempt.language).toBe('hi');

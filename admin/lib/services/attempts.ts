@@ -1,4 +1,4 @@
-import { parseDefinition, withSafety, type Answers, type Definition, type Report, type Result, type Text } from '@mfb/questionnaire';
+import { buildReport, parseDefinition, withSafety, type Answers, type Definition, type Report, type Result, type Text } from '@mfb/questionnaire';
 import { createClient } from '../supabase/server';
 import { requireStaff } from '../auth';
 import type { Conclusion } from '../conclusion';
@@ -269,4 +269,16 @@ export async function attemptCounts(): Promise<{ completed: number; inProgress: 
   };
   const [completed, inProgress] = await Promise.all([count(['completed']), count(['paid', 'in_progress'])]);
   return { completed, inProgress };
+}
+
+/**
+ * The report in English. Reports are built in English since 2026-11-06; one stored in Hindi before that is
+ * turned into English here from the pinned version and the stored result: the same scores, ranges and plan,
+ * only the texts come from the English side of the version. Nothing is re-scored and nothing is written.
+ * Falls back to the stored report when the version cannot be read.
+ */
+export function reportInEnglish(detail: Pick<AttemptDetail, 'report' | 'definition' | 'result'>): Report | null {
+  const { report, definition, result } = detail;
+  if (!report || report.lang === 'en' || !definition || !result) return report;
+  return buildReport(definition, result, { lang: 'en', clientName: report.clientName, reportId: report.reportId, completedAt: report.date });
 }

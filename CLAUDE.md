@@ -193,8 +193,10 @@ results with you"). The client never sees a report in the app.
   (`attempt_details`); Back from the first one returns to the last safety question.
 - Single choice = cards; options with `value: null` ("Not applicable", "Unsure") = smaller secondary buttons;
   multiple choice = checkboxes with `max_choices`.
-- The report is built once at submit, in the language the client was using (EN / हिं toggle), and stored in
-  `attempt_results.report` with the engine result. Never re-scored or rebuilt for display.
+- The report is built once at submit, **always in English** (owner decision 2026-11-06; the client may answer
+  in Hindi, `attempts.language` keeps that), and stored in `attempt_results.report` with the engine result.
+  Never re-scored. The one rebuild: the PDF route turns a report stored in Hindi before that decision into
+  English from the pinned version and the stored result (same scores, English texts; nothing is written).
 - URLs and titles carry no test name: `/pay/<code>` (the questionnaire code, e.g. `/pay/IA`, any case; shown with
   Copy pay link in Admin → Questionnaires; title and link preview "My Fit Brain"), `/assessment/<uuid>`. The unused column
   `questionnaires.pay_code` is removed by `20261031000001_drop_pay_code.sql`.

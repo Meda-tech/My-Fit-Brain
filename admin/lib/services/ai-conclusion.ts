@@ -1,10 +1,10 @@
 import 'server-only';
-import { buildReport, counsellorView, pick } from '@mfb/questionnaire';
+import { counsellorView, pick } from '@mfb/questionnaire';
 import { requireStaff } from '../auth';
 import { createClient } from '../supabase/server';
 import { AiNotConfiguredError, generateJson } from '../ai/gemini';
 import { CONCLUSION_RESPONSE_SCHEMA, CONCLUSION_SYSTEM_PROMPT, buildConclusionInput, conclusionFromAi } from '../ai/conclusion-prompt';
-import { canViewReports, getAttemptDetail } from './attempts';
+import { canViewReports, getAttemptDetail, reportInEnglish } from './attempts';
 
 // "Draft with AI" on the counsellor's conclusion: builds the compact input from the stored report, the
 // counsellor view and the client's typed details, asks Gemini, and returns plain text for the editor.
@@ -31,12 +31,7 @@ export async function draftConclusion(attemptId: string): Promise<{ error: strin
   const view = detail.definition && detail.answers ? counsellorView(detail.definition, detail.answers, detail.result) : null;
   const input = buildConclusionInput({
     questionnaire: detail.attempt.questionnaire_name,
-    // Always English for the AI: the same report rebuilt in English from the pinned version and the stored
-    // result (input only; the stored report is never changed or rebuilt for display).
-    report:
-      detail.report.lang === 'en' || !detail.definition || !detail.result
-        ? detail.report
-        : buildReport(detail.definition, detail.result, { lang: 'en', clientName: '', reportId: '', completedAt: detail.report.date }),
+    report: reportInEnglish(detail) ?? detail.report,
     view,
     client: { age: c.age ?? null, gender: c.gender ?? null, relationship: c.marital_status ?? null },
     details: (detail.details ?? []).map((d) => ({ question: pick(d.question, 'en'), answer: d.answer })),

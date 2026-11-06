@@ -253,8 +253,9 @@ export async function back(deps: ServiceDeps, client: ClientProfile, attemptId: 
 // Submit
 
 /**
- * Scores the attempt with its pinned version, builds the report in the client's language and stores
- * both once. Safe to call again.
+ * Scores the attempt with its pinned version, builds the report and stores both once. The report is
+ * always in English (owner decision 2026-11-06); the attempt keeps the language the client answered in.
+ * Safe to call again.
  */
 export async function submit(deps: ServiceDeps, client: ClientProfile, attemptId: string, language: Lang): Promise<{ status: 'completed' }> {
   const attempt = await ownAttempt(deps, client, attemptId);
@@ -269,7 +270,7 @@ export async function submit(deps: ServiceDeps, client: ClientProfile, attemptId
 
   const completedAt = deps.now().toISOString();
   const result = score(def, answers);
-  const report = buildReport(def, result, { lang: language, clientName: client.full_name, reportId: attempt.report_id, completedAt });
+  const report = buildReport(def, result, { lang: 'en', clientName: client.full_name, reportId: attempt.report_id, completedAt });
   await deps.store.insertResult(attempt.id, result, report, result.engineVersion);
   await deps.store.updateAttempt(attempt.id, { language, status: 'completed', completed_at: completedAt });
   return { status: 'completed' };
