@@ -15,7 +15,7 @@ import type { CounsellorView, Report } from '@mfb/questionnaire';
 // phone, email, city or report ID. The home-safety answer is never sent as such (only "individual
 // sessions only"), so the text can never reveal it to someone else who reads the PDF.
 
-export const CONCLUSION_TARGET_WORDS = 200;
+export const CONCLUSION_TARGET_WORDS = 250;
 /** Answers sent at most (the highest difficulty first); keeps the request small. */
 export const MAX_NOTABLE = 12;
 /** The line above the support points, in the editor and the PDF. */
@@ -37,7 +37,7 @@ FLOW (always this order)
 3. closing: 1-3 sentences. Say how progress will be reviewed gradually across the sessions; if the data gives a plan, write the number of sessions in words and the pace (for example "across the eight weekly sessions"), and the overall focus. Then, ONLY if the client reported something physical or medical (for example periods stopping, pain, erection changes they linked to health, test results, a doctor they see, a medicine they take), recommend the fitting doctor in plain words (for example urologist, gynaecologist, general physician) and say what to discuss with them; if they take a medicine, add "take medication only as prescribed".
 
 STYLE
-- About ${CONCLUSION_TARGET_WORDS} words in total, never more than 260.
+- About ${CONCLUSION_TARGET_WORDS} words in total, never more than ${CONCLUSION_TARGET_WORDS + 50}.
 - Always write in English, even when parts of the data are in Hindi.
 - Calm, kind, professional and non-judgemental. Short, clear sentences; everyday words. Warm, never cute.
 - "you" and "your" only. Never "the client", "he", "she", "they" for the client, or a name.

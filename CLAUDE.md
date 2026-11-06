@@ -304,7 +304,7 @@ results with you"). The client never sees a report in the app.
   report (owner decisions 2026-11-06), so it is written for the client to read; left out when none is saved.
   Lines "• Label: text" print as bullets with a bold label; a short line above them as a subheading.
 - **Draft with AI** (owner request 2026-11-06): a button on the conclusion fills the editor with a Google
-  Gemini draft in English (about 200 words, addressed to the client as "you"), in the counsellors' own
+  Gemini draft in English (about 250 words, addressed to the client as "you"), in the counsellors' own
   shape: a summary paragraph ("Your responses indicate…", concerns, context from the client's words,
   strengths) · "Suggested Support Plan" with 4–5 "Label: sentence" points · a closing paragraph (progress
   across the sessions; a fitting doctor's follow-up only when the client reported something physical or
