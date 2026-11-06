@@ -327,7 +327,10 @@ results with you"). The client never sees a report in the app.
   plan = the saved counsellor's conclusion, in English; empty parts left out), layout per
   `brand/MFB_Assessment_Report_Template_A4.pdf` in `admin/lib/report-pdf/`. Colours from
   `brand/mfb-tokens.json`, fonts from `admin/app/fonts`, logos from `admin/assets/report-pdf/`. Hindi PDFs
-  need `NotoSansDevanagari-Regular.ttf` / `-Bold.ttf` (OFL) in `admin/app/fonts/` — registered when present.
+  use `NotoSansDevanagari-Regular.ttf` / `-Bold.ttf` (static, OFL, licence beside them) in `admin/app/fonts/`
+  as a font LIST: Noto first, then DM Sans / Poppins for the Latin letters Noto lacks (name, report ID).
+  Never set Hindi text in DM Sans or Poppins alone: DM Sans and Poppins-SemiBold have no Devanagari, and
+  the PDF prints garbled letters (seen on 2026-11-06, before the font was added).
   Runtime files must live inside the app (`next.config.ts` traces them into the deployment).
 
 ---
@@ -533,8 +536,8 @@ existing migrations, `.env*` files.
   checks `docs/tasks/11-verify.sql`; then import `docs/questionnaires/intimacy.json` and `mind.json` from
   Admin → Questionnaires and publish.
 - Open (payments task): GST invoice numbering, its own gap-free series per financial year.
-- Open: Hindi PDF font files (`NotoSansDevanagari-*.ttf`) in `admin/app/fonts/`; Intimacy 2.0 workbook (the
-  starting draft comes from v1.1).
+- Done: Hindi PDF font files (`NotoSansDevanagari-*.ttf`) in `admin/app/fonts/` (2026-11-06).
+- Open: Intimacy 2.0 workbook (the starting draft comes from v1.1).
 - Done: **Client details** (typed answers after the safety questions). Run
   `20261027000000_client_details.sql`, checks `docs/tasks/12-client-details-verify.sql`; then set the list
   in Admin → Questionnaires (or import + publish `intimacy.json`, which carries the six Intimacy questions).

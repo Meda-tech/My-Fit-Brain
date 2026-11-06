@@ -123,10 +123,12 @@ export function ReportPdf({ report: r, conclusion }: ReportPdfProps) {
   const { logo, fonts } = pdfAssets();
   const lang = r.lang;
   const t = LABELS[lang];
-  // Hindi text uses the Devanagari font when available; headings fall back to it too (Poppins has no Devanagari).
+  // Hindi: Noto Sans Devanagari first (it has no Latin letters), then the brand font for the Latin parts
+  // (client name, "MFB", report ID). react-pdf picks, per character, the first font that has the glyph.
+  // DM Sans and Poppins SemiBold have no Devanagari, so a Hindi report must never use them alone.
   const hindi = lang === 'hi' && !!fonts.devanagariRegular;
-  const bodyFont = hindi ? 'Devanagari' : 'DM Sans';
-  const headFont = hindi ? 'Devanagari' : 'Poppins';
+  const bodyFont: string | string[] = hindi ? ['Devanagari', 'DM Sans'] : 'DM Sans';
+  const headFont: string | string[] = hindi ? ['Devanagari', 'Poppins'] : 'Poppins';
   const body = { fontFamily: bodyFont };
   const head = { fontFamily: headFont };
 
@@ -282,7 +284,7 @@ export function ReportPdf({ report: r, conclusion }: ReportPdfProps) {
   );
 }
 
-function Field({ label, value, font }: { label: string; value: string; font: string }) {
+function Field({ label, value, font }: { label: string; value: string; font: string | string[] }) {
   return (
     <View style={s.field}>
       <Text style={[s.fieldLabel, { fontFamily: font }]}>{label}</Text>
