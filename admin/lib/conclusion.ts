@@ -29,3 +29,10 @@ export function cleanConclusion(raw: unknown): { ok: true; body: string } | { ok
 export function conclusionParagraphs(body: string): string[] {
   return body.split(/\n\s*\n/).filter((p) => p.trim() !== '');
 }
+
+/** Lines of a paragraph when every line is a "• " / "- " bullet, else null (the PDF prints these as a list). */
+export function bulletLines(paragraph: string): string[] | null {
+  const lines = paragraph.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!lines.length || !lines.every((l) => /^[•\-*]\s+/.test(l))) return null;
+  return lines.map((l) => l.replace(/^[•\-*]\s+/, ''));
+}

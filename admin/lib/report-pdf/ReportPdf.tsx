@@ -2,19 +2,22 @@ import 'server-only';
 import { Document, Font, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { Report } from '@mfb/questionnaire';
 import { colour, pdfAssets } from './assets';
+import { bulletLines, conclusionParagraphs } from '../conclusion';
 
 // The report PDF, laid out on brand/MFB_Assessment_Report_Template_A4.pdf: a cover page (endorsed logo,
 // bindu dot, title, Prepared for / Date / Report ID, founder seal, teal disclaimer band) and content
 // pages (logo header, numbered teal sections, mist cards with bars, "Space to speak." footer). Five
 // parts, the same for every questionnaire; parts with no content are left out. Every sentence comes
-// from the stored report; only the labels below are UI words. Generated on request and never stored.
+// from the stored report, except the last part, "Summary and suggestions": the counsellor's saved
+// conclusion, printed as written (left out when none is saved). Only the labels below are UI words.
+// Generated on request and never stored.
 
 const FOOTER_LINE = 'My Fit Brain · Space to speak.';
 const BRAND_LINE = 'Space to speak.';
 
 const LABELS = {
-  en: { preparedFor: 'PREPARED FOR', date: 'DATE', reportId: 'REPORT ID', sessions: 'sessions', notEnough: 'Not enough answers' },
-  hi: { preparedFor: 'किसके लिए', date: 'तारीख', reportId: 'रिपोर्ट ID', sessions: 'सेशन', notEnough: 'पर्याप्त जवाब नहीं' },
+  en: { preparedFor: 'PREPARED FOR', date: 'DATE', reportId: 'REPORT ID', sessions: 'sessions', notEnough: 'Not enough answers', conclusion: 'Summary and suggestions' },
+  hi: { preparedFor: 'किसके लिए', date: 'तारीख', reportId: 'रिपोर्ट ID', sessions: 'सेशन', notEnough: 'पर्याप्त जवाब नहीं', conclusion: 'सारांश और सुझाव' },
 };
 
 let fontsReady = false;
@@ -97,6 +100,8 @@ const s = StyleSheet.create({
   plan: { backgroundColor: colour.mist, borderRadius: 9, padding: 16 },
   planText: { fontWeight: 500, fontSize: 11.5, lineHeight: 1.55, color: colour.ink },
   planNote: { fontSize: 10, lineHeight: 1.5, color: colour['ink-soft'], marginTop: 8 },
+  conclusion: { backgroundColor: colour.mist, borderLeftWidth: 3, borderLeftColor: colour.teal, borderTopRightRadius: 9, borderBottomRightRadius: 9, paddingVertical: 16, paddingHorizontal: 19 },
+  conclusionPara: { fontSize: 10.5, lineHeight: 1.65, color: colour.ink, marginBottom: 9 },
 });
 
 function formatDate(iso: string, lang: 'en' | 'hi'): string {
@@ -105,9 +110,11 @@ function formatDate(iso: string, lang: 'en' | 'hi'): string {
 
 export interface ReportPdfProps {
   report: Report;
+  /** The counsellor's saved conclusion (plain text), printed last; null = part left out. */
+  conclusion?: string | null;
 }
 
-export function ReportPdf({ report: r }: ReportPdfProps) {
+export function ReportPdf({ report: r, conclusion }: ReportPdfProps) {
   registerFonts();
   const { logo, fonts } = pdfAssets();
   const lang = r.lang;
@@ -170,6 +177,34 @@ export function ReportPdf({ report: r }: ReportPdfProps) {
     });
   }
   if (r.closing) sections.push({ heading: r.closing.heading, keep: true, body: <Text style={[s.body, body]}>{r.closing.text}</Text> });
+  const paragraphs = conclusion?.trim() ? conclusionParagraphs(conclusion) : [];
+  if (paragraphs.length) {
+    sections.push({
+      heading: t.conclusion,
+      body: (
+        <View style={s.conclusion}>
+          {paragraphs.map((p, i) => {
+            const bullets = bulletLines(p);
+            const last = i === paragraphs.length - 1;
+            return bullets ? (
+              <View key={i} style={{ marginBottom: last ? 0 : 6 }}>
+                {bullets.map((b, j) => (
+                  <View key={j} style={s.bulletRow} wrap={false}>
+                    <View style={s.bullet} />
+                    <Text style={[s.bulletText, body, { color: colour.ink }]}>{b}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text key={i} style={[s.conclusionPara, body, last ? { marginBottom: 0 } : {}]}>
+                {p}
+              </Text>
+            );
+          })}
+        </View>
+      ),
+    });
+  }
 
   let n = 0;
   const date = formatDate(r.date, lang);

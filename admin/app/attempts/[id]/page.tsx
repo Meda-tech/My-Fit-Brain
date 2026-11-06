@@ -10,6 +10,7 @@ import { DownloadPdfButton } from '../../../components/attempts/DownloadPdfButto
 import { ClientDetailsAnswers } from '../../../components/attempts/ClientDetailsAnswers';
 import { ConclusionEditor } from '../../../components/attempts/ConclusionEditor';
 import { canViewReports, getAttemptDetail } from '../../../lib/services/attempts';
+import { isAiConfigured } from '../../../lib/ai/gemini';
 import { Card, Notice, Pill } from '../../../components/brand';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +55,7 @@ export default async function AttemptPage({ params }: { params: Promise<{ id: st
           )}
           <CounsellorView view={view} alerts={detail.alerts} />
           {detail.details && <ClientDetailsAnswers details={detail.details} />}
-          <ConclusionEditor attemptId={attempt.id} initial={detail.conclusion} canWrite={attempt.status === 'completed'} />
+          <ConclusionEditor attemptId={attempt.id} initial={detail.conclusion} canWrite={attempt.status === 'completed'} aiEnabled={isAiConfigured()} />
         </div>
       ) : (
         <div className="max-w-202 space-y-6">

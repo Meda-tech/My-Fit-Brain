@@ -83,8 +83,11 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Service providers</strong> who help us run the service, only for that purpose: secure cloud
-            hosting and database, the SMS provider that sends your OTP, Razorpay for payments, and Google Drive, where
-            proofs of direct payments are stored for our accounts team.
+            hosting and database, the SMS provider that sends your OTP, Razorpay for payments, Google Drive, where
+            proofs of direct payments are stored for our accounts team, and Google&rsquo;s Gemini AI service, which
+            helps your counsellor draft the summary at the end of your report. Gemini receives your answers (including what you type at the end), scores,
+            age, gender and relationship status, never your name, phone number or email, and your counsellor reads
+            and edits every summary before it is used.
           </li>
         </ul>
         <p>We share information with authorities only when the law requires it.</p>

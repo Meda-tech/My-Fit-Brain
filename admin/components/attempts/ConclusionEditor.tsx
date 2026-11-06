@@ -1,30 +1,36 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
-import { NotebookPen, Pencil } from 'lucide-react';
-import { saveConclusionAction } from '../../app/attempts/[id]/actions';
+import { NotebookPen, Pencil, Sparkles } from 'lucide-react';
+import { draftConclusionAction, saveConclusionAction } from '../../app/attempts/[id]/actions';
 import { CONCLUSION_MAX_LENGTH, cleanConclusion, conclusionParagraphs, type Conclusion } from '../../lib/conclusion';
 import { Button, Card, Notice, cn, helpTextClasses } from '../brand';
 import { formatDateTime } from './AttemptStatusPill';
 
 // The counsellor's conclusion on a completed assessment: super admins and counsellors write it after going
 // through the answers and edit it whenever they want. Plain text; an empty line starts a new paragraph.
-// Care team only: never in the report, the PDF or any notification.
+// Printed at the end of the report PDF as "Summary and suggestions", so it is written for the client to
+// read. "Draft with AI" fills the box with a Gemini draft; nothing is saved until the counsellor saves.
+// Never in any notification; coordinators and clients never see it in the apps.
 
 interface ConclusionEditorProps {
   attemptId: string;
   initial: Conclusion | null;
   /** Only once the client has completed the assessment. */
   canWrite: boolean;
+  /** GEMINI_API_KEY is set: show "Draft with AI". */
+  aiEnabled: boolean;
 }
 
-export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEditorProps) {
+export function ConclusionEditor({ attemptId, initial, canWrite, aiEnabled }: ConclusionEditorProps) {
   const [saved, setSaved] = useState<Conclusion | null>(initial);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initial?.body ?? '');
   const [error, setError] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [drafting, startDrafting] = useTransition();
+  const [fromAi, setFromAi] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
 
   const dirty = editing && draft.trim() !== (saved?.body ?? '').trim();
@@ -50,10 +56,33 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
     });
   };
 
+  const draftWithAi = () => {
+    const current = editing ? draft.trim() : (saved?.body ?? '').trim();
+    if (current && !window.confirm('Replace the text in the box with a new AI draft? Nothing is saved until you press Save.')) return;
+    setError(null);
+    setJustSaved(false);
+    startDrafting(async () => {
+      const result = await draftConclusionAction(attemptId);
+      if (result.error || !result.body) {
+        // Errors show inside the editor: open it with the current text.
+        if (!editing) {
+          setDraft(saved?.body ?? '');
+          setEditing(true);
+        }
+        setError(result.error ?? 'The AI draft could not be made. Please try again in a minute.');
+        return;
+      }
+      setDraft(result.body);
+      setFromAi(true);
+      setEditing(true);
+    });
+  };
+
   const cancel = () => {
     if (dirty && !window.confirm('Discard the changes you have not saved?')) return;
     setEditing(false);
     setError(null);
+    setFromAi(false);
   };
 
   const save = () => {
@@ -72,6 +101,7 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
       setSaved(result.conclusion);
       setDraft(result.conclusion.body);
       setEditing(false);
+      setFromAi(false);
       setJustSaved(true);
     });
   };
@@ -87,13 +117,18 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
             <NotebookPen size={20} strokeWidth={2} aria-hidden />
             <span>Counsellor&rsquo;s conclusion</span>
           </h2>
-          <p className="mt-1 text-[13px] text-ink-muted">For counsellors and super admins only. Not part of the report or the PDF.</p>
+          <p className="mt-1 text-[13px] text-ink-muted">
+            Printed at the end of the report PDF as &ldquo;Summary and suggestions&rdquo;. Write it for the client to read.
+          </p>
         </div>
         {saved && !editing && canWrite && (
-          <Button variant="secondary" size="sm" onClick={startEditing}>
-            <Pencil size={16} strokeWidth={2} aria-hidden />
-            <span>Edit</span>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {aiEnabled && <AiButton onClick={draftWithAi} loading={drafting} />}
+            <Button variant="secondary" size="sm" onClick={startEditing} disabled={drafting}>
+              <Pencil size={16} strokeWidth={2} aria-hidden />
+              <span>Edit</span>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -119,10 +154,10 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
               }
               if (e.key === 'Escape') cancel();
             }}
-            placeholder={'What stood out in this assessment, your overall impression, and what to take up in the sessions.\n\nLeave an empty line to start a new paragraph.'}
+            placeholder={'A short summary for the client, how the sessions will work, and two or three first steps.\n\nLeave an empty line to start a new paragraph.'}
             aria-describedby="conclusion-help"
             aria-invalid={!!error || tooLong}
-            disabled={pending}
+            disabled={pending || drafting}
             spellCheck
             className={cn(
               'block min-h-72 w-full resize-y rounded-input border border-sand bg-white px-4 py-3.5 text-[16px] leading-7 text-ink field-sizing-content',
@@ -137,6 +172,12 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
             </span>
           </div>
 
+          {fromAi && !error && (
+            <Notice variant="info" className="mt-4">
+              AI draft, not saved yet. Read it, change anything that does not fit this client, then save. It is printed in the PDF the client receives.
+            </Notice>
+          )}
+
           {error && (
             <Notice variant="error" className="mt-4" role="alert">
               {error}
@@ -144,10 +185,11 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
           )}
 
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button onClick={save} loading={pending} loadingText="Saving..." disabled={tooLong || length === 0}>
+            <Button onClick={save} loading={pending} loadingText="Saving..." disabled={tooLong || length === 0 || drafting}>
               Save conclusion
             </Button>
-            <Button variant="ghost" onClick={cancel} disabled={pending}>
+            {aiEnabled && <AiButton onClick={draftWithAi} loading={drafting} disabled={pending} />}
+            <Button variant="ghost" onClick={cancel} disabled={pending || drafting}>
               Cancel
             </Button>
           </div>
@@ -176,13 +218,25 @@ export function ConclusionEditor({ attemptId, initial, canWrite }: ConclusionEdi
       ) : (
         <div className="rounded-input border border-dashed border-sand bg-cream p-5 text-center sm:p-6">
           <p className="text-[15px] text-ink-soft">No conclusion yet. Write one after going through the answers above.</p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={startEditing}>
-            <Pencil size={16} strokeWidth={2} aria-hidden />
-            <span>Write conclusion</span>
-          </Button>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {aiEnabled && <AiButton onClick={draftWithAi} loading={drafting} />}
+            <Button variant="secondary" size="sm" onClick={startEditing} disabled={drafting}>
+              <Pencil size={16} strokeWidth={2} aria-hidden />
+              <span>Write conclusion</span>
+            </Button>
+          </div>
         </div>
       )}
     </Card>
+  );
+}
+
+function AiButton({ onClick, loading, disabled }: { onClick: () => void; loading: boolean; disabled?: boolean }) {
+  return (
+    <Button variant="secondary" size="sm" onClick={onClick} loading={loading} loadingText="Drafting..." disabled={disabled}>
+      <Sparkles size={16} strokeWidth={2} aria-hidden />
+      <span>Draft with AI</span>
+    </Button>
   );
 }
 

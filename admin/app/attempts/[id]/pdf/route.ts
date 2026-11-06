@@ -9,7 +9,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // The report as a PDF, generated on request for super admins and counsellors and sent straight to the
-// browser. Nothing is stored. File name = report ID.
+// browser. Nothing is stored. File name = report ID. The counsellor's saved conclusion, if any, is printed
+// last as "Summary and suggestions".
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { profile } = await requireStaff();
   if (!canViewReports(profile.role)) return new Response('Not allowed', { status: 403 });
@@ -20,7 +21,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   let pdf: Buffer;
   try {
-    const element = createElement(ReportPdf, { report: detail.report }) as unknown as ReactElement<DocumentProps>;
+    const element = createElement(ReportPdf, { report: detail.report, conclusion: detail.conclusion?.body ?? null }) as unknown as ReactElement<DocumentProps>;
     pdf = await renderToBuffer(element);
   } catch (err) {
     // Shows in the deployment's function logs (Vercel → project → Logs).

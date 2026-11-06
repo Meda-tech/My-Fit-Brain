@@ -299,14 +299,27 @@ results with you"). The client never sees a report in the app.
   characters, an empty line = new paragraph; `admin/lib/conclusion.ts`, `lib/services/conclusions.ts`). One
   row per attempt in `attempt_conclusions` with the first author and the last editor (name kept as it was);
   a save is refused when someone else saved in between. Never deleted (trigger). Read only under
-  `can_view_reports()`; never in the report, the PDF or any notification; coordinators and clients never see it.
+  `can_view_reports()`; coordinators and clients never see it in the apps, never in any notification. **Printed
+  last in the report PDF as "Summary and suggestions" / "सारांश और सुझाव"** (owner decision 2026-11-06), so it
+  is written for the client to read; left out when none is saved.
+- **Draft with AI** (owner request 2026-11-06): a button on the conclusion fills the editor with a Google
+  Gemini draft (about 200 words, addressed to the client as "you": summary · how the sessions will work ·
+  2–3 first steps, in the report's language). Nothing is saved until the counsellor reads, edits and saves.
+  Prompt, compact markdown input and answer format in `admin/lib/ai/conclusion-prompt.ts` (tests
+  `admin/test/ai-conclusion.test.ts`), the call in `admin/lib/ai/gemini.ts` (plain fetch), the service in
+  `lib/services/ai-conclusion.ts`. Sent: age, gender, relationship status, the report's areas / plan / focus,
+  the top 12 answers, counsellor notes and the client-details answers. Never the name, phone, email, city or
+  report ID; a crisis is sent only as "needs support first", home safety only as "individual sessions only".
+  Env (admin, server only): `GEMINI_API_KEY` (billing-enabled project; unset = no button), optional
+  `GEMINI_MODEL` (default `gemini-2.5-flash`). Listed on /privacy as a service provider.
 - **Assessments** (`/assessments`, sidebar, all staff): every attempt with its client, newest first; status
   chips (Paid, not started · In progress · Completed, plus **Needs conclusion** for super admins and
   counsellors), a test filter and search (name, mobile, email, report ID). Alerts show as pills; the
   conclusion column only for report roles. Opening a row shows what the role allows.
 - Report PDFs are never stored: built on request by `admin/app/attempts/[id]/pdf/route.ts` with
-  `@react-pdf/renderer` from the stored report, `Cache-Control: no-store`, file name = report ID. Five parts
-  (cover · snapshot · plan · what sessions will work on · next step; empty parts left out), layout per
+  `@react-pdf/renderer` from the stored report, `Cache-Control: no-store`, file name = report ID. Six parts
+  (cover · snapshot · plan · what sessions will work on · next step · summary and suggestions = the saved
+  counsellor's conclusion; empty parts left out), layout per
   `brand/MFB_Assessment_Report_Template_A4.pdf` in `admin/lib/report-pdf/`. Colours from
   `brand/mfb-tokens.json`, fonts from `admin/app/fonts`, logos from `admin/assets/report-pdf/`. Hindi PDFs
   need `NotoSansDevanagari-Regular.ttf` / `-Bold.ttf` (OFL) in `admin/app/fonts/` — registered when present.
@@ -422,7 +435,9 @@ so copy the master file there before using a new combination.
 - Discretion: SMS, WhatsApp, email subjects, payment-gateway descriptor and all notifications say only
   "MFB Assessment". Never "Intimacy". Browser tab titles and page metadata stay generic ("My Fit Brain").
 - Report text comes only from the version's JSON (titles, range names, meaning and focus lines, closing,
-  disclaimer) plus the fixed headings and safety texts in `defaults.ts`. Never generate free text.
+  disclaimer) plus the fixed headings and safety texts in `defaults.ts`. Never generate free text. The one
+  exception is the last PDF part, the counsellor's saved conclusion (an AI draft only becomes text there after a
+  counsellor saves it).
 
 ## Safety (never weaken)
 
@@ -443,7 +458,8 @@ so copy the master file there before using a new combination.
 - Never collect or store free text from clients, with one exception approved by the owner (2026-10-27): the
   client-details answers at the end of an assessment (`attempt_details`, up to 1,000 characters, read only by
   super admins and counsellors, never in the report, the PDF or any notification). Nothing reads these
-  texts automatically; a crisis can only be raised by the built-in safety question.
+  texts automatically, except that "Draft with AI" sends them to Gemini when a counsellor presses it; a crisis can
+  only be raised by the built-in safety question.
 - Scoring runs server-side only. The browser submits option ids; the server loads the pinned version,
   scores, and writes results.
 - Every attempt stores its questionnaire version.
