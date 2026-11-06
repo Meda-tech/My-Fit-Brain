@@ -48,17 +48,16 @@ Return only JSON with three fields:
 - "approach": one paragraph (about 80 words) about how the sessions will work and what they will focus on.
 - "steps": two or three short first steps, one sentence each.`;
 
-/** Gemini response schema (OpenAPI subset). */
+/** The answer format (JSON Schema, sent as the Interactions API response_format schema). */
 export const CONCLUSION_RESPONSE_SCHEMA = {
-  type: 'OBJECT',
+  type: 'object',
   properties: {
-    summary: { type: 'STRING' },
-    approach: { type: 'STRING' },
-    steps: { type: 'ARRAY', items: { type: 'STRING' } },
+    summary: { type: 'string', description: 'About 80 words: where the client is now, written to them as you.' },
+    approach: { type: 'string', description: 'About 80 words: how the sessions will work and what they will focus on.' },
+    steps: { type: 'array', items: { type: 'string' }, description: 'Two or three short first steps, one sentence each.' },
   },
   required: ['summary', 'approach', 'steps'],
-  propertyOrdering: ['summary', 'approach', 'steps'],
-} as const;
+};
 
 export interface ConclusionInput {
   questionnaire: string;

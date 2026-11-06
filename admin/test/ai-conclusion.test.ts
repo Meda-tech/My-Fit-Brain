@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { CounsellorView, Report } from '@mfb/questionnaire';
 import { CONCLUSION_SYSTEM_PROMPT, MAX_NOTABLE, buildConclusionInput, conclusionFromAi } from '../lib/ai/conclusion-prompt';
 import { bulletLines } from '../lib/conclusion';
+
+vi.mock('server-only', () => ({}));
 
 const report: Report = {
   lang: 'en',
@@ -110,5 +112,17 @@ describe('bulletLines', () => {
 describe('prompt', () => {
   it('keeps the copy rules', () => {
     for (const word of ['diagnosis', 'cure', 'guaranteed', 'Dr. Neha Mehta', '"you"']) expect(CONCLUSION_SYSTEM_PROMPT).toContain(word);
+  });
+});
+
+describe('interactionText', () => {
+  it('reads only the model_output text steps', async () => {
+    const { interactionText } = await import('../lib/ai/gemini');
+    const data = {
+      status: 'completed',
+      steps: [{ type: 'thought' }, { type: 'model_output', content: [{ type: 'text', text: '{"a":' }, { type: 'text', text: '1}' }] }],
+    };
+    expect(interactionText(data)).toBe('{"a":1}');
+    expect(interactionText({})).toBe('');
   });
 });

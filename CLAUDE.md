@@ -306,12 +306,13 @@ results with you"). The client never sees a report in the app.
   Gemini draft (about 200 words, addressed to the client as "you": summary · how the sessions will work ·
   2–3 first steps, in the report's language). Nothing is saved until the counsellor reads, edits and saves.
   Prompt, compact markdown input and answer format in `admin/lib/ai/conclusion-prompt.ts` (tests
-  `admin/test/ai-conclusion.test.ts`), the call in `admin/lib/ai/gemini.ts` (plain fetch), the service in
+  `admin/test/ai-conclusion.test.ts`), the call in `admin/lib/ai/gemini.ts` (Interactions API, plain fetch, `store: false`), the service in
   `lib/services/ai-conclusion.ts`. Sent: age, gender, relationship status, the report's areas / plan / focus,
   the top 12 answers, counsellor notes and the client-details answers. Never the name, phone, email, city or
   report ID; a crisis is sent only as "needs support first", home safety only as "individual sessions only".
   Env (admin, server only): `GEMINI_API_KEY` (billing-enabled project; unset = no button), optional
-  `GEMINI_MODEL` (default `gemini-2.5-flash`). Listed on /privacy as a service provider.
+  `GEMINI_MODEL` (default `gemini-3.8-flash`; when busy it retries once on stable `gemini-3.6-flash`). Listed on
+  /privacy as a service provider.
 - **Assessments** (`/assessments`, sidebar, all staff): every attempt with its client, newest first; status
   chips (Paid, not started · In progress · Completed, plus **Needs conclusion** for super admins and
   counsellors), a test filter and search (name, mobile, email, report ID). Alerts show as pills; the

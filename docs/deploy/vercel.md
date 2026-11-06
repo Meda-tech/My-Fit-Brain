@@ -112,7 +112,7 @@ deploys). Never prefix a secret with `NEXT_PUBLIC_`: those are sent to the brows
 | `GOOGLE_PRIVATE_KEY` | `private_key` from the service account's JSON key (one line with `\n`, or real line breaks) | **yes** |
 | `GOOGLE_DRIVE_FOLDER_ID` | the Shared Drive ID (or a folder ID inside it) from its Drive URL | no |
 | `GEMINI_API_KEY` | Google AI Studio → Get API key, on a project with billing on (free-tier prompts may be used by Google). Unset = no "Draft with AI" button | **yes** |
-| `GEMINI_MODEL` | optional, default `gemini-2.5-flash` | no |
+| `GEMINI_MODEL` | optional, default `gemini-3.8-flash` (falls back to `gemini-3.6-flash` when busy) | no |
 
 `GOOGLE_SHEETS_SYNC_TOKEN` protects the Google Sheets feed
 `GET https://admin.myfitbrain.app/api/integrations/google-sheets/payments` (header
