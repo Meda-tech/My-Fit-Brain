@@ -33,6 +33,8 @@ const nextConfig: NextConfig = {
   // Dev only: phone testing over the local network. Read when `next dev` starts: restart after a change.
   allowedDevOrigins: ["localhost", ...LOCAL_NETWORK],
   experimental: {
+    // Agent-driven Next.js upgrades: security releases only.
+    agentUpgrade: "security",
     serverActions: {
       // Questionnaire JSON import (pasted text).
       bodySizeLimit: "6mb",
