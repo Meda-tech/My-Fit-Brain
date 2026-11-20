@@ -1,11 +1,35 @@
 // Purchases and the purchase journey (step 1): the words and the small rules the screen shows.
-// No database access; the database keeps the data (migration 20261120100000_purchases.sql).
+// No database access; the database keeps the data (migrations 20261120100000_purchases.sql and
+// 20261120110000_payment_attempts.sql).
 
-export type PurchaseStatus = 'not_paid' | 'paid' | 'refunded' | 'cancelled';
+/**
+ * A purchase is paid, or was paid and then refunded or cancelled. A try that is not paid is a payment attempt
+ * (status not_paid in the database) and is never shown as a purchase. When the phone pays the same
+ * assessment, the attempt becomes the purchase.
+ */
+export type PurchaseStatus = 'paid' | 'refunded' | 'cancelled';
+export const PURCHASE_STATUSES: readonly PurchaseStatus[] = ['paid', 'refunded', 'cancelled'];
 
-/** not_paid covers every try that did not end in a payment. */
-export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
-  not_paid: 'Payment failed',
+/** A row on the Purchases screen: a purchase, or an open payment attempt (not_paid, shown as "Unpaid"). */
+export type PurchaseRowStatus = PurchaseStatus | 'not_paid';
+
+/** The tabs of the Purchases screen. */
+export const PURCHASE_TABS = ['unpaid', 'paid', 'all'] as const;
+export type PurchaseTab = (typeof PURCHASE_TABS)[number];
+export const PURCHASE_TAB_LABELS: Record<PurchaseTab, string> = { unpaid: 'Unpaid', paid: 'Paid', all: 'All' };
+
+export function isPurchaseTab(v: unknown): v is PurchaseTab {
+  return typeof v === 'string' && (PURCHASE_TABS as readonly string[]).includes(v);
+}
+
+/** The tab a page opens on when none is chosen: coordinators start on Unpaid when they have any, else Paid. */
+export function defaultPurchaseTab(role: string, unpaidCount: number): PurchaseTab {
+  if (role === 'coordinator') return unpaidCount > 0 ? 'unpaid' : 'paid';
+  return 'all';
+}
+
+export const PURCHASE_STATUS_LABELS: Record<PurchaseRowStatus, string> = {
+  not_paid: 'Unpaid',
   paid: 'Paid',
   refunded: 'Refunded',
   cancelled: 'Cancelled',

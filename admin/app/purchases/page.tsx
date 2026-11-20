@@ -8,33 +8,70 @@ import { Card, cn } from '../../components/brand';
 import { PurchasePanel } from '../../components/purchases/PurchasePanel';
 import { PurchaseStatusPill } from '../../components/purchases/PurchasePills';
 import { formatAmount, formatDate, formatTime } from '../../components/payments/format';
-import { JOURNEY_STAGE_LABELS } from '../../lib/purchases';
-import { PURCHASE_PAGE_SIZE, canViewPurchases, getPurchase, listPurchases, type PurchaseRow } from '../../lib/services/purchases';
+import { JOURNEY_STAGE_LABELS, PURCHASE_TABS, PURCHASE_TAB_LABELS, defaultPurchaseTab, isPurchaseTab, type PurchaseTab } from '../../lib/purchases';
+import {
+  PURCHASE_PAGE_SIZE,
+  canViewPurchases,
+  getPurchase,
+  listPurchases,
+  purchaseTabCounts,
+  type PurchaseRow,
+} from '../../lib/services/purchases';
 
 export const dynamic = 'force-dynamic';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function stageText(r: PurchaseRow): string {
+  if (r.status === 'not_paid') return JOURNEY_STAGE_LABELS.payment;
   if (r.status !== 'paid') return '—';
   return r.current_stage ? JOURNEY_STAGE_LABELS[r.current_stage] : 'All done';
 }
 
-// Purchases: every pay-page try and manual payment, newest first. Super admins see all; a coordinator sees
-// the purchases of their own clients (RLS). A row opens the purchase journey in a right-side panel.
-export default async function PurchasesPage({ searchParams }: { searchParams: Promise<{ page?: string; open?: string }> }) {
+/** The time a row is listed by: the latest try while unpaid, else the paid time. */
+function rowTime(r: PurchaseRow): string {
+  return r.status === 'not_paid' ? r.last_tried_at : r.paid_at ?? r.created_at;
+}
+
+function triesText(n: number): string {
+  return `${n} ${n === 1 ? 'try' : 'tries'}`;
+}
+
+const EMPTY: Record<PurchaseTab, string> = {
+  unpaid: 'No unpaid tries.',
+  paid: 'No purchases yet.',
+  all: 'No purchases yet.',
+};
+
+// Purchases. Tabs: Unpaid (tries on the pay page that are not paid: payment attempts) · Paid (paid, also
+// refunded or cancelled later) · All. When a number pays, its row moves from Unpaid to Paid by itself, with the
+// same coordinator. Super admins see all rows; a coordinator only the rows of their own clients (RLS).
+// A row opens a right-side panel: the purchase journey, or the tries of an unpaid row.
+export default async function PurchasesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; page?: string; open?: string }>;
+}) {
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) redirect('/dashboard');
   const sp = await searchParams;
+  const counts = await purchaseTabCounts();
+  const tab: PurchaseTab = isPurchaseTab(sp.tab) ? sp.tab : defaultPurchaseTab(profile.role, counts.unpaid);
   const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
   const [{ rows, total }, open] = await Promise.all([
-    listPurchases(page),
+    listPurchases(tab, page),
     sp.open && UUID.test(sp.open) ? getPurchase(sp.open) : Promise.resolve(null),
   ]);
   const pages = Math.max(1, Math.ceil(total / PURCHASE_PAGE_SIZE));
-  const listHref = (p: number) => (p > 1 ? `/purchases?page=${p}` : '/purchases');
-  const openHref = (id: string) => `/purchases?${new URLSearchParams({ ...(page > 1 ? { page: String(page) } : {}), open: id })}`;
+  const href = (params: { tab?: PurchaseTab; page?: number; open?: string }) => {
+    const q = new URLSearchParams({ tab: params.tab ?? tab });
+    if ((params.page ?? 1) > 1) q.set('page', String(params.page));
+    if (params.open) q.set('open', params.open);
+    return `/purchases?${q}`;
+  };
+  const openHref = (id: string) => href({ page, open: id });
   const coordinator = profile.role === 'coordinator';
+  const unpaidTab = tab === 'unpaid';
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
@@ -42,22 +79,35 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
         title="Purchases"
         description={
           coordinator
-            ? 'Purchases of your clients. Open one to see its purchase journey.'
-            : 'Every purchase: pay-page tries and manual payments. Open one to see its purchase journey.'
+            ? 'Purchases and unpaid tries of your clients. Open one to see more.'
+            : 'Every purchase, and tries on the pay page that are not paid yet. Open one to see more.'
         }
       />
 
       <Card className="overflow-hidden">
-        <div className="border-b border-sand p-4 sm:p-5">
-          <p className="text-[16px] font-semibold text-teal">
-            {total} {total === 1 ? 'purchase' : 'purchases'}
-          </p>
-        </div>
+        <nav aria-label="Purchases" className="flex gap-1 overflow-x-auto border-b border-sand px-2 sm:px-3">
+          {PURCHASE_TABS.map((t) => (
+            <Link
+              key={t}
+              href={href({ tab: t })}
+              aria-current={t === tab ? 'page' : undefined}
+              className={cn(
+                'flex min-h-12 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[15px] font-semibold',
+                t === tab ? 'border-teal text-teal' : 'border-transparent text-ink-muted hover:text-teal'
+              )}
+            >
+              {PURCHASE_TAB_LABELS[t]}
+              <span className={cn('rounded-full px-2 text-[12px] leading-5', t === tab ? 'bg-mist text-teal' : 'bg-cream text-ink-muted')}>
+                {counts[t]}
+              </span>
+            </Link>
+          ))}
+        </nav>
 
         {rows.length === 0 ? (
           <div className="p-10 text-center sm:p-12">
             <ShoppingBag size={40} strokeWidth={2} className="mx-auto mb-2 text-teal" aria-hidden />
-            <p className="text-[16px] font-medium text-ink">No purchases yet.</p>
+            <p className="text-[16px] font-medium text-ink">{EMPTY[tab]}</p>
           </div>
         ) : (
           <>
@@ -74,7 +124,10 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
                       <PurchaseStatusPill status={r.status} />
                     </div>
                     <p className="mt-2 text-[13px] text-ink-soft">
-                      {r.test_code} · {formatAmount(r.amount_paise)} · {formatDate(r.created_at)} · Now: {stageText(r)}
+                      {r.test_code} ·{' '}
+                      {r.status === 'not_paid'
+                        ? `${triesText(r.tries)} · last ${formatDate(rowTime(r))}, ${formatTime(rowTime(r))}`
+                        : `${formatAmount(r.amount_paise)} · ${formatDate(rowTime(r))} · Now: ${stageText(r)}`}
                     </p>
                     <p className="text-[13px] text-ink-muted">Coordinator: {r.coordinator_name ?? 'None yet'}</p>
                   </Link>
@@ -87,12 +140,18 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
               <table className="w-full text-left text-[14px]">
                 <thead className="bg-cream text-[12px] uppercase tracking-[0.06em] text-ink-muted">
                   <tr>
-                    <th className="px-5 py-3 font-semibold">Date</th>
+                    <th className="px-5 py-3 font-semibold">{unpaidTab ? 'Tried' : 'Date'}</th>
                     <th className="px-5 py-3 font-semibold">Client</th>
                     <th className="px-5 py-3 font-semibold">Assessment</th>
-                    <th className="px-5 py-3 font-semibold">Amount</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 font-semibold">Stage now</th>
+                    {unpaidTab ? (
+                      <th className="px-5 py-3 font-semibold">Tries</th>
+                    ) : (
+                      <>
+                        <th className="px-5 py-3 font-semibold">Amount</th>
+                        <th className="px-5 py-3 font-semibold">Status</th>
+                        <th className="px-5 py-3 font-semibold">Stage now</th>
+                      </>
+                    )}
                     <th className="px-5 py-3 font-semibold">Coordinator</th>
                   </tr>
                 </thead>
@@ -101,21 +160,27 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
                     <tr key={r.id} className={cn('relative hover:bg-cream', open?.id === r.id && 'bg-mist')}>
                       <td className="px-5 py-3 whitespace-nowrap">
                         {/* The link covers the whole row. */}
-                        <Link href={openHref(r.id)} scroll={false} className="after:absolute after:inset-0" aria-label={`Open purchase of ${r.client_name ?? r.phone}`}>
-                          {formatDate(r.created_at)}
+                        <Link href={openHref(r.id)} scroll={false} className="after:absolute after:inset-0" aria-label={`Open ${r.client_name ?? r.phone}`}>
+                          {formatDate(rowTime(r))}
                         </Link>
-                        <span className="block text-[12px] text-ink-muted">{formatTime(r.created_at)}</span>
+                        <span className="block text-[12px] text-ink-muted">{formatTime(rowTime(r))}</span>
                       </td>
                       <td className="px-5 py-3">
                         <span className="font-medium text-ink">{r.client_name ?? 'Not registered yet'}</span>
                         <span className="block font-mono text-[12px] text-ink-muted">{r.phone}</span>
                       </td>
                       <td className="px-5 py-3">{r.test_name}</td>
-                      <td className="px-5 py-3 whitespace-nowrap">{formatAmount(r.amount_paise)}</td>
-                      <td className="px-5 py-3">
-                        <PurchaseStatusPill status={r.status} />
-                      </td>
-                      <td className="px-5 py-3">{stageText(r)}</td>
+                      {unpaidTab ? (
+                        <td className="px-5 py-3 whitespace-nowrap">{triesText(r.tries)}</td>
+                      ) : (
+                        <>
+                          <td className="px-5 py-3 whitespace-nowrap">{formatAmount(r.amount_paise)}</td>
+                          <td className="px-5 py-3">
+                            <PurchaseStatusPill status={r.status} />
+                          </td>
+                          <td className="px-5 py-3">{stageText(r)}</td>
+                        </>
+                      )}
                       <td className="px-5 py-3">{r.coordinator_name ?? <span className="text-ink-muted">None yet</span>}</td>
                     </tr>
                   ))}
@@ -128,7 +193,7 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
         {pages > 1 && (
           <nav aria-label="Pages" className="flex items-center justify-between gap-3 border-t border-sand p-4 text-[14px]">
             {page > 1 ? (
-              <Link href={listHref(page - 1)} className="font-medium text-teal hover:underline">
+              <Link href={href({ page: page - 1 })} className="font-medium text-teal hover:underline">
                 Newer
               </Link>
             ) : (
@@ -138,7 +203,7 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
               Page {page} of {pages}
             </span>
             {page < pages ? (
-              <Link href={listHref(page + 1)} className="font-medium text-teal hover:underline">
+              <Link href={href({ page: page + 1 })} className="font-medium text-teal hover:underline">
                 Older
               </Link>
             ) : (
@@ -148,7 +213,7 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
         )}
       </Card>
 
-      {open && <PurchasePanel purchase={open} closeHref={listHref(page)} now={new Date()} />}
+      {open && <PurchasePanel purchase={open} closeHref={href({ page })} now={new Date()} />}
     </AdminShell>
   );
 }

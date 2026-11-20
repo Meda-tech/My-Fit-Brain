@@ -57,3 +57,4 @@ Files that are on staging but not yet on production. Paste them into the product
 | # | File | On staging since | Checks |
 |---|---|---|---|
 | 1 | `20261120100000_purchases.sql` (step 1: purchases, purchase journey, coordinator per client, working hours; new tables and functions, two triggers; changes no existing table and removes nothing) | 2026-11-20 | `docs/tasks/21-purchases-verify.sql` |
+| 2 | `20261120110000_payment_attempts.sql` (step 1 adjustment: unpaid tries are payment attempts, one open per phone and assessment; one paid payment per purchase; `payment_attempts` view; Move clients; no Make inactive while a coordinator has clients; adds a column to `purchases`, one table, one trigger on `profiles`; removes nothing) | 2026-11-20 | `docs/tasks/21b-payment-attempts-verify.sql`, then `docs/tasks/21-purchases-verify.sql` again |

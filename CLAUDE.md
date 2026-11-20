@@ -302,20 +302,37 @@ results with you"). The client never sees a report in the app.
 
 ### Purchases and the purchase journey (step 1, owner 2026-11-20)
 
-- Migration `20261120100000_purchases.sql`, checks `docs/tasks/21-purchases-verify.sql`, behaviour test
+- Migrations `20261120100000_purchases.sql` then `20261120110000_payment_attempts.sql`; checks
+  `docs/tasks/21-purchases-verify.sql` and `docs/tasks/21b-payment-attempts-verify.sql`; behaviour test
   `supabase/staging/staging-test-purchases.sql` (rolled back). The `payments` table is not changed.
-- Every pay-page try is a **Purchase** (`purchases`: type Assessment, assessment, phone, amount, status Payment failed
-  (`not_paid`) / Paid / Refunded / Cancelled). A paid manual payment joins the latest open not-paid purchase of the same
-  phone and assessment, else makes a new Paid purchase. `purchase_payments` links payments to purchases and keeps
-  "Accounts check: pending" for manual payments; the screen shows "Verified by coordinator" (who recorded it).
+- One table `purchases` holds **purchases** (Paid / Refunded / Cancelled) and **payment attempts** (`not_paid`: tried
+  on the pay page, not paid; never called a purchase). One open attempt per phone and assessment: every new payment
+  of that phone and assessment, paid or not, Razorpay or manual, joins it; when one is paid the attempt becomes the
+  purchase (same row, same coordinator). Without an open attempt a payment starts its own row. One paid payment per
+  purchase: a second paid payment becomes its own purchase. An older attempt replaced by a later row is closed
+  (`closed_at`) and never shown. `payment_attempts` (view, caller's rights) lists attempts with first / last try and
+  `last_try_status` (failed / not_completed) for the Payment call of step 2 (30 min after a try still unpaid, at once
+  when failed). `purchase_payments` links payments and keeps "Accounts check: pending" for manual payments; the
+  screen shows "Verified by coordinator" (who recorded it).
 - **Purchase journey** (`purchase_stages`): Payment → Assessment → Presentation booking → Report presentation → Package
-  call, each with planned time, actual time and status (waiting / open / done). Payment and Assessment are filled from
-  real data by triggers on `payments` and `attempts` (never block a payment or a submit).
+  call, each with planned time, actual time and status (waiting / open / done). Payment and Assessment actual times
+  come from real data by triggers on `payments` and `attempts` (never block a payment or a submit). Planned times
+  (owner 2026-11-20, filled as the calls are created in later steps): Assessment = paid + 2 working hours
+  (Assessment call due); Presentation booking = assessment completed + 2 working hours (Booking call due); Report
+  presentation = the booked slot; Package call = presentation done + 2 working hours. Actual: assessment completed,
+  booked, counsellor marks done, coordinator marks done.
 - **Coordinator per client** (phone, `client_coordinators`): new phone → round robin among active coordinators
-  (`coordinator_round_robin`); returning phone → same coordinator (round robin again only if inactive).
+  (`coordinator_round_robin`), also for an unpaid try; returning phone → same coordinator. Admin → Team shows each
+  coordinator's clients; **Move clients** moves all of them, with their purchases and attempts, to another active
+  coordinator (`move_coordinator_clients`, logged in `coordinator_client_moves`). **Make inactive** is refused while
+  a coordinator still has clients: "Move their clients first." (service and trigger `profiles_keep_clients`). The
+  round robin for a phone whose coordinator is inactive stays only as a safety fallback.
 - `add_working_hours(at, hours)`: Mon–Sat 9:00–18:00 India time, Sunday off (Fri 17:30 + 2 h = Sat 10:30).
-- Admin → **Purchases** (`/purchases`, super admins all, coordinators only their own; RLS `purchases_select`): list
-  newest first; a row opens a right-side panel (`?open=<id>`) with the purchase journey and the payments (collapsed).
+- Admin → **Purchases** (`/purchases`, super admins all, coordinators only their own clients' rows; RLS
+  `purchases_select`). Tabs **Unpaid** (open attempts: tried, client, assessment, tries, coordinator; later the
+  Payment call due time) · **Paid** (date, client, assessment, amount, status, stage now, coordinator) · **All**.
+  Coordinators open on Unpaid when they have any, else Paid; super admins on All. A row opens a right-side panel
+  (`?open=<id>`): the purchase journey and the payments (collapsed), or for an unpaid row its tries.
 
 ### Counsellor flow (admin)
 

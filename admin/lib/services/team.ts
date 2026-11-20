@@ -132,8 +132,71 @@ export async function createTeamMember(
   }
 }
 
+/** Shown when a coordinator who still has clients would be made inactive (owner's words, 2026-11-20). */
+export const MOVE_CLIENTS_FIRST = 'Move their clients first.';
+
+/**
+ * How many clients (phones) each coordinator has (client_coordinators). Super Admin only.
+ * One counted query per coordinator, so no row limit applies.
+ */
+export async function coordinatorClientCounts(coordinatorIds: string[]): Promise<Record<string, number>> {
+  const staff = await getCurrentStaff();
+  if (!staff || !staff.isSuperAdmin || coordinatorIds.length === 0) return {};
+  const adminClient = createAdminClient();
+  const counts = await Promise.all(
+    coordinatorIds.map(async (id) => {
+      const { count, error } = await adminClient
+        .from('client_coordinators')
+        .select('phone', { count: 'exact', head: true })
+        .eq('coordinator_id', id);
+      if (error) throw new Error(`Could not count clients: ${error.message}`);
+      return [id, count ?? 0] as const;
+    })
+  );
+  return Object.fromEntries(counts);
+}
+
+/**
+ * Move every client (phone) of one coordinator, with their purchases and payment attempts, to another active
+ * coordinator. Super Admin only. Logged in coordinator_client_moves.
+ */
+export async function moveCoordinatorClients(
+  fromId: string,
+  toId: string
+): Promise<TeamServiceResult<{ moved: number; toName: string }>> {
+  const staff = await getCurrentStaff();
+  if (!staff || !staff.isSuperAdmin) {
+    return { success: false, error: 'Unauthorized: Only Super Admin can move clients.' };
+  }
+  if (!fromId || !toId || fromId === toId) {
+    return { success: false, error: 'Choose another coordinator.' };
+  }
+
+  const adminClient = createAdminClient();
+  const { data: to } = await adminClient
+    .from('profiles')
+    .select('full_name, role, is_active')
+    .eq('id', toId)
+    .maybeSingle();
+  if (!to || to.role !== 'coordinator' || !to.is_active) {
+    return { success: false, error: 'Choose an active coordinator.' };
+  }
+
+  const { data, error } = await adminClient.rpc('move_coordinator_clients', {
+    p_from: fromId,
+    p_to: toId,
+    p_by: staff.profile.id,
+  });
+  if (error) {
+    console.error('Failed to move coordinator clients:', error);
+    return { success: false, error: 'The clients could not be moved. Please try again.' };
+  }
+  return { success: true, data: { moved: Number(data ?? 0), toName: to.full_name as string } };
+}
+
 /**
  * Toggle active status of a coordinator or counsellor.
+ * A coordinator who still has clients cannot be made inactive: move their clients first.
  */
 export async function toggleTeamMemberStatus(
   profileId: string,
@@ -147,6 +210,16 @@ export async function toggleTeamMemberStatus(
   try {
     const adminClient = createAdminClient();
 
+    if (!isActive) {
+      const { count } = await adminClient
+        .from('client_coordinators')
+        .select('phone', { count: 'exact', head: true })
+        .eq('coordinator_id', profileId);
+      if ((count ?? 0) > 0) {
+        return { success: false, error: MOVE_CLIENTS_FIRST };
+      }
+    }
+
     const { data, error } = await adminClient
       .from('profiles')
       .update({ is_active: isActive })
@@ -155,6 +228,10 @@ export async function toggleTeamMemberStatus(
       .select('*')
       .single();
 
+    // The database refuses it too (trigger profiles_keep_clients), e.g. when a client arrived meanwhile.
+    if (error?.message?.includes(MOVE_CLIENTS_FIRST)) {
+      return { success: false, error: MOVE_CLIENTS_FIRST };
+    }
     if (error || !data) {
       return { success: false, error: 'Team member not found or update failed.' };
     }

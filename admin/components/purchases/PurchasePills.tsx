@@ -1,10 +1,10 @@
 import { cn } from '../brand';
-import { PURCHASE_STATUS_LABELS, STAGE_STATUS_LABELS, type PurchaseStatus, type StageStatus } from '../../lib/purchases';
+import { PURCHASE_STATUS_LABELS, STAGE_STATUS_LABELS, type PurchaseRowStatus, type StageStatus } from '../../lib/purchases';
 
 const PILL = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold leading-4.5';
 
-// Calm colours only: paid = teal, the rest quiet; a failed payment uses the small coral-deep text.
-export function PurchaseStatusPill({ status }: { status: PurchaseStatus }) {
+// Calm colours only: paid = teal, unpaid = small coral-deep text, refunded and cancelled quiet.
+export function PurchaseStatusPill({ status }: { status: PurchaseRowStatus }) {
   return (
     <span
       className={cn(

@@ -15,6 +15,7 @@ import { PageHeader } from '../../components/PageHeader';
 import {
   createTeamMemberAction,
   toggleStatusAction,
+  moveClientsAction,
   resetPasswordAction,
   TeamActionState,
 } from './actions';
@@ -30,6 +31,8 @@ import {
 
 interface TeamListClientProps {
   initialTeam: Profile[];
+  /** Coordinators only: how many clients (phones) each one has. */
+  clientCounts: Record<string, number>;
 }
 
 const requiredMark = (
@@ -41,13 +44,17 @@ const requiredMark = (
 const closeButtonClasses =
   'inline-flex items-center justify-center w-11 h-11 -mr-2 rounded-full text-ink-muted hover:bg-mist hover:text-teal transition-colors';
 
-export function TeamListClient({ initialTeam }: TeamListClientProps) {
+export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProps) {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [resetModalId, setResetModalId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resetting, setResetting] = useState(false);
   const [statusTogglingId, setStatusTogglingId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [moveFrom, setMoveFrom] = useState<Profile | null>(null);
+  const [moveTo, setMoveTo] = useState('');
+  const [moving, setMoving] = useState(false);
 
   const [state, formAction, isPending] = useActionState<TeamActionState | null, FormData>(
     async (prev, formData) => {
@@ -64,9 +71,15 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
   const handleToggleStatus = async (member: Profile) => {
     try {
       setStatusTogglingId(member.id);
+      setErrorMessage(null);
       const res = await toggleStatusAction(member.id, !member.is_active);
       if (!res.success) {
-        alert(res.error || 'Failed to update status');
+        setToastMessage(null);
+        setErrorMessage(
+          res.error === 'Move their clients first.'
+            ? `${member.full_name} still has clients. Move their clients first.`
+            : res.error || 'Failed to update status'
+        );
       } else {
         setToastMessage(
           `${ROLE_LABELS[member.role]} ${member.full_name} marked as ${!member.is_active ? 'active' : 'inactive'}.`
@@ -74,6 +87,30 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
       }
     } finally {
       setStatusTogglingId(null);
+    }
+  };
+
+  // Coordinators who can take the clients: active, and not the one they come from.
+  const moveTargets = moveFrom
+    ? initialTeam.filter((m) => m.role === 'coordinator' && m.is_active && m.id !== moveFrom.id)
+    : [];
+
+  const handleMoveClients = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!moveFrom || !moveTo) return;
+    try {
+      setMoving(true);
+      const res = await moveClientsAction(moveFrom.id, moveTo);
+      if (!res.success) {
+        setErrorMessage(res.error || 'The clients could not be moved.');
+      } else {
+        setErrorMessage(null);
+        setToastMessage(res.message || 'Clients moved.');
+      }
+      setMoveFrom(null);
+      setMoveTo('');
+    } finally {
+      setMoving(false);
     }
   };
 
@@ -99,9 +136,21 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  const roleBadge = (member: Profile) => (
-    <Pill className="whitespace-nowrap">{ROLE_LABELS[member.role]}</Pill>
-  );
+  const clientsOf = (member: Profile) => (member.role === 'coordinator' ? clientCounts[member.id] ?? 0 : null);
+
+  const roleBadge = (member: Profile) => {
+    const clients = clientsOf(member);
+    return (
+      <>
+        <Pill className="whitespace-nowrap">{ROLE_LABELS[member.role]}</Pill>
+        {clients !== null && (
+          <span className="mt-1 block text-[13px] text-ink-muted">
+            {clients} {clients === 1 ? 'client' : 'clients'}
+          </span>
+        )}
+      </>
+    );
+  };
 
   const statusPill = (member: Profile) =>
     member.is_active ? (
@@ -123,10 +172,22 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
         size="sm"
         onClick={() => handleToggleStatus(member)}
         disabled={statusTogglingId === member.id}
-        title={member.is_active ? 'Deactivate account' : 'Activate account'}
       >
-        {member.is_active ? 'Deactivate' : 'Activate'}
+        {member.is_active ? 'Make inactive' : 'Make active'}
       </Button>
+      {(clientsOf(member) ?? 0) > 0 && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setErrorMessage(null);
+            setMoveTo('');
+            setMoveFrom(member);
+          }}
+        >
+          Move clients
+        </Button>
+      )}
       <Button variant="ghost" size="sm" onClick={() => setResetModalId(member.id)}>
         Reset password
       </Button>
@@ -135,6 +196,27 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
 
   return (
     <div>
+      {errorMessage && (
+        <Notice
+          variant="error"
+          role="alert"
+          icon={<AlertCircle size={18} strokeWidth={2} className="text-coral-deep" />}
+          className="mb-5"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span>{errorMessage}</span>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className={closeButtonClasses}
+              aria-label="Dismiss message"
+            >
+              <X size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </div>
+        </Notice>
+      )}
+
       {/* Toast feedback */}
       {toastMessage && (
         <Notice
@@ -222,7 +304,7 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
                     <th className="px-5 py-3 font-semibold">Role</th>
                     <th className="px-5 py-3 font-semibold">Email address</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="hidden px-5 py-3 font-semibold lg:table-cell">Created</th>
+                    <th className="hidden px-5 py-3 font-semibold 2xl:table-cell">Created</th>
                     <th className="px-5 py-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -233,11 +315,11 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
                       <td className="px-5 py-3.5">{roleBadge(member)}</td>
                       <td className="px-5 py-3.5 font-mono text-[13px] text-ink-soft">{member.email}</td>
                       <td className="px-5 py-3.5">{statusPill(member)}</td>
-                      <td className="hidden whitespace-nowrap px-5 py-3.5 text-ink-muted lg:table-cell">
+                      <td className="hidden whitespace-nowrap px-5 py-3.5 text-ink-muted 2xl:table-cell">
                         {formatDate(member.created_at)}
                       </td>
                       <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">{renderActions(member)}</div>
+                        <div className="flex flex-wrap items-center justify-end gap-2 [&>*]:whitespace-nowrap">{renderActions(member)}</div>
                       </td>
                     </tr>
                   ))}
@@ -361,6 +443,72 @@ export function TeamListClient({ initialTeam }: TeamListClientProps) {
                 </Button>
               </div>
             </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Move clients Modal */}
+      {moveFrom && (
+        <div className="fixed inset-0 z-40 bg-night/40 flex items-center justify-center p-4">
+          <Card
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="move-clients-title"
+            className="max-w-105 w-full p-6"
+          >
+            <h2 id="move-clients-title" className="text-[22px] leading-[1.3] font-semibold text-teal mb-2">
+              Move clients
+            </h2>
+            <p className="text-[14px] text-ink-soft mb-4">
+              All {clientsOf(moveFrom)} clients of {moveFrom.full_name}, with their purchases, go to the coordinator
+              you choose.
+            </p>
+
+            {moveTargets.length === 0 ? (
+              <>
+                <p className="text-[14px] text-ink mb-4">
+                  There is no other active coordinator. Add one first.
+                </p>
+                <div className="flex justify-end">
+                  <Button variant="secondary" onClick={() => setMoveFrom(null)}>
+                    Close
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={handleMoveClients} className="space-y-4">
+                <div>
+                  <label htmlFor="moveTo" className={labelClasses}>
+                    New coordinator {requiredMark}
+                  </label>
+                  <select
+                    id="moveTo"
+                    required
+                    value={moveTo}
+                    onChange={(e) => setMoveTo(e.target.value)}
+                    className={inputClasses}
+                  >
+                    <option value="" disabled>
+                      Choose one
+                    </option>
+                    {moveTargets.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.full_name} ({clientsOf(m)} {clientsOf(m) === 1 ? 'client' : 'clients'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+                  <Button variant="secondary" onClick={() => setMoveFrom(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" loading={moving} loadingText="Moving...">
+                    Move clients
+                  </Button>
+                </div>
+              </form>
+            )}
           </Card>
         </div>
       )}

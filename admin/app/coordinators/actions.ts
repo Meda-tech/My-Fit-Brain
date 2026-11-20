@@ -4,6 +4,7 @@ import {
   createTeamMember,
   toggleTeamMemberStatus,
   resetTeamMemberPassword,
+  moveCoordinatorClients,
 } from '../../lib/services/team';
 import { ROLE_LABELS } from '../../lib/roles';
 import { revalidatePath } from 'next/cache';
@@ -48,6 +49,17 @@ export async function toggleStatusAction(
   revalidatePath('/coordinators');
   revalidatePath('/dashboard');
   return { success: true };
+}
+
+export async function moveClientsAction(fromId: string, toId: string): Promise<TeamActionState> {
+  const result = await moveCoordinatorClients(fromId, toId);
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error || 'The clients could not be moved.' };
+  }
+  revalidatePath('/coordinators');
+  revalidatePath('/purchases');
+  const { moved, toName } = result.data;
+  return { success: true, message: `${moved} ${moved === 1 ? 'client' : 'clients'} moved to ${toName}.` };
 }
 
 export async function resetPasswordAction(

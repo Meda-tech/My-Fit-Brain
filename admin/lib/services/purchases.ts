@@ -1,12 +1,23 @@
 import { createClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
-import { currentStage, type JourneyStage, type PurchaseStatus, type StageRow } from '../purchases';
+import {
+  PURCHASE_STATUSES,
+  currentStage,
+  type JourneyStage,
+  type PurchaseRowStatus,
+  type PurchaseTab,
+  type StageRow,
+} from '../purchases';
 import type { PaymentProvider, PaymentStatus, RefundStatus } from './payments';
 
-// Purchases (step 1). Reads use the staff session, so RLS decides: super admins see every purchase, a
-// coordinator only the purchases of their own clients, counsellors none. Nothing here writes: the database
-// keeps purchases up to date from payments and assessments.
+// Purchases (step 1). Reads use the staff session, so RLS decides: super admins see every row, a coordinator
+// only the rows of their own clients, counsellors none. Nothing here writes: the database keeps the rows up to
+// date from payments and assessments.
+// One table holds both: purchases (paid, refunded, cancelled) and payment attempts (not_paid: tried on the pay
+// page, not paid). Only OPEN attempts are shown (tab Unpaid); an older attempt replaced by a later try or
+// purchase of the same phone and assessment is closed and never shown. When the phone pays, the same row
+// becomes the purchase, so it moves from Unpaid to Paid by itself, with the same coordinator.
 
 export const PURCHASE_ROLES = ['super_admin', 'coordinator'] as const;
 
@@ -24,11 +35,15 @@ export interface PurchaseRow {
   phone: string;
   client_name: string | null;
   amount_paise: number;
-  status: PurchaseStatus;
+  status: PurchaseRowStatus;
   source: 'pay_page' | 'manual';
   coordinator_name: string | null;
   paid_at: string | null;
   created_at: string;
+  /** How many payments (tries) the row holds. */
+  tries: number;
+  /** The time of the latest try. */
+  last_tried_at: string;
   stages: StageRow[];
   current_stage: JourneyStage | null;
 }
@@ -59,7 +74,11 @@ export interface PurchaseDetail extends PurchaseRow {
 type Db = Awaited<ReturnType<typeof createClient>>;
 
 const COLUMNS =
-  'id, kind, test_code, phone, client_id, amount_paise, status, source, coordinator_id, paid_at, created_at, purchase_stages(stage, position, planned_at, done_at, status)';
+  'id, kind, test_code, phone, client_id, amount_paise, status, source, coordinator_id, paid_at, created_at, ' +
+  'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at))';
+
+/** Rows shown on the screen: purchases plus open payment attempts (closed attempts never). */
+const SHOWN = `status.neq.not_paid,closed_at.is.null`;
 
 interface RawPurchase {
   id: string;
@@ -68,12 +87,13 @@ interface RawPurchase {
   phone: string;
   client_id: string | null;
   amount_paise: number;
-  status: PurchaseStatus;
+  status: PurchaseRowStatus;
   source: 'pay_page' | 'manual';
   coordinator_id: string | null;
   paid_at: string | null;
   created_at: string;
   purchase_stages: StageRow[] | null;
+  purchase_payments: { payments: { created_at: string } | { created_at: string }[] | null }[] | null;
 }
 
 /** Names for the rows: the client (linked, else registered with the number), the coordinator, the assessment. */
@@ -95,30 +115,62 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
   const coordName = new Map(((coords?.data ?? []) as { id: string; full_name: string }[]).map((c) => [c.id, c.full_name]));
   const testName = new Map(((tests.data ?? []) as { code: string; name_en: string }[]).map((t) => [t.code, t.name_en]));
 
-  return raw.map(({ purchase_stages, client_id, coordinator_id, ...r }) => {
+  return raw.map(({ purchase_stages, purchase_payments, client_id, coordinator_id, ...r }) => {
     const stages = [...(purchase_stages ?? [])].sort((a, b) => a.position - b.position);
+    const tryTimes = (purchase_payments ?? [])
+      .flatMap((l) => (Array.isArray(l.payments) ? l.payments : l.payments ? [l.payments] : []))
+      .map((p) => p.created_at)
+      .sort();
     return {
       ...r,
       test_name: testName.get(r.test_code) ?? r.test_code,
       client_name: client_id ? idName.get(client_id) ?? null : phoneName.get(r.phone.slice(-10)) ?? null,
       coordinator_name: coordinator_id ? coordName.get(coordinator_id) ?? null : null,
+      tries: tryTimes.length,
+      last_tried_at: tryTimes.at(-1) ?? r.created_at,
       stages,
       current_stage: currentStage(stages),
     };
   });
 }
 
-/** All purchases the staff member may see, newest first, one page. */
-export async function listPurchases(page: number): Promise<{ rows: PurchaseRow[]; total: number }> {
+/** How many rows each tab has for this staff member. */
+export async function purchaseTabCounts(): Promise<Record<PurchaseTab, number>> {
+  const { profile } = await requireStaff();
+  if (!canViewPurchases(profile.role)) return { unpaid: 0, paid: 0, all: 0 };
+  const db = await createClient();
+  const head = () => db.from('purchases').select('id', { count: 'exact', head: true });
+  const [unpaid, paid] = await Promise.all([
+    head().eq('status', 'not_paid').is('closed_at', null),
+    head().in('status', [...PURCHASE_STATUSES]),
+  ]);
+  if (unpaid.error?.code === '42P01' || paid.error?.code === '42P01') return { unpaid: 0, paid: 0, all: 0 };
+  const u = unpaid.count ?? 0;
+  const p = paid.count ?? 0;
+  return { unpaid: u, paid: p, all: u + p };
+}
+
+/**
+ * One page of a tab, newest first. Unpaid: open payment attempts, by first try. Paid: purchases, by paid time.
+ * All: both, by first try.
+ */
+export async function listPurchases(tab: PurchaseTab, page: number): Promise<{ rows: PurchaseRow[]; total: number }> {
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) return { rows: [], total: 0 };
   const db = await createClient();
   const from = (page - 1) * PURCHASE_PAGE_SIZE;
-  const { data, error, count } = await db
-    .from('purchases')
-    .select(COLUMNS, { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(from, from + PURCHASE_PAGE_SIZE - 1);
+  let q = db.from('purchases').select(COLUMNS, { count: 'exact' });
+  if (tab === 'unpaid') {
+    q = q.eq('status', 'not_paid').is('closed_at', null).order('created_at', { ascending: false });
+  } else if (tab === 'paid') {
+    q = q
+      .in('status', [...PURCHASE_STATUSES])
+      .order('paid_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+  } else {
+    q = q.or(SHOWN).order('created_at', { ascending: false });
+  }
+  const { data, error, count } = await q.order('id').range(from, from + PURCHASE_PAGE_SIZE - 1);
   if (error) {
     if (error.code === '42P01') return { rows: [], total: 0 };
     throw new Error(`Could not read purchases: ${error.message}`);
@@ -126,12 +178,15 @@ export async function listPurchases(page: number): Promise<{ rows: PurchaseRow[]
   return { rows: await withNames(db, (data ?? []) as unknown as RawPurchase[]), total: count ?? 0 };
 }
 
-/** One purchase with its journey and its payments, or null when it does not exist or is not the staff member's. */
+/**
+ * One row with its journey and its payments (tries), or null when it does not exist, is a closed attempt, or
+ * is not the staff member's.
+ */
 export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) return null;
   const db = await createClient();
-  const { data } = await db.from('purchases').select(COLUMNS).eq('id', id).maybeSingle();
+  const { data } = await db.from('purchases').select(COLUMNS).eq('id', id).or(SHOWN).maybeSingle();
   if (!data) return null;
   const [row] = await withNames(db, [data as unknown as RawPurchase]);
 

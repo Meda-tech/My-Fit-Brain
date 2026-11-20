@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { JOURNEY_STAGES, JOURNEY_STAGE_LABELS, PURCHASE_STATUS_LABELS, currentStage, isLate } from '../lib/purchases';
+import {
+  JOURNEY_STAGES,
+  JOURNEY_STAGE_LABELS,
+  PURCHASE_STATUSES,
+  PURCHASE_STATUS_LABELS,
+  PURCHASE_TABS,
+  PURCHASE_TAB_LABELS,
+  currentStage,
+  defaultPurchaseTab,
+  isLate,
+  isPurchaseTab,
+} from '../lib/purchases';
 
 describe('purchase journey', () => {
   it('has the five stages in order, in the team words', () => {
@@ -10,8 +21,17 @@ describe('purchase journey', () => {
       'Report presentation',
       'Package call',
     ]);
-    expect(PURCHASE_STATUS_LABELS.not_paid).toBe('Payment failed');
-    expect(PURCHASE_STATUS_LABELS.paid).toBe('Paid');
+    expect(PURCHASE_STATUS_LABELS).toEqual({ not_paid: 'Unpaid', paid: 'Paid', refunded: 'Refunded', cancelled: 'Cancelled' });
+    expect(PURCHASE_STATUSES).not.toContain('not_paid');
+  });
+
+  it('tabs: Unpaid · Paid · All; coordinators start on Unpaid when they have any, else Paid', () => {
+    expect(PURCHASE_TABS.map((t) => PURCHASE_TAB_LABELS[t])).toEqual(['Unpaid', 'Paid', 'All']);
+    expect(defaultPurchaseTab('coordinator', 2)).toBe('unpaid');
+    expect(defaultPurchaseTab('coordinator', 0)).toBe('paid');
+    expect(defaultPurchaseTab('super_admin', 2)).toBe('all');
+    expect(isPurchaseTab('paid')).toBe(true);
+    expect(isPurchaseTab('x')).toBe(false);
   });
 
   it('the stage now is the first one not done', () => {

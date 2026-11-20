@@ -53,9 +53,10 @@ function PaymentItem({ p }: { p: PurchasePayment }) {
   );
 }
 
-// The purchase in a right-side panel: who, what, status, coordinator, the purchase journey with planned and
-// actual times, and the payments (collapsed).
+// The row in a right-side panel: who, what, status, coordinator. A purchase shows its purchase journey with
+// planned and actual times, and the payments (collapsed). An unpaid row (payment attempt) lists its tries.
 export function PurchasePanel({ purchase: p, closeHref, now }: { purchase: PurchaseDetail; closeHref: string; now: Date }) {
+  const unpaid = p.status === 'not_paid';
   return (
     <SidePanel title={p.client_name ?? 'Not registered yet'} closeHref={closeHref}>
       <div className="mb-5 grid gap-2">
@@ -76,6 +77,26 @@ export function PurchasePanel({ purchase: p, closeHref, now }: { purchase: Purch
         </p>
       </div>
 
+      {unpaid ? (
+        <>
+          <h3 className="mb-1 text-[16px] font-semibold text-teal">Tries ({p.payments.length})</h3>
+          <p className="mb-3 text-[13px] text-ink-muted">Not paid yet. When this number pays this assessment, it moves to Paid.</p>
+          <ul className="grid gap-3">
+            {p.payments.map((pay) => (
+              <PaymentItem key={pay.id} p={pay} />
+            ))}
+          </ul>
+        </>
+      ) : (
+        <PurchaseJourney purchase={p} now={now} />
+      )}
+    </SidePanel>
+  );
+}
+
+function PurchaseJourney({ purchase: p, now }: { purchase: PurchaseDetail; now: Date }) {
+  return (
+    <>
       <h3 className="mb-3 text-[16px] font-semibold text-teal">Purchase journey</h3>
       <ol className="mb-6 grid gap-3">
         {p.stages.map((s, i) => (
@@ -118,6 +139,6 @@ export function PurchasePanel({ purchase: p, closeHref, now }: { purchase: Purch
           ))}
         </ul>
       </details>
-    </SidePanel>
+    </>
   );
 }
