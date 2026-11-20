@@ -20,6 +20,18 @@ schema-only exports.
 3. All 22 migration files recorded as applied on staging (`staging-migrate.ps1 -MarkAllApplied`).
 4. Fake data loaded: `staging-migrate.ps1 -Run supabase/seed-staging.sql`.
 
+## Reset to production (2026-11-20)
+
+All Task 12 (Gold journey FMS) and Task 13 (coordinator orders) changes were removed from staging on 2026-11-20
+(owner request): their tables, functions, triggers, access rules, the pg_cron timer, the Program Manager and
+Accounts test logins and four demo payments. A schema-only export of staging was then compared with one of
+production: same tables, functions, triggers, access rules and grants. Two things exist on staging only, on
+purpose:
+
+- the owner's **n8n payment webhook** (`notify_n8n_payment_paid` and the triggers `payments_paid_notify_insert`
+  / `_update`; SQL in `supabase/staging/20261110_n8n_payment_webhook.sql`, never for production);
+- `supabase_migrations.schema_migrations`, the record `staging-migrate.ps1` keeps of applied files.
+
 ## Commands (PowerShell, from the repo root, Docker running)
 
 ```powershell
@@ -34,7 +46,7 @@ The script reads only `STAGING_DB_URL` and refuses to run if it does not point t
 
 | Login | How |
 |---|---|
-| `superadmin@example.com`, `coordinator@example.com`, `counsellor@example.com` | Admin app, password = `STAGING_STAFF_PASSWORD` in `supabase/.env.db` |
+| `superadmin@example.com`, `coordinator@example.com`, `counsellor@example.com` (also `coordinator2@`, `counsellor2@`) | Admin app, password = `STAGING_STAFF_PASSWORD` in `supabase/.env.db` |
 | Asha Test `+91 99999 00001` | paid IA, not started (Home shows Start) |
 | Rahul Test `+91 99999 00002` | one failed MA payment, one offline UPI MA payment (paid, not started) |
 | Meera Test `+91 99999 00003` | registered, nothing bought |

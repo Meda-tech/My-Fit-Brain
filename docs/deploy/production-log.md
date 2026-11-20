@@ -8,6 +8,11 @@ How to add a line: after pasting file X into production and seeing it succeed, a
 
 ## Already on production
 
+**Checked again on 2026-11-20** with a new schema-only export of production (read only, no data): production
+has exactly the 23 files below and nothing else. None of the Task 12 / Task 13 files (`20261118…`,
+`20261120…`) was ever pasted into production; that work was set aside on 2026-11-20 (local branch
+`archive/fms-2026-11-20`) and is not in `supabase/migrations/`.
+
 Confirmed on 2026-11-04 from a schema-only export (`supabase/baseline/production-schema-2026-11-04.sql`):
 the export contains every change of the files below (offline payments, `pay_code` removed, no Google Drive
 token table).

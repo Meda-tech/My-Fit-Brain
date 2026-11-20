@@ -559,4 +559,8 @@ existing migrations, `.env*` files.
   `docs/deploy/production-log.md`.
 - Done: **Counsellor's conclusion and the Assessments page** (`20261105000000_attempt_conclusions.sql`, on
   production 2026-11-05; checks `docs/tasks/20-conclusions-verify.sql`).
+- Set aside on 2026-11-20 (owner decision): Task 12 (Gold journey FMS) and Task 13 (coordinator orders). Never on
+  production; removed from staging; the code is only in local branch `archive/fms-2026-11-20` and
+  `D:\Tech\Meda\mfb-backup-2026-11-20.bundle`. Do not reuse it unless the owner asks.
+- Done: Next.js 16.4.6 in both apps (security advisory on 16.4.2), on `main` 2026-11-20.
 - Next: Task 07 — polish.
