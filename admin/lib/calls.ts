@@ -31,7 +31,7 @@ export const CALL_REASON_LABELS: Record<CallReason, string> = {
 export const CALL_EVENT_LABELS: Record<CallEvent, string> = {
   created: 'Call created',
   new_try: 'New try on the pay page',
-  try_failed: 'Payment failed',
+  try_failed: 'Tried again – failed',
   paid: 'Paid: call closed',
   assessment_completed: 'Assessment completed: call closed',
   ended: 'Refunded or cancelled: call closed',

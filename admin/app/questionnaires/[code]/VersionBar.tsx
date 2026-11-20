@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, X } from 'lucide-react';
 import { Button, Card, cn } from '../../../components/brand';
-import { CopyButton } from '../CopyButton';
+import { CopyButton } from '../../../components/CopyButton';
 import { ImportJsonForm } from '../ImportJsonForm';
 
 // The version row: "New version" on the left (opens the import panel), then one tab per version.

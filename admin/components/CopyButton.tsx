@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
-import { Button } from '../../components/brand';
+import { Button } from './brand';
 
-/** Copies a text to the clipboard (the AI prompt, the version's JSON). */
+/** Copies a text to the clipboard (the AI prompt, a version's JSON, a pay link). */
 export function CopyButton({ text, label, variant = 'secondary' }: { text: string; label: string; variant?: 'primary' | 'secondary' | 'ghost' }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {

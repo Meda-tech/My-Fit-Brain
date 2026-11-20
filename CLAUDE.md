@@ -341,16 +341,26 @@ results with you"). The client never sees a report in the app.
 
 ### Calls and My tasks (step 2, owner 2026-11-20)
 
-- Migration `20261120120000_calls.sql`, checks `docs/tasks/22-calls-verify.sql`, behaviour test
-  `supabase/staging/staging-test-calls.sql` (rolled back). Tables `calls` (one per row of purchases and kind,
-  status open / closed, outcome) and `call_logs` (call history; never changed or removed, trigger). RLS: whoever
-  sees the purchase sees its calls.
+- Migrations `20261120120000_calls.sql` then `20261120130000_calls_go_live.sql` (same session, at go-live); checks
+  `docs/tasks/23-calls-go-live-verify.sql` (replaces 22); behaviour test `supabase/staging/staging-test-calls.sql`
+  (rolled back). Tables `calls` (one per row of purchases and kind, status open / closed, outcome, `closed_note`
+  when a rule closed it) and `call_logs` (call history; never changed or removed, trigger); `call_settings` holds
+  `go_live_at` (one row). RLS: whoever sees the purchase sees its calls. The outcome and event lists are CHECK
+  rules: widening one means dropping and re-adding it, which needs the owner's yes for that file.
 - **Payment call** (on an unpaid attempt): starts 30 minutes after the first try if still unpaid, or at once when a
-  payment actually failed; due 2 working hours after it starts. One per attempt; a new try only adds a history
-  line. Closes by itself when the attempt becomes a Paid purchase.
+  payment actually failed; due 2 working hours after it starts. One per attempt; a new try adds a history line.
+  Closes by itself when the attempt becomes a Paid purchase. **Reopens** (owner, 2026-11-20) when a try after it
+  closed (Done or Not interested) fails, or is still unpaid 30 minutes later: due 2 working hours after that, history
+  line "Tried again – failed, <time>" (event `try_failed`); a new try also joins and reopens an attempt closed as Not
+  interested.
 - **Assessment call** (on a Paid purchase): starts at the paid time, due 2 working hours after payment; closes by
   itself when the assessment is completed (stays open while only started); not made when already completed.
-  Journey: Assessment planned = its first due time, actual = completed time.
+  Journey: Assessment planned = its first due time, actual = completed time. **Go-live rule** (owner, 2026-11-20):
+  paid in the 7 days before go-live → starts at go-live, due 2 working hours later (not late); paid earlier → no
+  automatic call (closed with the note "Paid more than 7 days before go-live: no automatic call."), it stays under
+  Paid as "Assessment not started" for Admin to decide; calls already worked before go-live keep their times.
+- The Unpaid side panel has **Copy pay link** (`<clients URL>/pay/<code>`) for Payment calls; Paid rows show
+  "Assessment not started" / "Assessment started" while at the Assessment stage.
 - Calls are made and closed by the payment and assessment triggers (`calls_sync_purchase`) and by `calls_sync()`,
   which the admin runs when My tasks or Purchases opens (the 30-minute rule; no scheduler). Start and due times
   always come from the events, never from when the sync ran.

@@ -1,7 +1,9 @@
 import { Phone } from 'lucide-react';
 import { SidePanel } from './SidePanel';
 import { PurchaseStatusPill, StagePill } from './PurchasePills';
-import { formatAmount, formatDateTime, paymentMethodLabel } from '../payments/format';
+import { formatAmount, formatDateTime, formatTime, paymentMethodLabel } from '../payments/format';
+import { CopyButton } from '../CopyButton';
+import { CLIENTS_URL } from '../../lib/site';
 import { CallDoneButton } from '../calls/CallDoneButton';
 import { cn } from '../brand';
 import { JOURNEY_STAGE_LABELS, PURCHASE_KIND_LABELS, isLate } from '../../lib/purchases';
@@ -57,6 +59,8 @@ function PaymentItem({ p }: { p: PurchasePayment }) {
 }
 
 function logText(l: CallLogRow): string {
+  // "Tried again – failed, 4:19 pm" (owner's words, 2026-11-20).
+  if (l.entry === 'event' && l.event === 'try_failed') return `${CALL_EVENT_LABELS.try_failed}, ${formatTime(l.at)}`;
   if (l.entry === 'event') return l.event ? CALL_EVENT_LABELS[l.event] : '';
   const parts = [l.choice ? CALL_CHOICE_LABELS[l.choice] : ''];
   if (l.reason) parts.push(CALL_REASON_LABELS[l.reason]);
@@ -68,8 +72,14 @@ function logText(l: CallLogRow): string {
 function CallBox({ calls, now }: { calls: CallRow[]; now: Date }) {
   if (calls.length === 0) return null;
   const open = calls.find((c) => c.status === 'open');
-  const logs = calls
-    .flatMap((c) => c.logs.map((l) => ({ ...l, kind: c.kind })))
+  // The history lines, plus one line for a call a rule closed (its note, e.g. paid before go-live).
+  const logs: (CallLogRow & { kind: CallRow['kind']; text?: string })[] = calls
+    .flatMap((c) => [
+      ...c.logs.map((l) => ({ ...l, kind: c.kind })),
+      ...(c.closed_note && c.closed_at
+        ? [{ id: `${c.id}-note`, at: c.closed_at, entry: 'event' as const, choice: null, reason: null, note: null, follow_up_at: null, event: null, by_name: null, kind: c.kind, text: c.closed_note }]
+        : []),
+    ])
     .sort((a, b) => b.at.localeCompare(a.at));
   const late = open ? isCallLate(open.due_at, now) : false;
   return (
@@ -98,7 +108,7 @@ function CallBox({ calls, now }: { calls: CallRow[]; now: Date }) {
                 {formatDateTime(l.at)} · {CALL_KIND_LABELS[l.kind]}
                 {l.by_name ? ` · ${l.by_name}` : ''}
               </p>
-              <p className={cn('m-0', l.entry === 'call' ? 'font-medium text-ink' : 'text-ink-soft')}>{logText(l)}</p>
+              <p className={cn('m-0', l.entry === 'call' ? 'font-medium text-ink' : 'text-ink-soft')}>{l.text ?? logText(l)}</p>
               {l.note && <p className="m-0 mt-1 whitespace-pre-line text-ink-soft">{l.note}</p>}
             </li>
           ))}
@@ -131,6 +141,12 @@ export function PurchasePanel({ purchase: p, closeHref, now }: { purchase: Purch
         <p className="text-[14px] text-ink-soft">
           Coordinator: <span className="font-medium text-ink">{p.coordinator_name ?? 'None yet'}</span>
         </p>
+        {/* During a Payment call: the pay link for this assessment, to send to the client. */}
+        {unpaid && (
+          <div className="w-fit">
+            <CopyButton text={`${CLIENTS_URL}/pay/${p.test_code}`} label="Copy pay link" variant="secondary" />
+          </div>
+        )}
       </div>
 
       <CallBox calls={p.calls} now={now} />

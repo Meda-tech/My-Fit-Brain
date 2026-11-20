@@ -138,6 +138,48 @@ SELECT 'manual payment with no try: no Payment call; Done closes the Assessment 
   AND (SELECT c.status = 'closed' AND c.outcome = 'done' FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id
        WHERE pu.phone = '+919999900084' AND c.kind = 'assessment');
 
+-- 6b. Reopen (owner, 2026-11-20): a new failed try reopens a Payment call closed as Not interested.
+-- (In one transaction now() never moves, so the closing time is set an hour back to put the new try after it.)
+UPDATE public.calls SET closed_at = now() - interval '1 hour' WHERE id = (SELECT id FROM t_c1);
+INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id)
+VALUES ('5eed0000-0000-4000-8000-0000000c0006', '+919999900081', 'IA', 'razorpay', 350000, 'failed', 'order_STAGINGFAKE_C6');
+SELECT 'Not interested, then a new failed try: same attempt, reopened; same Payment call open again, due 2 working hours after the failure',
+  (SELECT purchase_id = (SELECT id FROM t_a1) FROM public.purchase_payments WHERE payment_id = '5eed0000-0000-4000-8000-0000000c0006')
+  AND (SELECT closed_at IS NULL AND closed_reason IS NULL FROM public.purchases WHERE id = (SELECT id FROM t_a1))
+  AND (SELECT status = 'open' AND outcome IS NULL AND due_at = public.add_working_hours(now(), 2) FROM public.calls WHERE id = (SELECT id FROM t_c1))
+  AND (SELECT count(*) = 1 FROM public.calls WHERE purchase_id = (SELECT id FROM t_a1) AND kind = 'payment');
+SELECT 'the history has a "Tried again – failed" line (try_failed) after the closing',
+  EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT id FROM t_c1) AND event = 'try_failed' AND at > now() - interval '1 hour');
+
+-- 6c. Reopen after Done: a try still unpaid 30 minutes later.
+INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id)
+VALUES ('5eed0000-0000-4000-8000-0000000c0007', '+919999900085', 'MA', 'razorpay', 350000, 'failed', 'order_STAGINGFAKE_C7');
+CREATE TEMP TABLE t_c7 ON COMMIT DROP AS
+SELECT c.id FROM public.calls c JOIN public.purchase_payments pp ON pp.purchase_id = c.purchase_id
+WHERE pp.payment_id = '5eed0000-0000-4000-8000-0000000c0007' AND c.kind = 'payment';
+SELECT public.call_mark((SELECT id FROM t_c7), (SELECT admin FROM t_ids), 'done', null, 'Will pay tonight', null)::text = '' AS marked;
+UPDATE public.calls SET closed_at = now() - interval '2 hours' WHERE id = (SELECT id FROM t_c7);
+INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id, created_at)
+VALUES ('5eed0000-0000-4000-8000-0000000c0008', '+919999900085', 'MA', 'razorpay', 350000, 'created', 'order_STAGINGFAKE_C8', now() - interval '45 minutes');
+SELECT 'Done, then a try still unpaid after 30 minutes: the same Payment call reopens, due 2 working hours after those 30 minutes',
+  (SELECT status = 'open' AND due_at = public.add_working_hours(now() - interval '15 minutes', 2) FROM public.calls WHERE id = (SELECT id FROM t_c7))
+  AND EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT id FROM t_c7) AND event = 'try_failed');
+
+-- 6d. Go-live (owner, 2026-11-20). Go-live is set to yesterday for this test.
+UPDATE public.call_settings SET go_live_at = now() - interval '1 day';
+INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id, provider_payment_id, paid_at, created_at, method, reference, recorded_by, proof_file_id, proof_url)
+SELECT v.id, v.phone, 'IA', 'offline', 350000, 'paid', 'offline_' || v.id, 'offline_' || v.id, now() - v.ago, now() - v.ago, 'upi', 'UPI-GOLIVE-' || v.n, admin, 'fake-proof-g' || v.n, 'https://drive.example/fake-proof-g' || v.n
+FROM t_ids, (VALUES ('5eed0000-0000-4000-8000-0000000c0009'::uuid, '+919999900086', interval '10 days', 1),
+                    ('5eed0000-0000-4000-8000-0000000c0010'::uuid, '+919999900087', interval '3 days', 2)) AS v(id, phone, ago, n);
+SELECT public.calls_sync() >= 0 AS synced;
+SELECT 'paid more than 7 days before go-live: no automatic Assessment call',
+  NOT EXISTS (SELECT 1 FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id WHERE pu.phone = '+919999900086');
+SELECT 'paid in the 7 days before go-live: Assessment call due 2 working hours after go-live (not late at go-live)',
+  (SELECT c.created_at = g.go_live_at AND c.due_at = public.add_working_hours(g.go_live_at, 2) AND s.planned_at = c.due_at
+   FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id
+   JOIN public.purchase_stages s ON s.purchase_id = pu.id AND s.stage = 'assessment', public.call_settings g
+   WHERE pu.phone = '+919999900087' AND c.kind = 'assessment');
+
 -- 7. Access: the same people who see the purchase.
 SELECT 'as coordinator', set_config('request.jwt.claims',
   json_build_object('sub', (SELECT auth_user_id FROM public.profiles WHERE email = 'coordinator@example.com'), 'role', 'authenticated')::text, true) IS NOT NULL;

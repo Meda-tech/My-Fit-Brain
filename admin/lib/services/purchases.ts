@@ -9,7 +9,7 @@ import {
   type PurchaseTab,
   type StageRow,
 } from '../purchases';
-import type { CallChoice, CallEvent, CallKind, CallOutcome, CallReason } from '../calls';
+import type { AssessmentProgress, CallChoice, CallEvent, CallKind, CallOutcome, CallReason } from '../calls';
 import type { PaymentProvider, PaymentStatus, RefundStatus } from './payments';
 
 // Purchases (step 1) and their calls (step 2). Reads use the staff session, so RLS decides: super admins see every
@@ -56,6 +56,8 @@ export interface PurchaseRow {
   last_try_failed: boolean;
   /** The call that is open now (one at most at a time: payment while unpaid, assessment once paid). */
   open_call: OpenCall | null;
+  /** How far the client got with the assessment (paid rows). */
+  assessment_progress: AssessmentProgress;
   stages: StageRow[];
   current_stage: JourneyStage | null;
 }
@@ -99,6 +101,8 @@ export interface CallRow {
   created_at: string;
   due_at: string;
   closed_at: string | null;
+  /** Why a rule closed the call, in words (e.g. paid more than 7 days before go-live). */
+  closed_note: string | null;
   logs: CallLogRow[];
   /** Earlier "Mark as call done" entries (Not interested needs at least one). */
   prior_calls: number;
@@ -113,7 +117,7 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 
 const COLUMNS =
   'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, source, coordinator_id, paid_at, created_at, ' +
-  'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status)), ' +
+  'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status, attempt_id)), ' +
   'calls(id, kind, status, due_at)';
 
 /** Rows shown on the screen: purchases, open attempts and attempts closed as Not interested. */
@@ -137,7 +141,7 @@ interface RawPurchase {
   paid_at: string | null;
   created_at: string;
   purchase_stages: StageRow[] | null;
-  purchase_payments: { payments: One<{ created_at: string; status: string }> }[] | null;
+  purchase_payments: { payments: One<{ created_at: string; status: string; attempt_id: string | null }> }[] | null;
   calls: { id: string; kind: CallKind; status: string; due_at: string }[] | null;
 }
 
@@ -175,13 +179,30 @@ export async function nameLookup(
   };
 }
 
+type RawTry = { created_at: string; status: string; attempt_id: string | null };
+
+/** How far the client got with the assessment of each paid row (only ids of rows the staff member may see). */
+async function assessmentProgress(raw: RawPurchase[]): Promise<Map<string, AssessmentProgress>> {
+  const tries = (r: RawPurchase) => (r.purchase_payments ?? []).map((l) => one(l.payments)).filter((p): p is RawTry => !!p);
+  const ids = [...new Set(raw.flatMap((r) => tries(r).map((p) => p.attempt_id).filter((v): v is string => !!v)))];
+  const { data } = ids.length ? await createAdminClient().from('attempts').select('id, status').in('id', ids) : { data: [] };
+  const status = new Map(((data ?? []) as { id: string; status: string }[]).map((a) => [a.id, a.status]));
+  return new Map(
+    raw.map((r) => {
+      const s = tries(r).map((p) => (p.attempt_id ? status.get(p.attempt_id) : undefined));
+      const progress: AssessmentProgress = s.includes('completed') ? 'completed' : s.includes('in_progress') ? 'in_progress' : 'not_started';
+      return [r.id, progress];
+    })
+  );
+}
+
 async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
-  const names = await nameLookup(db, raw);
+  const [names, progress] = await Promise.all([nameLookup(db, raw), assessmentProgress(raw)]);
   return raw.map(({ purchase_stages, purchase_payments, calls, client_id, coordinator_id, closed_reason, ...r }) => {
     const stages = [...(purchase_stages ?? [])].sort((a, b) => a.position - b.position);
     const tries = (purchase_payments ?? [])
       .map((l) => one(l.payments))
-      .filter((p): p is { created_at: string; status: string } => !!p)
+      .filter((p): p is RawTry => !!p)
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
     const last = tries.at(-1);
     const open = (calls ?? []).filter((c) => c.status === 'open').sort((a, b) => a.due_at.localeCompare(b.due_at))[0];
@@ -195,6 +216,7 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
       last_tried_at: last?.created_at ?? r.created_at,
       last_try_failed: last?.status === 'failed',
       open_call: open ? { id: open.id, kind: open.kind, due_at: open.due_at } : null,
+      assessment_progress: progress.get(r.id) ?? 'not_started',
       stages,
       current_stage: currentStage(stages),
     };
@@ -272,7 +294,7 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
       .eq('purchase_id', id),
     db
       .from('calls')
-      .select('id, kind, status, outcome, created_at, due_at, closed_at, call_logs(id, at, entry, choice, reason, note, follow_up_at, event, by_name)')
+      .select('id, kind, status, outcome, created_at, due_at, closed_at, closed_note, call_logs(id, at, entry, choice, reason, note, follow_up_at, event, by_name)')
       .eq('purchase_id', id),
   ]);
   type RawPayment = Omit<PurchasePayment, 'recorded_by_name' | 'accounts_check'> & { recorded_by: string | null };

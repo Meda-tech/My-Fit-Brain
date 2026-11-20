@@ -8,7 +8,7 @@ import { PageHeader } from '../../../components/PageHeader';
 import { Button, Notice, Pill, cn } from '../../../components/brand';
 import { canEditQuestionnaires, canViewQuestionnaires, formatDateTime, getQuestionnaire, getVersion } from '../../../lib/services/questionnaires';
 import { publishAction } from '../actions';
-import { CopyButton } from '../CopyButton';
+import { CopyButton } from '../../../components/CopyButton';
 import { StatusPill } from '../StatusPill';
 import { OverviewView, ReportView } from './QuestionnaireView';
 import { ClientDetailsEditor } from './ClientDetailsEditor';

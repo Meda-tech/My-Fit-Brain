@@ -9,7 +9,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { Card, Notice, Pill } from '../../components/brand';
 import { canEditQuestionnaires, canViewQuestionnaires, formatDateTime, listQuestionnaires } from '../../lib/services/questionnaires';
 import { ActiveSwitch } from './ActiveSwitch';
-import { CopyButton } from './CopyButton';
+import { CopyButton } from '../../components/CopyButton';
 import { NewQuestionnaireForm } from './NewQuestionnaireForm';
 import { StatusPill } from './StatusPill';
 

@@ -27,6 +27,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function stageText(r: PurchaseRow): string {
   if (r.status === 'not_paid') return JOURNEY_STAGE_LABELS.payment;
   if (r.status !== 'paid') return '—';
+  if (r.current_stage === 'assessment') {
+    return r.assessment_progress === 'in_progress' ? 'Assessment started' : 'Assessment not started';
+  }
   return r.current_stage ? JOURNEY_STAGE_LABELS[r.current_stage] : 'All done';
 }
 
