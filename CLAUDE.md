@@ -300,6 +300,23 @@ results with you"). The client never sees a report in the app.
 - Auth in the clients app uses `supabase.auth.getClaims()` (`proxy.ts` → `lib/supabase/middleware.ts`, and
   `lib/auth.ts` `getAuthUser()`), which verifies the token locally with asymmetric JWT signing keys.
 
+### Purchases and the purchase journey (step 1, owner 2026-11-20)
+
+- Migration `20261120100000_purchases.sql`, checks `docs/tasks/21-purchases-verify.sql`, behaviour test
+  `supabase/staging/staging-test-purchases.sql` (rolled back). The `payments` table is not changed.
+- Every pay-page try is a **Purchase** (`purchases`: type Assessment, assessment, phone, amount, status Payment failed
+  (`not_paid`) / Paid / Refunded / Cancelled). A paid manual payment joins the latest open not-paid purchase of the same
+  phone and assessment, else makes a new Paid purchase. `purchase_payments` links payments to purchases and keeps
+  "Accounts check: pending" for manual payments; the screen shows "Verified by coordinator" (who recorded it).
+- **Purchase journey** (`purchase_stages`): Payment → Assessment → Presentation booking → Report presentation → Package
+  call, each with planned time, actual time and status (waiting / open / done). Payment and Assessment are filled from
+  real data by triggers on `payments` and `attempts` (never block a payment or a submit).
+- **Coordinator per client** (phone, `client_coordinators`): new phone → round robin among active coordinators
+  (`coordinator_round_robin`); returning phone → same coordinator (round robin again only if inactive).
+- `add_working_hours(at, hours)`: Mon–Sat 9:00–18:00 India time, Sunday off (Fri 17:30 + 2 h = Sat 10:30).
+- Admin → **Purchases** (`/purchases`, super admins all, coordinators only their own; RLS `purchases_select`): list
+  newest first; a row opens a right-side panel (`?open=<id>`) with the purchase journey and the payments (collapsed).
+
 ### Counsellor flow (admin)
 
 - Client → attempt (`/attempts/<id>`): super admins and counsellors see the **counsellor view** (alerts and

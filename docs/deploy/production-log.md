@@ -56,4 +56,4 @@ Files that are on staging but not yet on production. Paste them into the product
 
 | # | File | On staging since | Checks |
 |---|---|---|---|
-| — | none | | |
+| 1 | `20261120100000_purchases.sql` (step 1: purchases, purchase journey, coordinator per client, working hours; new tables and functions, two triggers; changes no existing table and removes nothing) | 2026-11-20 | `docs/tasks/21-purchases-verify.sql` |
