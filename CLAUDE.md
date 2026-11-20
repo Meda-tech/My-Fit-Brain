@@ -20,6 +20,20 @@ something must say so in plain words at its top. Verification SQL is `select` on
 
 ---
 
+## Standing rules for every step (owner, 2026-11-20)
+
+- Build on the current `main` (production code). Never reuse `archive/fms-2026-11-20` or any old Task 12/13 work.
+- Never commit directly on `main`: each step gets its own branch, started from the previous step's branch (or
+  `main`). Nothing is merged into `main` or pushed unless the owner asks.
+- Work on STAGING. Additive SQL only. Never delete data or write deleting SQL without the owner's explicit
+  permission. After each step, name the SQL file(s) to paste into production once the owner has tested.
+- Keep screens simple: plain words, one main button at a time, details collapsed.
+- Build only what the current step asks. STOP after each step with: what changed, how to test it (with test
+  logins), and any SQL.
+- Words on screens: **Purchase**, **Purchase journey**, **Mark as call done**.
+
+---
+
 ## Repository layout
 
 ```
