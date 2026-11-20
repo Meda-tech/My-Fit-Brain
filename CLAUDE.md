@@ -30,6 +30,9 @@ something must say so in plain words at its top. Verification SQL is `select` on
 - Production stays untouched until the whole flow works (owner, 2026-11-20): each step's SQL files are collected
   in `docs/deploy/production-log.md` under "To paste later, in order".
 - Make every screen responsive: phones, tablets and laptops (owner, 2026-11-20).
+- Standing permission (owner, 2026-11-20): a CHECK rule / allowed-values list may be replaced by a WIDER one (new
+  outcomes, events, statuses) when a step needs it, as long as no rows are removed or changed. Say so in the step's
+  summary every time. Every other kind of deleting still needs the owner's explicit yes.
 - Keep screens simple: plain words, one main button at a time, details collapsed.
 - Build only what the current step asks. STOP after each step with: what changed, how to test it (with test
   logins), and any SQL.
@@ -346,12 +349,13 @@ results with you"). The client never sees a report in the app.
   (rolled back). Tables `calls` (one per row of purchases and kind, status open / closed, outcome, `closed_note`
   when a rule closed it) and `call_logs` (call history; never changed or removed, trigger); `call_settings` holds
   `go_live_at` (one row). RLS: whoever sees the purchase sees its calls. The outcome and event lists are CHECK
-  rules: widening one means dropping and re-adding it, which needs the owner's yes for that file.
+  rules; widening one is covered by the standing permission (say so in the summary). Cleanup
+  `20261121000000_calls_cleanup.sql`: outcome `before_go_live` (calls closed by the go-live rule), event `reopened`.
 - **Payment call** (on an unpaid attempt): starts 30 minutes after the first try if still unpaid, or at once when a
   payment actually failed; due 2 working hours after it starts. One per attempt; a new try adds a history line.
   Closes by itself when the attempt becomes a Paid purchase. **Reopens** (owner, 2026-11-20) when a try after it
   closed (Done or Not interested) fails, or is still unpaid 30 minutes later: due 2 working hours after that, history
-  line "Tried again – failed, <time>" (event `try_failed`); a new try also joins and reopens an attempt closed as Not
+  line "Tried again – failed, <time>" (event `try_failed`) and "Payment call reopened" (event `reopened`); a new try also joins and reopens an attempt closed as Not
   interested.
 - **Assessment call** (on a Paid purchase): starts at the paid time, due 2 working hours after payment; closes by
   itself when the assessment is completed (stays open while only started); not made when already completed.
@@ -379,6 +383,27 @@ results with you"). The client never sees a report in the app.
   the same right-side panel as Purchases.
 - Working hours exist twice and must match: SQL `add_working_hours` and `addWorkingHours` in `admin/lib/calls.ts`
   (tests `admin/test/calls.test.ts` use the same cases as the verify file).
+
+### Counsellor availability (step 3, owner 2026-11-20)
+
+- Migration `20261121000001_counsellor_availability.sql`, checks `docs/tasks/24-availability-verify.sql`, behaviour
+  test `supabase/staging/staging-test-availability.sql` (rolled back). Super admins only: page, reads (RLS
+  `is_super_admin()`), writes (`availability_add` / `availability_remove`, service role, which check the role again).
+  Counsellors and coordinators cannot see or change availability.
+- **Default, stored once** in `availability_settings` (one row; a Settings screen can change it later, nothing is
+  hard-coded in screens): 30-minute slots, Monday–Saturday (`work_days` = ISO weekdays), 9:00–18:00, no gap, lunch
+  13:00–13:30 → 17 slots a day (9:00 … 12:30, 13:30 … 17:30). Sunday off. Times are India time.
+- **Changes** (`availability_changes`, per counsellor and date): Mark off (whole day, or a time range; optional
+  reason) or custom slots (a time range that is a whole number of slots, split into slots; e.g. Sunday 10:00–12:00,
+  18:00–18:30). Today or later only. Undo sets `removed_at / removed_by_name` (refused when any of its slots is
+  booked); the row stays, so the history (who added, who undid, when) is complete. Never deleted or rewritten
+  (trigger).
+- `counsellor_slots(counsellor, from, to)` is the ONE place that turns the default and the changes into slots with
+  Free / Booked / Off (a default slot wins over a custom one at the same time; Booked wins over Off). Booking must use
+  it. `availability_booked()` answers "no" until the booking step replaces its body.
+- Admin → **Counsellor availability** (`/availability?c=<counsellor>&m=<YYYY-MM>&d=<date>`): pick a counsellor →
+  month view (Monday first) with free / booked / off per date → a date opens a right-side panel: that day's slots,
+  Mark off and Add custom slots (past dates read only), the active changes with Undo, the history (collapsed).
 
 ### Counsellor flow (admin)
 

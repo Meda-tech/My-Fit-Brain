@@ -9,6 +9,7 @@ import {
   ClipboardList,
   BookOpen,
   ShieldCheck,
+  CalendarClock,
   LogOut,
   Menu,
   X,
@@ -113,7 +114,13 @@ export function AdminShellClient({
           { href: '/under-18', label: 'Under 18', icon: UserX },
         ]
       : []),
-    ...(isSuperAdmin ? [{ href: '/team', label: 'Team', icon: ShieldCheck }] : []),
+    // Counsellor availability and Team: super admins only.
+    ...(isSuperAdmin
+      ? [
+          { href: '/availability', label: 'Counsellor availability', icon: CalendarClock },
+          { href: '/team', label: 'Team', icon: ShieldCheck },
+        ]
+      : []),
   ];
 
   // Tooltip for the collapsed rail: one fixed element beside the hovered/focused item.

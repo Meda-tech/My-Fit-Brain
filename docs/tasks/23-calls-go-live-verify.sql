@@ -1,4 +1,4 @@
--- Checks for the calls after supabase/migrations/20261120130000_calls_go_live.sql (replaces
+-- Checks for the calls after supabase/migrations/20261120130000_calls_go_live.sql and 20261121000000_calls_cleanup.sql (replaces
 -- docs/tasks/22-calls-verify.sql from now on). SELECT only, changes nothing. Every row: ok = true.
 
 select 'calls and call_logs exist, RLS on, one read rule each and no write rule' as check,
@@ -43,6 +43,13 @@ select 'paid more than 7 days before go-live: no open automatic Assessment call 
   not exists (select 1 from public.calls c join public.purchases pu on pu.id = c.purchase_id cross join public.call_settings g
               where c.kind = 'assessment' and c.status = 'open' and pu.paid_at < g.go_live_at - interval '7 days'
                 and not exists (select 1 from public.call_logs l where l.call_id = c.id and l.entry = 'call'))
+union all
+select 'calls closed by the go-live rule have the outcome before_go_live (and only they)',
+  not exists (select 1 from public.calls where (closed_note is not null) <> (outcome is not distinct from 'before_go_live'))
+union all
+select '"reopened" lines only on Payment calls',
+  not exists (select 1 from public.call_logs l join public.calls c on c.id = l.call_id
+              where l.event = 'reopened' and c.kind <> 'payment')
 union all
 select 'no open Assessment call once the assessment is completed',
   not exists (select 1 from public.calls c join public.purchase_stages s on s.purchase_id = c.purchase_id and s.stage = 'assessment'

@@ -4,8 +4,8 @@
 export type CallKind = 'payment' | 'assessment';
 export type CallChoice = 'done' | 'call_later' | 'not_picked' | 'not_interested';
 export type CallReason = 'too_costly' | 'not_now' | 'wrong_number' | 'other';
-export type CallEvent = 'created' | 'new_try' | 'try_failed' | 'paid' | 'assessment_completed' | 'ended';
-export type CallOutcome = 'done' | 'not_interested' | 'paid' | 'assessment_completed' | 'ended';
+export type CallEvent = 'created' | 'new_try' | 'try_failed' | 'paid' | 'assessment_completed' | 'ended' | 'reopened';
+export type CallOutcome = 'done' | 'not_interested' | 'paid' | 'assessment_completed' | 'ended' | 'before_go_live';
 
 export const CALL_KIND_LABELS: Record<CallKind, string> = {
   payment: 'Payment call',
@@ -35,6 +35,7 @@ export const CALL_EVENT_LABELS: Record<CallEvent, string> = {
   paid: 'Paid: call closed',
   assessment_completed: 'Assessment completed: call closed',
   ended: 'Refunded or cancelled: call closed',
+  reopened: 'Payment call reopened',
 };
 
 export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
@@ -43,6 +44,7 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   paid: 'Closed: paid',
   assessment_completed: 'Closed: assessment completed',
   ended: 'Closed: refunded or cancelled',
+  before_go_live: 'Closed: paid more than 7 days before go-live',
 };
 
 export const CALL_NOTE_MAX = 2000;
