@@ -50,11 +50,14 @@ token table).
 | `docs/tasks/17-launch-cleanup.sql` | owner request 2026-10-31; never rerun |
 | `docs/tasks/19-fix-payment-order_TuZmscuEiO1eG3.sql` | run on production 2026-11-04 — marked one missed Razorpay payment paid |
 
-## Waiting for production
+## To paste later, in order
 
-Files that are on staging but not yet on production. Paste them into the production SQL Editor in this order.
+Owner decision 2026-11-20: production stays untouched until the whole flow (purchases, calls and the next steps)
+works on staging. Each step adds its files here. When the owner says so, paste ALL of them into the production SQL
+Editor in this order, one at a time, then run the checks. Do not paste a step on its own.
 
 | # | File | On staging since | Checks |
 |---|---|---|---|
 | 1 | `20261120100000_purchases.sql` (step 1: purchases, purchase journey, coordinator per client, working hours; new tables and functions, two triggers; changes no existing table and removes nothing) | 2026-11-20 | `docs/tasks/21-purchases-verify.sql` |
 | 2 | `20261120110000_payment_attempts.sql` (step 1 adjustment: unpaid tries are payment attempts, one open per phone and assessment; one paid payment per purchase; `payment_attempts` view; Move clients; no Make inactive while a coordinator has clients; adds a column to `purchases`, one table, one trigger on `profiles`; removes nothing) | 2026-11-20 | `docs/tasks/21b-payment-attempts-verify.sql`, then `docs/tasks/21-purchases-verify.sql` again |
+| 3 | `20261120120000_calls.sql` (step 2: Payment and Assessment calls, call history, Mark as call done; adds `purchases.closed_reason`, two tables, functions; new bodies for the two purchase triggers and the `payment_attempts` view; removes nothing. Makes calls for existing purchases: every paid purchase whose assessment is not completed gets an Assessment call, due 2 working hours after its payment, so older ones start as Overdue) | 2026-11-20 | `docs/tasks/22-calls-verify.sql` |

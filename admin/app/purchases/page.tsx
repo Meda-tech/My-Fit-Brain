@@ -7,14 +7,16 @@ import { PageHeader } from '../../components/PageHeader';
 import { Card, cn } from '../../components/brand';
 import { PurchasePanel } from '../../components/purchases/PurchasePanel';
 import { PurchaseStatusPill } from '../../components/purchases/PurchasePills';
-import { formatAmount, formatDate, formatTime } from '../../components/payments/format';
+import { formatAmount, formatDate, formatDateTime, formatTime } from '../../components/payments/format';
 import { JOURNEY_STAGE_LABELS, PURCHASE_TABS, PURCHASE_TAB_LABELS, defaultPurchaseTab, isPurchaseTab, type PurchaseTab } from '../../lib/purchases';
+import { CALL_KIND_LABELS, isCallLate } from '../../lib/calls';
 import {
   PURCHASE_PAGE_SIZE,
   canViewPurchases,
   getPurchase,
   listPurchases,
   purchaseTabCounts,
+  syncCalls,
   type PurchaseRow,
 } from '../../lib/services/purchases';
 
@@ -37,16 +39,34 @@ function triesText(n: number): string {
   return `${n} ${n === 1 ? 'try' : 'tries'}`;
 }
 
+/** The open call and its due time; coral-deep when late. */
+function CallDue({ r, now }: { r: PurchaseRow; now: Date }) {
+  if (!r.open_call) return <span className="text-ink-muted">—</span>;
+  const late = isCallLate(r.open_call.due_at, now);
+  return (
+    <span className={cn('block', late && 'font-semibold text-coral-deep')}>
+      {CALL_KIND_LABELS[r.open_call.kind]}
+      <span className={cn('block text-[12px]', late ? 'text-coral-deep' : 'text-ink-muted')}>
+        {late ? 'Late · ' : 'Due '}
+        {formatDateTime(r.open_call.due_at)}
+      </span>
+    </span>
+  );
+}
+
 const EMPTY: Record<PurchaseTab, string> = {
   unpaid: 'No unpaid tries.',
   paid: 'No purchases yet.',
   all: 'No purchases yet.',
 };
 
-// Purchases. Tabs: Unpaid (tries on the pay page that are not paid: payment attempts) · Paid (paid, also
-// refunded or cancelled later) · All. When a number pays, its row moves from Unpaid to Paid by itself, with the
-// same coordinator. Super admins see all rows; a coordinator only the rows of their own clients (RLS).
-// A row opens a right-side panel: the purchase journey, or the tries of an unpaid row.
+const TH = 'px-4 py-3 font-semibold';
+const TD = 'px-4 py-3';
+
+// Purchases. Tabs: Unpaid (tries on the pay page that are not paid: payment attempts, also those closed as Not
+// interested) · Paid (paid, also refunded or cancelled later) · All. When a number pays, its row moves from Unpaid to
+// Paid by itself, with the same coordinator. Each row shows its open call and due time. Super admins see all rows; a
+// coordinator only the rows of their own clients (RLS). A row opens a right-side panel.
 export default async function PurchasesPage({
   searchParams,
 }: {
@@ -55,6 +75,7 @@ export default async function PurchasesPage({
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) redirect('/dashboard');
   const sp = await searchParams;
+  await syncCalls();
   const counts = await purchaseTabCounts();
   const tab: PurchaseTab = isPurchaseTab(sp.tab) ? sp.tab : defaultPurchaseTab(profile.role, counts.unpaid);
   const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
@@ -62,6 +83,7 @@ export default async function PurchasesPage({
     listPurchases(tab, page),
     sp.open && UUID.test(sp.open) ? getPurchase(sp.open) : Promise.resolve(null),
   ]);
+  const now = new Date();
   const pages = Math.max(1, Math.ceil(total / PURCHASE_PAGE_SIZE));
   const href = (params: { tab?: PurchaseTab; page?: number; open?: string }) => {
     const q = new URLSearchParams({ tab: params.tab ?? tab });
@@ -111,77 +133,93 @@ export default async function PurchasesPage({
           </div>
         ) : (
           <>
-            {/* Phones: cards */}
-            <ul className="divide-y divide-sand md:hidden">
+            {/* Phones, tablets and laptops: cards */}
+            <ul className="divide-y divide-sand xl:hidden">
               {rows.map((r) => (
                 <li key={r.id}>
-                  <Link href={openHref(r.id)} scroll={false} className="block p-4 hover:bg-cream">
+                  <Link
+                    href={openHref(r.id)}
+                    scroll={false}
+                    className={cn('grid gap-1 p-4 hover:bg-cream sm:px-5', open?.id === r.id && 'bg-mist')}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="font-semibold text-ink">{r.client_name ?? r.phone}</p>
-                        {r.client_name && <p className="font-mono text-[12px] text-ink-muted">{r.phone}</p>}
+                        <p className="m-0 font-semibold text-ink">{r.client_name ?? r.phone}</p>
+                        {r.client_name && <p className="m-0 font-mono text-[12px] text-ink-muted">{r.phone}</p>}
                       </div>
-                      <PurchaseStatusPill status={r.status} />
+                      <PurchaseStatusPill status={r.status} notInterested={r.not_interested} />
                     </div>
-                    <p className="mt-2 text-[13px] text-ink-soft">
-                      {r.test_code} ·{' '}
+                    <p className="m-0 text-[14px] text-ink-soft">
+                      {r.test_name} ·{' '}
                       {r.status === 'not_paid'
-                        ? `${triesText(r.tries)} · last ${formatDate(rowTime(r))}, ${formatTime(rowTime(r))}`
+                        ? `${triesText(r.tries)}, last ${formatDate(rowTime(r))}, ${formatTime(rowTime(r))}`
                         : `${formatAmount(r.amount_paise)} · ${formatDate(rowTime(r))} · Now: ${stageText(r)}`}
                     </p>
-                    <p className="text-[13px] text-ink-muted">Coordinator: {r.coordinator_name ?? 'None yet'}</p>
+                    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 text-[13px]">
+                      <span className="text-ink-muted">Coordinator: {r.coordinator_name ?? 'None yet'}</span>
+                      {r.open_call && (
+                        <span className="text-right">
+                          <CallDue r={r} now={now} />
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 </li>
               ))}
             </ul>
 
-            {/* Wider screens: table */}
-            <div className="hidden overflow-x-auto md:block">
+            {/* Wide screens: table */}
+            <div className="hidden overflow-x-auto xl:block">
               <table className="w-full text-left text-[14px]">
                 <thead className="bg-cream text-[12px] uppercase tracking-[0.06em] text-ink-muted">
                   <tr>
-                    <th className="px-5 py-3 font-semibold">{unpaidTab ? 'Tried' : 'Date'}</th>
-                    <th className="px-5 py-3 font-semibold">Client</th>
-                    <th className="px-5 py-3 font-semibold">Assessment</th>
+                    <th className={TH}>{unpaidTab ? 'Tried' : 'Date'}</th>
+                    <th className={TH}>Client</th>
+                    <th className={TH}>Assessment</th>
                     {unpaidTab ? (
-                      <th className="px-5 py-3 font-semibold">Tries</th>
+                      <>
+                        <th className={TH}>Tries</th>
+                        <th className={TH}>Status</th>
+                      </>
                     ) : (
                       <>
-                        <th className="px-5 py-3 font-semibold">Amount</th>
-                        <th className="px-5 py-3 font-semibold">Status</th>
-                        <th className="px-5 py-3 font-semibold">Stage now</th>
+                        <th className={TH}>Amount</th>
+                        <th className={TH}>Status</th>
+                        <th className={TH}>Stage now</th>
                       </>
                     )}
-                    <th className="px-5 py-3 font-semibold">Coordinator</th>
+                    <th className={TH}>Call</th>
+                    <th className={TH}>Coordinator</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand">
                   {rows.map((r) => (
                     <tr key={r.id} className={cn('relative hover:bg-cream', open?.id === r.id && 'bg-mist')}>
-                      <td className="px-5 py-3 whitespace-nowrap">
+                      <td className={cn(TD, 'whitespace-nowrap')}>
                         {/* The link covers the whole row. */}
                         <Link href={openHref(r.id)} scroll={false} className="after:absolute after:inset-0" aria-label={`Open ${r.client_name ?? r.phone}`}>
                           {formatDate(rowTime(r))}
                         </Link>
                         <span className="block text-[12px] text-ink-muted">{formatTime(rowTime(r))}</span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className={TD}>
                         <span className="font-medium text-ink">{r.client_name ?? 'Not registered yet'}</span>
                         <span className="block font-mono text-[12px] text-ink-muted">{r.phone}</span>
                       </td>
-                      <td className="px-5 py-3">{r.test_name}</td>
+                      <td className={TD}>{r.test_name}</td>
                       {unpaidTab ? (
-                        <td className="px-5 py-3 whitespace-nowrap">{triesText(r.tries)}</td>
+                        <td className={cn(TD, 'whitespace-nowrap')}>{triesText(r.tries)}</td>
                       ) : (
-                        <>
-                          <td className="px-5 py-3 whitespace-nowrap">{formatAmount(r.amount_paise)}</td>
-                          <td className="px-5 py-3">
-                            <PurchaseStatusPill status={r.status} />
-                          </td>
-                          <td className="px-5 py-3">{stageText(r)}</td>
-                        </>
+                        <td className={cn(TD, 'whitespace-nowrap')}>{formatAmount(r.amount_paise)}</td>
                       )}
-                      <td className="px-5 py-3">{r.coordinator_name ?? <span className="text-ink-muted">None yet</span>}</td>
+                      <td className={TD}>
+                        <PurchaseStatusPill status={r.status} notInterested={r.not_interested} />
+                      </td>
+                      {!unpaidTab && <td className={TD}>{stageText(r)}</td>}
+                      <td className={TD}>
+                        <CallDue r={r} now={now} />
+                      </td>
+                      <td className={TD}>{r.coordinator_name ?? <span className="text-ink-muted">None yet</span>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -193,7 +231,7 @@ export default async function PurchasesPage({
         {pages > 1 && (
           <nav aria-label="Pages" className="flex items-center justify-between gap-3 border-t border-sand p-4 text-[14px]">
             {page > 1 ? (
-              <Link href={href({ page: page - 1 })} className="font-medium text-teal hover:underline">
+              <Link href={href({ page: page - 1 })} className="flex min-h-11 items-center font-medium text-teal hover:underline">
                 Newer
               </Link>
             ) : (
@@ -203,7 +241,7 @@ export default async function PurchasesPage({
               Page {page} of {pages}
             </span>
             {page < pages ? (
-              <Link href={href({ page: page + 1 })} className="font-medium text-teal hover:underline">
+              <Link href={href({ page: page + 1 })} className="flex min-h-11 items-center font-medium text-teal hover:underline">
                 Older
               </Link>
             ) : (
@@ -213,7 +251,7 @@ export default async function PurchasesPage({
         )}
       </Card>
 
-      {open && <PurchasePanel purchase={open} closeHref={href({ page })} now={new Date()} />}
+      {open && <PurchasePanel purchase={open} closeHref={href({ page })} now={now} />}
     </AdminShell>
   );
 }

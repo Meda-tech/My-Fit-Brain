@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
   CreditCard,
   ShoppingBag,
+  PhoneCall,
   UserX,
 } from 'lucide-react';
 import { StaffRole } from '../lib/types';
@@ -105,6 +106,7 @@ export function AdminShellClient({
     // Purchases and payments: super admins and coordinators only (RLS: purchases_select, can_view_payments()).
     ...(role === 'super_admin' || role === 'coordinator'
       ? [
+          { href: '/tasks', label: 'My tasks', icon: PhoneCall },
           { href: '/purchases', label: 'Purchases', icon: ShoppingBag },
           { href: '/payments', label: 'Payments', icon: CreditCard },
           { href: '/under-18', label: 'Under 18', icon: UserX },

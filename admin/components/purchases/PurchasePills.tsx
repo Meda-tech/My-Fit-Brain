@@ -3,8 +3,11 @@ import { PURCHASE_STATUS_LABELS, STAGE_STATUS_LABELS, type PurchaseRowStatus, ty
 
 const PILL = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-semibold leading-4.5';
 
-// Calm colours only: paid = teal, unpaid = small coral-deep text, refunded and cancelled quiet.
-export function PurchaseStatusPill({ status }: { status: PurchaseRowStatus }) {
+// Calm colours only: paid = teal, unpaid = small coral-deep text, refunded, cancelled and not interested quiet.
+export function PurchaseStatusPill({ status, notInterested = false }: { status: PurchaseRowStatus; notInterested?: boolean }) {
+  if (status === 'not_paid' && notInterested) {
+    return <span className={cn(PILL, 'border border-sand bg-cream text-ink-soft')}>Not interested</span>;
+  }
   return (
     <span
       className={cn(

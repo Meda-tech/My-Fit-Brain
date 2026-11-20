@@ -270,63 +270,32 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
             </Button>
           </div>
         ) : (
-          <>
-            {/* Mobile: stacked list */}
-            <ul className="divide-y divide-sand md:hidden">
-              {initialTeam.map((member) => (
-                <li key={member.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-ink">{member.full_name}</p>
-                      <div className="mt-1">{roleBadge(member)}</div>
-                      <p className="mt-1 break-all font-mono text-[13px] text-ink-soft">
-                        {member.email}
-                      </p>
-                      <p className="mt-0.5 text-[13px] text-ink-muted">
-                        Created {formatDate(member.created_at)}
-                      </p>
-                    </div>
-                    <div className="shrink-0">{statusPill(member)}</div>
+          // One list for every width: details stack on phones and sit in a row on wider screens; the buttons
+          // wrap below on phones and tablets and sit at the right on wide screens.
+          <ul className="divide-y divide-sand">
+            {initialTeam.map((member) => (
+              <li
+                key={member.id}
+                className="flex flex-col gap-3 p-4 transition-colors hover:bg-mist/50 sm:px-5 xl:flex-row xl:items-center xl:gap-6"
+              >
+                <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_7rem] sm:items-center sm:gap-6">
+                  <div className="min-w-0">
+                    <p className="m-0 font-semibold text-ink">{member.full_name}</p>
+                    <p className="m-0 break-all font-mono text-[13px] text-ink-soft">{member.email}</p>
+                    <p className="m-0 text-[13px] text-ink-muted">Created {formatDate(member.created_at)}</p>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {renderActions(member)}
+                  <div className="flex items-center gap-3 sm:block">
+                    {roleBadge(member)}
+                    <span className="sm:hidden">{statusPill(member)}</span>
                   </div>
-                </li>
-              ))}
-            </ul>
-
-            {/* Desktop: table */}
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full border-collapse text-left text-[14px]">
-                <thead>
-                  <tr className="border-b border-sand bg-cream text-[12px] uppercase tracking-[0.06em] text-ink-muted">
-                    <th className="px-5 py-3 font-semibold">Name</th>
-                    <th className="px-5 py-3 font-semibold">Role</th>
-                    <th className="px-5 py-3 font-semibold">Email address</th>
-                    <th className="px-5 py-3 font-semibold">Status</th>
-                    <th className="hidden px-5 py-3 font-semibold 2xl:table-cell">Created</th>
-                    <th className="px-5 py-3 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-sand">
-                  {initialTeam.map((member) => (
-                    <tr key={member.id} className="transition-colors hover:bg-mist/50">
-                      <td className="px-5 py-3.5 font-semibold text-ink">{member.full_name}</td>
-                      <td className="px-5 py-3.5">{roleBadge(member)}</td>
-                      <td className="px-5 py-3.5 font-mono text-[13px] text-ink-soft">{member.email}</td>
-                      <td className="px-5 py-3.5">{statusPill(member)}</td>
-                      <td className="hidden whitespace-nowrap px-5 py-3.5 text-ink-muted 2xl:table-cell">
-                        {formatDate(member.created_at)}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex flex-wrap items-center justify-end gap-2 [&>*]:whitespace-nowrap">{renderActions(member)}</div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                  <div className="hidden sm:block">{statusPill(member)}</div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 xl:justify-end [&>*]:whitespace-nowrap">
+                  {renderActions(member)}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
 

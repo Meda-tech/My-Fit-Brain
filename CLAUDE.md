@@ -27,6 +27,9 @@ something must say so in plain words at its top. Verification SQL is `select` on
   `main`). Nothing is merged into `main` or pushed unless the owner asks.
 - Work on STAGING. Additive SQL only. Never delete data or write deleting SQL without the owner's explicit
   permission. After each step, name the SQL file(s) to paste into production once the owner has tested.
+- Production stays untouched until the whole flow works (owner, 2026-11-20): each step's SQL files are collected
+  in `docs/deploy/production-log.md` under "To paste later, in order".
+- Make every screen responsive: phones, tablets and laptops (owner, 2026-11-20).
 - Keep screens simple: plain words, one main button at a time, details collapsed.
 - Build only what the current step asks. STOP after each step with: what changed, how to test it (with test
   logins), and any SQL.
@@ -329,10 +332,41 @@ results with you"). The client never sees a report in the app.
   round robin for a phone whose coordinator is inactive stays only as a safety fallback.
 - `add_working_hours(at, hours)`: Mon–Sat 9:00–18:00 India time, Sunday off (Fri 17:30 + 2 h = Sat 10:30).
 - Admin → **Purchases** (`/purchases`, super admins all, coordinators only their own clients' rows; RLS
-  `purchases_select`). Tabs **Unpaid** (open attempts: tried, client, assessment, tries, coordinator; later the
-  Payment call due time) · **Paid** (date, client, assessment, amount, status, stage now, coordinator) · **All**.
-  Coordinators open on Unpaid when they have any, else Paid; super admins on All. A row opens a right-side panel
-  (`?open=<id>`): the purchase journey and the payments (collapsed), or for an unpaid row its tries.
+  `purchases_select`). Tabs **Unpaid** (open attempts and those closed as Not interested: tried, client,
+  assessment, tries, status, call, coordinator) · **Paid** (date, client, assessment, amount, status, stage now,
+  call, coordinator) · **All**. Each row shows its open call and due time. Coordinators open on Unpaid when they
+  have any, else Paid; super admins on All. A row opens a right-side panel (`?open=<id>`): the open call with
+  Mark as call done, the call history (collapsed), then the purchase journey and the payments (collapsed), or for
+  an unpaid row its tries. Cards below wide screens (xl), a table on wide screens.
+
+### Calls and My tasks (step 2, owner 2026-11-20)
+
+- Migration `20261120120000_calls.sql`, checks `docs/tasks/22-calls-verify.sql`, behaviour test
+  `supabase/staging/staging-test-calls.sql` (rolled back). Tables `calls` (one per row of purchases and kind,
+  status open / closed, outcome) and `call_logs` (call history; never changed or removed, trigger). RLS: whoever
+  sees the purchase sees its calls.
+- **Payment call** (on an unpaid attempt): starts 30 minutes after the first try if still unpaid, or at once when a
+  payment actually failed; due 2 working hours after it starts. One per attempt; a new try only adds a history
+  line. Closes by itself when the attempt becomes a Paid purchase.
+- **Assessment call** (on a Paid purchase): starts at the paid time, due 2 working hours after payment; closes by
+  itself when the assessment is completed (stays open while only started); not made when already completed.
+  Journey: Assessment planned = its first due time, actual = completed time.
+- Calls are made and closed by the payment and assessment triggers (`calls_sync_purchase`) and by `calls_sync()`,
+  which the admin runs when My tasks or Purchases opens (the 30-minute rule; no scheduler). Start and due times
+  always come from the events, never from when the sync ran.
+- **Mark as call done** (`call_mark()`, service role; `lib/services/calls.ts` checks the role and reads the call
+  under RLS first): Done (closes) · Call later / Not picked (follow-up date and time within 2 working days = 18
+  working hours; the call stays open with that due time) · Not interested (only after at least one earlier call,
+  else "At least one follow-up call is needed first."; reason Too costly / Not now / Wrong number / Other). A note
+  (up to 2,000 characters) on every choice. Not interested on a Payment call closes the attempt
+  (`purchases.closed_reason = 'not_interested'`); it stays under Unpaid with that status. Not interested on an
+  Assessment call only closes the call.
+- Admin → **My tasks** (`/tasks`, coordinators their own clients, super admins all with a coordinator filter; "Late
+  only" for both): sections Overdue · Today · Upcoming (India time); row = call name, client name or phone,
+  assessment, one context line ("2 tries, last 4:19 pm" / "Paid 19 Nov · assessment not started"), due time
+  (coral-deep when late), button Mark as call done. A row opens the same right-side panel as Purchases.
+- Working hours exist twice and must match: SQL `add_working_hours` and `addWorkingHours` in `admin/lib/calls.ts`
+  (tests `admin/test/calls.test.ts` use the same cases as the verify file).
 
 ### Counsellor flow (admin)
 
@@ -539,7 +573,7 @@ so copy the master file there before using a new combination.
   1. **Staging: Claude applies it** — `powershell -File supabase/staging-migrate.ps1` (runs only the files
      staging does not have yet), and runs the verify file with `-Run <file>`. Anything may run on staging.
   2. **Production: Claude never connects to change anything.** Tell the owner exactly: "paste file X into the
-     production SQL Editor" (in order), and add X under "Waiting for production" in
+     production SQL Editor" (in order), and add X under "To paste later, in order" in
      `docs/deploy/production-log.md`; move it to "Already on production" with the date once the owner
      confirms it ran.
 - `PROD_DB_URL` is for read-only, schema-only exports (`supabase db dump`, no data) and nothing else. Never
