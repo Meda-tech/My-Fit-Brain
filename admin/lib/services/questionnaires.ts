@@ -6,11 +6,18 @@ import { createClient } from '../supabase/server';
 // Questionnaires and their versions. Reads go through the staff session (RLS: active staff); writes run
 // on the service role after the role check here. Published versions never change (database trigger).
 
-/** Roles that may import and publish questionnaires. Counsellors read. */
-export const EDIT_ROLES = ['super_admin', 'coordinator'] as const;
+/** Roles that may import and publish questionnaires, switch them on or off and edit client details. */
+export const EDIT_ROLES = ['super_admin'] as const;
+
+/** Roles that may open Questionnaires at all. Counsellors read; coordinators have no access (owner, 2026-11-20). */
+export const VIEW_ROLES = ['super_admin', 'counsellor'] as const;
 
 export function canEditQuestionnaires(role: string): boolean {
   return (EDIT_ROLES as readonly string[]).includes(role);
+}
+
+export function canViewQuestionnaires(role: string): boolean {
+  return (VIEW_ROLES as readonly string[]).includes(role);
 }
 
 export type VersionStatus = 'draft' | 'live' | 'retired';
@@ -104,7 +111,7 @@ export type ImportOutcome = { ok: true; versionId: string; number: number; repla
  */
 export async function importDefinition(code: string, json: string, profileId: string): Promise<ImportOutcome> {
   const { profile } = await requireStaff();
-  if (!canEditQuestionnaires(profile.role)) return { ok: false, errors: [{ where: 'Rights', message: 'Only super admins and coordinators can import questionnaires.' }], warnings: [] };
+  if (!canEditQuestionnaires(profile.role)) return { ok: false, errors: [{ where: 'Rights', message: 'Only super admins can import questionnaires.' }], warnings: [] };
   const parsed = parseDefinition(json);
   if (!parsed.ok) return parsed;
   const definition = JSON.parse(json) as unknown; // stored as pasted (parse succeeded above)
@@ -135,7 +142,7 @@ export async function importDefinition(code: string, json: string, profileId: st
  */
 export async function publishVersion(versionId: string, profileId: string): Promise<void> {
   const { profile } = await requireStaff();
-  if (!canEditQuestionnaires(profile.role)) throw new Error('Only super admins and coordinators can publish.');
+  if (!canEditQuestionnaires(profile.role)) throw new Error('Only super admins can publish.');
   const db = createAdminClient();
   const { error } = await db.rpc('publish_questionnaire_version', { p_version_id: versionId, p_by: profileId });
   if (error) throw new Error(`Could not publish: ${error.message}`);
@@ -156,7 +163,7 @@ export async function publishVersion(versionId: string, profileId: string): Prom
  */
 export async function saveClientDetails(code: string, list: unknown): Promise<{ ok: true } | { ok: false; errors: Issue[] }> {
   const { profile } = await requireStaff();
-  if (!canEditQuestionnaires(profile.role)) return { ok: false, errors: [{ where: 'Rights', message: 'Only super admins and coordinators can change client details.' }] };
+  if (!canEditQuestionnaires(profile.role)) return { ok: false, errors: [{ where: 'Rights', message: 'Only super admins can change client details.' }] };
   const parsed = parseClientDetails(list, 'Client details');
   if (!parsed.ok) return { ok: false, errors: parsed.errors };
   const { error } = await createAdminClient().from('questionnaires').update({ client_details: parsed.details }).eq('code', code);
@@ -167,7 +174,7 @@ export async function saveClientDetails(code: string, list: unknown): Promise<{ 
 /** Switches a questionnaire on or off for buying. Paid purchases and running assessments are not affected. */
 export async function setQuestionnaireActive(code: string, active: boolean): Promise<void> {
   const { profile } = await requireStaff();
-  if (!canEditQuestionnaires(profile.role)) throw new Error('Only super admins and coordinators can switch an assessment on or off.');
+  if (!canEditQuestionnaires(profile.role)) throw new Error('Only super admins can switch an assessment on or off.');
   const { error } = await createAdminClient()
     .from('questionnaires')
     .update({ is_active: active, active_changed_at: new Date().toISOString(), active_changed_by: profile.id })
@@ -177,7 +184,7 @@ export async function setQuestionnaireActive(code: string, active: boolean): Pro
 
 export async function createQuestionnaire(input: { code: string; name_en: string; name_hi: string; report_prefix: string }): Promise<string | null> {
   const { profile } = await requireStaff();
-  if (!canEditQuestionnaires(profile.role)) return 'Only super admins and coordinators can add questionnaires.';
+  if (!canEditQuestionnaires(profile.role)) return 'Only super admins can add questionnaires.';
   const code = input.code.trim().toUpperCase();
   const prefix = input.report_prefix.trim().toUpperCase();
   if (!/^[A-Z]{1,8}$/.test(code)) return 'The code is 1–8 capital letters, e.g. IA.';

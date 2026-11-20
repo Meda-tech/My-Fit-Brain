@@ -1,21 +1,6 @@
-import { requireSuperAdmin } from '../../lib/auth';
-import { AdminShell } from '../../components/AdminShell';
-import { coordinatorClientCounts, listTeam } from '../../lib/services/team';
-import { TeamListClient } from './TeamListClient';
+import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-// Team page (coordinators and counsellors). Route stays /coordinators so links keep working.
-export default async function TeamPage() {
-  const staff = await requireSuperAdmin();
-  const { profile } = staff;
-
-  const team = await listTeam();
-  const clientCounts = await coordinatorClientCounts(team.filter((m) => m.role === 'coordinator').map((m) => m.id));
-
-  return (
-    <AdminShell fullName={profile.full_name} role={profile.role}>
-      <TeamListClient initialTeam={team} clientCounts={clientCounts} />
-    </AdminShell>
-  );
+// The Team page moved to /team (owner, 2026-11-20). Old links and bookmarks land there.
+export default function OldTeamAddress() {
+  redirect('/team');
 }

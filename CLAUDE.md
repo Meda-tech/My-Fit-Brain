@@ -127,7 +127,7 @@ Never invent questions, values or report text. If something is not covered, stop
 
 - **MFB Intimacy Assessment** — code `IA`, report ID `MFB-IA-YYYY-NNNNN`
 - **MFB Mind Assessment** — code `MA`, report ID `MFB-MA-YYYY-NNNNN`
-- **On / Off** (Admin → Questionnaires, super admins and coordinators; `questionnaires.is_active`, migration
+- **On / Off** (Admin → Questionnaires, super admins only; `questionnaires.is_active`, migration
   `20261031000002_questionnaire_active.sql`): Off = nobody can buy it (the pay link says "not available right
   now", the order route refuses with PAUSED, Home hides it). Paid purchases can still be started and running
   assessments finished.
@@ -157,7 +157,7 @@ Never invent questions, values or report text. If something is not covered, stop
   the AI returns one JSON → **Import JSON** (creates the draft, or replaces the open draft) → the page shows
   the whole questionnaire in plain language (what opens what, values, counsellor notes, report lines) →
   **Publish** (the previous live version retires). No review step, no approval tick. **Copy JSON** gives a
-  version back for editing. Super admins and coordinators import and publish; counsellors read.
+  version back for editing. Super admins import and publish; counsellors read; coordinators have no access to Questionnaires (owner, 2026-11-20: menu, page guard and every action).
 - **The JSON:** `title`, optional `subtitle` / `closing` / `disclaimer` / `ranges` / `plan`, and `sections` →
   `questions` → `options` (`id`, `text {en, hi}`, `value` number or `null`, optional counsellor `note`).
   Rules (`show_when`), the complete list: `question is / is_not / includes`, `section score_at_least /
@@ -184,7 +184,7 @@ Never invent questions, values or report text. If something is not covered, stop
   asked after the safety questions, one per screen, answer required, up to 1,000 characters
   (`DETAIL_MAX_LENGTH`). No options, values, rules, scoring or report text. The list lives in
   `questionnaires.client_details`, **not** in a version: Admin → Questionnaires → Client details edits it at
-  any time (super admins, coordinators), and it applies at once, also to running assessments. Each answer
+  any time (super admins), and it applies at once, also to running assessments. Each answer
   is stored in `attempt_details` with a copy of the question as it was asked. The JSON may carry an optional
   `client_details` list; publishing a version that has one replaces the questionnaire's list, and Copy JSON
   includes the current list.
@@ -325,7 +325,7 @@ results with you"). The client never sees a report in the app.
   presentation = the booked slot; Package call = presentation done + 2 working hours. Actual: assessment completed,
   booked, counsellor marks done, coordinator marks done.
 - **Coordinator per client** (phone, `client_coordinators`): new phone → round robin among active coordinators
-  (`coordinator_round_robin`), also for an unpaid try; returning phone → same coordinator. Admin → Team shows each
+  (`coordinator_round_robin`), also for an unpaid try; returning phone → same coordinator. Admin → Team (`/team`; the old `/coordinators` redirects there) shows each
   coordinator's clients; **Move clients** moves all of them, with their purchases and attempts, to another active
   coordinator (`move_coordinator_clients`, logged in `coordinator_client_moves`). **Make inactive** is refused while
   a coordinator still has clients: "Move their clients first." (service and trigger `profiles_keep_clients`). The
@@ -361,10 +361,12 @@ results with you"). The client never sees a report in the app.
   (up to 2,000 characters) on every choice. Not interested on a Payment call closes the attempt
   (`purchases.closed_reason = 'not_interested'`); it stays under Unpaid with that status. Not interested on an
   Assessment call only closes the call.
-- Admin → **My tasks** (`/tasks`, coordinators their own clients, super admins all with a coordinator filter; "Late
-  only" for both): sections Overdue · Today · Upcoming (India time); row = call name, client name or phone,
-  assessment, one context line ("2 tries, last 4:19 pm" / "Paid 19 Nov · assessment not started"), due time
-  (coral-deep when late), button Mark as call done. A row opens the same right-side panel as Purchases.
+- Admin → **My tasks** (`/tasks`, coordinators their own clients, super admins all): ONE list in due-time order,
+  late ones first; no sections (owner, 2026-11-20). Filters at the top: **All · Late only · Upcoming** (with
+  counts; `?show=late|upcoming`), plus a coordinator filter for super admins. Row = call name, client name or
+  phone, assessment, one context line ("2 tries, last 4:19 pm" / "Paid 19 Nov · assessment not started"), due
+  time ("Today, 4:19 pm" / "Tomorrow, …"; coral-deep "Late · was due …"), button Mark as call done. A row opens
+  the same right-side panel as Purchases.
 - Working hours exist twice and must match: SQL `add_working_hours` and `addWorkingHours` in `admin/lib/calls.ts`
   (tests `admin/test/calls.test.ts` use the same cases as the verify file).
 

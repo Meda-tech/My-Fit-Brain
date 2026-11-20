@@ -55,8 +55,8 @@ interface RawTask {
   purchases: One<TaskPurchase>;
 }
 
-/** Open calls, soonest due first. Super admins may filter by coordinator; anyone by "Late only". */
-export async function listTasks(opts: { coordinatorId?: string | null; lateOnly?: boolean }): Promise<TaskRow[]> {
+/** Open calls, one list by due time (late ones first). Super admins may filter by coordinator. */
+export async function listTasks(opts: { coordinatorId?: string | null }): Promise<TaskRow[]> {
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) return [];
   const db = await createClient();
@@ -69,7 +69,6 @@ export async function listTasks(opts: { coordinatorId?: string | null; lateOnly?
     )
     .eq('status', 'open');
   if (profile.role === 'super_admin' && opts.coordinatorId) q = q.eq('purchases.coordinator_id', opts.coordinatorId);
-  if (opts.lateOnly) q = q.lt('due_at', now.toISOString());
   const { data, error } = await q.order('due_at').limit(500);
   if (error) {
     if (error.code === '42P01') return [];

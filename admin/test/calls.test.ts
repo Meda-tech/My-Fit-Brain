@@ -9,7 +9,11 @@ import {
   fromIstInput,
   needsFollowUp,
   paymentContext,
-  taskSection,
+  TASK_SHOWS,
+  TASK_SHOW_LABELS,
+  dueLabel,
+  isCallLate,
+  isTaskShow,
   toIstInput,
 } from '../lib/calls';
 
@@ -41,11 +45,14 @@ describe('calls', () => {
     expect(needsFollowUp('call_later') && needsFollowUp('not_picked') && !needsFollowUp('done')).toBe(true);
   });
 
-  it('sections: Overdue · Today · Upcoming in India time', () => {
+  it('filters All · Late only · Upcoming; due labels in India time', () => {
+    expect(TASK_SHOWS.map((s) => TASK_SHOW_LABELS[s])).toEqual(['All', 'Late only', 'Upcoming']);
+    expect(isTaskShow('late') && !isTaskShow('overdue')).toBe(true);
     const now = ist('2026-11-20T16:00:00');
-    expect(taskSection(ist('2026-11-20T15:59:00').toISOString(), now)).toBe('overdue');
-    expect(taskSection(ist('2026-11-20T23:30:00').toISOString(), now)).toBe('today');
-    expect(taskSection(ist('2026-11-21T00:10:00').toISOString(), now)).toBe('upcoming');
+    expect(isCallLate(ist('2026-11-20T15:59:00').toISOString(), now)).toBe(true);
+    expect(dueLabel(ist('2026-11-20T23:30:00').toISOString(), now)).toBe('Today, 11:30 pm');
+    expect(dueLabel(ist('2026-11-21T09:49:00').toISOString(), now)).toBe('Tomorrow, 9:49 am');
+    expect(dueLabel(ist('2026-11-23T10:00:00').toISOString(), now)).toBe('Mon, 23 Nov, 10:00 am');
   });
 
   it('follow-up field reads and writes India time', () => {

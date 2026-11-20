@@ -8,7 +8,7 @@ import { saveClientDetailsAction } from '../actions';
 
 // The questions asked after the safety questions, where the client types the answer. Not versioned:
 // saving changes what clients are asked from now on, and every answer already given keeps the question
-// text it was asked with. Super admins and coordinators edit; counsellors read.
+// text it was asked with. Super admins edit; counsellors read; coordinators have no access.
 
 interface Row {
   id: string;

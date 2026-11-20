@@ -24,6 +24,7 @@ import {
   Card,
   Notice,
   Pill,
+  cn,
   helpTextClasses,
   inputClasses,
   labelClasses,
@@ -40,6 +41,9 @@ const requiredMark = (
     *
   </span>
 );
+
+// The Team list columns: name (flexible) · role · status · on wide screens three button slots.
+const TEAM_GRID = 'sm:grid-cols-[minmax(0,1fr)_11rem_8rem] sm:items-center sm:gap-x-6 2xl:grid-cols-[minmax(0,1fr)_11rem_8rem_28rem]';
 
 const closeButtonClasses =
   'inline-flex items-center justify-center w-11 h-11 -mr-2 rounded-full text-ink-muted hover:bg-mist hover:text-teal transition-colors';
@@ -165,6 +169,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
       </Pill>
     );
 
+  // Always in the same order. On wide screens each button has its own slot (an empty slot keeps the columns).
   const renderActions = (member: Profile) => (
     <>
       <Button
@@ -172,10 +177,11 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
         size="sm"
         onClick={() => handleToggleStatus(member)}
         disabled={statusTogglingId === member.id}
+        className="2xl:w-full"
       >
         {member.is_active ? 'Make inactive' : 'Make active'}
       </Button>
-      {(clientsOf(member) ?? 0) > 0 && (
+      {(clientsOf(member) ?? 0) > 0 ? (
         <Button
           variant="secondary"
           size="sm"
@@ -184,11 +190,14 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
             setMoveTo('');
             setMoveFrom(member);
           }}
+          className="2xl:w-full"
         >
           Move clients
         </Button>
+      ) : (
+        <span aria-hidden className="hidden 2xl:block" />
       )}
-      <Button variant="ghost" size="sm" onClick={() => setResetModalId(member.id)}>
+      <Button variant="ghost" size="sm" onClick={() => setResetModalId(member.id)} className="2xl:w-full">
         Reset password
       </Button>
     </>
@@ -270,15 +279,19 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
             </Button>
           </div>
         ) : (
-          // One list for every width: details stack on phones and sit in a row on wider screens; the buttons
-          // wrap below on phones and tablets and sit at the right on wide screens.
-          <ul className="divide-y divide-sand">
-            {initialTeam.map((member) => (
-              <li
-                key={member.id}
-                className="flex flex-col gap-3 p-4 transition-colors hover:bg-mist/50 sm:px-5 xl:flex-row xl:items-center xl:gap-6"
-              >
-                <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_7rem] sm:items-center sm:gap-6">
+          // One list for every width, with the same columns in every row. Phones: everything stacked. Tablets and
+          // laptops: name · role · status in columns, the buttons on their own line below. Wide screens: the
+          // buttons in a fourth column with fixed slots, so each kind of button lines up from row to row.
+          <div>
+            <div className={cn(TEAM_GRID, 'hidden bg-cream px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-muted sm:grid')}>
+              <span>Name</span>
+              <span>Role</span>
+              <span>Status</span>
+              <span className="hidden 2xl:block">Actions</span>
+            </div>
+            <ul className="divide-y divide-sand border-t border-sand">
+              {initialTeam.map((member) => (
+                <li key={member.id} className={cn(TEAM_GRID, 'grid gap-3 p-4 transition-colors hover:bg-mist/50 sm:px-5')}>
                   <div className="min-w-0">
                     <p className="m-0 font-semibold text-ink">{member.full_name}</p>
                     <p className="m-0 break-all font-mono text-[13px] text-ink-soft">{member.email}</p>
@@ -289,13 +302,13 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
                     <span className="sm:hidden">{statusPill(member)}</span>
                   </div>
                   <div className="hidden sm:block">{statusPill(member)}</div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 xl:justify-end [&>*]:whitespace-nowrap">
-                  {renderActions(member)}
-                </div>
-              </li>
-            ))}
-          </ul>
+                  <div className="flex flex-wrap items-center gap-2 sm:col-span-3 2xl:col-span-1 2xl:grid 2xl:grid-cols-3 [&>*]:whitespace-nowrap">
+                    {renderActions(member)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </Card>
 

@@ -102,7 +102,8 @@ export function AdminShellClient({
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/clients', label: 'Clients', icon: Users },
     { href: '/assessments', label: 'Assessments', icon: ClipboardList },
-    { href: '/questionnaires', label: 'Questionnaires', icon: BookOpen },
+    // Questionnaires: super admins and counsellors; coordinators have no access (owner, 2026-11-20).
+    ...(role === 'coordinator' ? [] : [{ href: '/questionnaires', label: 'Questionnaires', icon: BookOpen }]),
     // Purchases and payments: super admins and coordinators only (RLS: purchases_select, can_view_payments()).
     ...(role === 'super_admin' || role === 'coordinator'
       ? [
@@ -112,7 +113,7 @@ export function AdminShellClient({
           { href: '/under-18', label: 'Under 18', icon: UserX },
         ]
       : []),
-    ...(isSuperAdmin ? [{ href: '/coordinators', label: 'Team', icon: ShieldCheck }] : []),
+    ...(isSuperAdmin ? [{ href: '/team', label: 'Team', icon: ShieldCheck }] : []),
   ];
 
   // Tooltip for the collapsed rail: one fixed element beside the hovered/focused item.

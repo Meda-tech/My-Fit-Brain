@@ -98,19 +98,30 @@ function istDay(at: Date): string {
   return new Date(at.getTime() + IST_MS).toISOString().slice(0, 10);
 }
 
-export type TaskSection = 'overdue' | 'today' | 'upcoming';
-export const TASK_SECTIONS: readonly TaskSection[] = ['overdue', 'today', 'upcoming'];
-export const TASK_SECTION_LABELS: Record<TaskSection, string> = { overdue: 'Overdue', today: 'Today', upcoming: 'Upcoming' };
+/**
+ * My tasks shows one list in due-time order (owner, 2026-11-20). The filter at the top: All · Late only (due time
+ * passed) · Upcoming (not due yet).
+ */
+export type TaskShow = 'all' | 'late' | 'upcoming';
+export const TASK_SHOWS: readonly TaskShow[] = ['all', 'late', 'upcoming'];
+export const TASK_SHOW_LABELS: Record<TaskShow, string> = { all: 'All', late: 'Late only', upcoming: 'Upcoming' };
 
-/** Overdue = due time passed; Today = later today (India time); Upcoming = after today. */
-export function taskSection(dueAt: string, now: Date): TaskSection {
-  const due = new Date(dueAt);
-  if (due.getTime() < now.getTime()) return 'overdue';
-  return istDay(due) === istDay(now) ? 'today' : 'upcoming';
+export function isTaskShow(v: unknown): v is TaskShow {
+  return typeof v === 'string' && (TASK_SHOWS as readonly string[]).includes(v);
 }
 
 export function isCallLate(dueAt: string, now: Date): boolean {
   return new Date(dueAt).getTime() < now.getTime();
+}
+
+/** "Today, 4:19 pm" · "Tomorrow, 9:49 am" · "Mon, 23 Nov, 10:00 am" (India time). */
+export function dueLabel(dueAt: string, now: Date): string {
+  const due = new Date(dueAt);
+  const t = due.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  if (istDay(due) === istDay(now)) return `Today, ${t}`;
+  if (istDay(due) === istDay(new Date(now.getTime() + 24 * HOUR_MS))) return `Tomorrow, ${t}`;
+  const d = due.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
+  return `${d}, ${t}`;
 }
 
 // --- The one context line of a task -----------------------------------------------------------------------
@@ -135,4 +146,13 @@ const PROGRESS_TEXT: Record<AssessmentProgress, string> = {
 /** "Paid 19 Nov · assessment not started". */
 export function assessmentContext(paidAt: string | null, progress: AssessmentProgress): string {
   return `${paidAt ? `Paid ${day(paidAt)}` : 'Paid'} · ${PROGRESS_TEXT[progress]}`;
+}
+
+/** The My tasks address for a coordinator filter and a show filter. */
+export function tasksHref(coordinatorId: string, show: TaskShow, open?: string): string {
+  const q = new URLSearchParams();
+  if (coordinatorId) q.set('coordinator', coordinatorId);
+  if (show !== 'all') q.set('show', show);
+  if (open) q.set('open', open);
+  return q.size ? `/tasks?${q}` : '/tasks';
 }

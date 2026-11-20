@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { CheckCircle2, Rocket } from 'lucide-react';
 import { AI_PROMPT, parseDefinition } from '@mfb/questionnaire';
 import { requireStaff } from '../../../lib/auth';
 import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
 import { Button, Notice, Pill, cn } from '../../../components/brand';
-import { canEditQuestionnaires, formatDateTime, getQuestionnaire, getVersion } from '../../../lib/services/questionnaires';
+import { canEditQuestionnaires, canViewQuestionnaires, formatDateTime, getQuestionnaire, getVersion } from '../../../lib/services/questionnaires';
 import { publishAction } from '../actions';
 import { CopyButton } from '../CopyButton';
 import { StatusPill } from '../StatusPill';
@@ -39,6 +39,7 @@ export default async function QuestionnairePage({
   searchParams: Promise<{ v?: string; view?: string; imported?: string; published?: string }>;
 }) {
   const { profile } = await requireStaff();
+  if (!canViewQuestionnaires(profile.role)) redirect('/dashboard');
   const { code } = await params;
   const { v, view: viewParam, imported, published } = await searchParams;
   const found = await getQuestionnaire(code);

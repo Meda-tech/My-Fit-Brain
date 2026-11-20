@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { ChevronRight, Database } from 'lucide-react';
 import { AI_PROMPT } from '@mfb/questionnaire';
 import { requireStaff } from '../../lib/auth';
@@ -6,7 +7,7 @@ import { CLIENTS_URL } from '../../lib/site';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { Card, Notice, Pill } from '../../components/brand';
-import { canEditQuestionnaires, formatDateTime, listQuestionnaires } from '../../lib/services/questionnaires';
+import { canEditQuestionnaires, canViewQuestionnaires, formatDateTime, listQuestionnaires } from '../../lib/services/questionnaires';
 import { ActiveSwitch } from './ActiveSwitch';
 import { CopyButton } from './CopyButton';
 import { NewQuestionnaireForm } from './NewQuestionnaireForm';
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function QuestionnairesPage() {
   const { profile } = await requireStaff();
+  if (!canViewQuestionnaires(profile.role)) redirect('/dashboard');
   const canEdit = canEditQuestionnaires(profile.role);
   const list = await listQuestionnaires();
 

@@ -30,7 +30,7 @@ export async function createTeamMemberAction(
     return { success: false, error: result.error || 'Failed to add team member.' };
   }
 
-  revalidatePath('/coordinators');
+  revalidatePath('/team');
   revalidatePath('/dashboard');
   return {
     success: true,
@@ -46,7 +46,7 @@ export async function toggleStatusAction(
   if (!result.success) {
     return { success: false, error: result.error };
   }
-  revalidatePath('/coordinators');
+  revalidatePath('/team');
   revalidatePath('/dashboard');
   return { success: true };
 }
@@ -56,7 +56,7 @@ export async function moveClientsAction(fromId: string, toId: string): Promise<T
   if (!result.success || !result.data) {
     return { success: false, error: result.error || 'The clients could not be moved.' };
   }
-  revalidatePath('/coordinators');
+  revalidatePath('/team');
   revalidatePath('/purchases');
   const { moved, toName } = result.data;
   return { success: true, message: `${moved} ${moved === 1 ? 'client' : 'clients'} moved to ${toName}.` };
@@ -70,6 +70,6 @@ export async function resetPasswordAction(
   if (!result.success) {
     return { success: false, error: result.error };
   }
-  revalidatePath('/coordinators');
+  revalidatePath('/team');
   return { success: true, message: 'Password updated successfully.' };
 }
