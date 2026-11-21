@@ -512,6 +512,27 @@ results with you"). The client never sees a report in the app.
   `admin/test/staging-e2e-package-manual.test.ts` (only with `RUN_STAGING_E2E=1`) records a manual package payment
   with a real proof upload.
 
+### Counsellor access and moving a counsellor's clients (step 8, owner 2026-11-21)
+
+- Migration `20261121600000_counsellor_clients.sql`, checks `docs/tasks/30-counsellor-clients-verify.sql`, behaviour
+  test `supabase/staging/staging-test-counsellor-clients.sql` (rolled back).
+- **A counsellor sees only their own clients** (client record, assessments, answers, results, client details, alerts,
+  conclusion, PDF, My presentations). A client is assigned (`client_counsellors`) when a presentation is booked with
+  that counsellor (trigger on `presentation_bookings`); the assignment stays after the presentation and after a cancel.
+  Super admins see everyone; coordinators and clients unchanged. Enforced by RESTRICTIVE rules on `clients`,
+  `attempts`, `attempt_answers`, `attempt_details`, `attempt_results`, `attempt_alerts`, `attempt_conclusions`
+  (`counsellor_login()`, `counsellor_client_ids()`, `counsellor_attempt_ids()`); every counsellor read of client data
+  goes through RLS, and service-role writes check visibility first (`saveConclusion`). Counsellors add no clients.
+- **Move clients** (Team, super admins; same as coordinators): all of a counsellor's clients go to another active
+  counsellor (`move_counsellor_clients()`): access moves (old rows get `ended_at`, never deleted), upcoming booked
+  presentations (booked, not done, slot not started) move to the new counsellor at the same date and time. When the
+  new counsellor is not free at any of those times (`counsellor_move_clashes()`, via `counsellor_slots()`), nothing
+  moves and the dialog lists the clashing presentations. Past presentations keep their counsellor. Logged in
+  `counsellor_client_moves` (from, to, by, when, client and booking ids; never changed).
+- **Make inactive** is refused with "Move their clients first." while a counsellor has clients or upcoming
+  presentations (service and trigger `profiles_keep_counsellor_clients`). An inactive counsellor gets no bookings and
+  sees nothing at once.
+
 ### Counsellor flow (admin)
 
 - Client → attempt (`/attempts/<id>`): super admins and counsellors see the **counsellor view** (alerts and

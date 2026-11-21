@@ -23,17 +23,25 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   const searchQuery = resolvedSearchParams?.search || '';
 
   const clients = await listClients(searchQuery);
+  // A counsellor sees only the clients whose presentation was booked with them (or moved to them), and adds none.
+  const isCounsellor = profile.role === 'counsellor';
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>
       <PageHeader
         title="Client records"
-        description="Registered clients and their verified phone numbers."
+        description={
+          isCounsellor
+            ? 'Your clients: a client appears here once a presentation is booked with you.'
+            : 'Registered clients and their verified phone numbers.'
+        }
         actions={
-          <ButtonLink href="/clients/new" variant="primary">
-            <UserPlus size={18} strokeWidth={2} aria-hidden />
-            <span>Create client</span>
-          </ButtonLink>
+          isCounsellor ? undefined : (
+            <ButtonLink href="/clients/new" variant="primary">
+              <UserPlus size={18} strokeWidth={2} aria-hidden />
+              <span>Create client</span>
+            </ButtonLink>
+          )
         }
       />
 
@@ -89,11 +97,15 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
             <p className="mb-4 mt-1 text-[14px] text-ink-muted">
               {searchQuery
                 ? `No clients found for "${searchQuery}". Try a different name or number.`
-                : 'Start by creating your first client record.'}
+                : isCounsellor
+                  ? 'No presentation is booked with you yet.'
+                  : 'Start by creating your first client record.'}
             </p>
-            <ButtonLink href="/clients/new" variant="secondary">
-              Create new client
-            </ButtonLink>
+            {!isCounsellor && (
+              <ButtonLink href="/clients/new" variant="secondary">
+                Create new client
+              </ButtonLink>
+            )}
           </div>
         ) : (
           <>

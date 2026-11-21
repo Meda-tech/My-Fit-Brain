@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { requireStaff } from '../../../lib/auth';
 import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
@@ -8,6 +9,8 @@ export const dynamic = 'force-dynamic';
 export default async function NewClientPage() {
   const staff = await requireStaff();
   const { profile } = staff;
+  // Counsellors add no clients (they see only their own; the database refuses it too).
+  if (profile.role === 'counsellor') redirect('/clients');
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>

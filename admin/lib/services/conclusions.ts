@@ -1,5 +1,6 @@
 import { requireStaff } from '../auth';
 import { createAdminClient } from '../supabase/admin';
+import { createClient } from '../supabase/server';
 import { cleanConclusion, type Conclusion } from '../conclusion';
 import { CONCLUSION_COLUMNS, canViewReports } from './attempts';
 
@@ -25,6 +26,10 @@ export async function saveConclusion(
   if (!canViewReports(profile.role)) return { error: 'Only counsellors and super admins can write conclusions.' };
   const parsed = cleanConclusion(raw);
   if (!parsed.ok) return { error: parsed.error };
+
+  // A counsellor writes only on the assessments of their own clients: the attempt must be readable under RLS.
+  const { data: visible } = await (await createClient()).from('attempts').select('id').eq('id', attemptId).maybeSingle();
+  if (!visible) return { error: 'This assessment was not found.' };
 
   const db = createAdminClient();
   const edit = { body: parsed.body, updated_by: profile.id, updated_by_name: profile.full_name };

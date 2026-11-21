@@ -3,6 +3,7 @@ import { createAdminClient } from '../supabase/admin';
 import { getCurrentStaff } from '../auth';
 import { Profile } from '../types';
 import { ROLE_LABELS, TEAM_ROLES, isTeamRole } from '../roles';
+import { presentationLabel } from '../booking';
 
 export interface CreateTeamMemberInput {
   email: string;
@@ -194,9 +195,98 @@ export async function moveCoordinatorClients(
   return { success: true, data: { moved: Number(data ?? 0), toName: to.full_name as string } };
 }
 
+
+/**
+ * How many clients each counsellor has (client_counsellors: assigned by a booking or a move, not moved on).
+ * Super Admin only. One counted query per counsellor.
+ */
+export async function counsellorClientCounts(counsellorIds: string[]): Promise<Record<string, number>> {
+  const staff = await getCurrentStaff();
+  if (!staff || !staff.isSuperAdmin || counsellorIds.length === 0) return {};
+  const adminClient = createAdminClient();
+  const counts = await Promise.all(
+    counsellorIds.map(async (id) => {
+      const { count, error } = await adminClient
+        .from('client_counsellors')
+        .select('id', { count: 'exact', head: true })
+        .eq('counsellor_id', id)
+        .is('ended_at', null);
+      if (error) throw new Error(`Could not count clients: ${error.message}`);
+      return [id, count ?? 0] as const;
+    })
+  );
+  return Object.fromEntries(counts);
+}
+
+/** Shown when the new counsellor is not free at one of the upcoming presentations' times. */
+export const MOVE_CLASH = 'The new counsellor is not free at some of these times. Pick another counsellor.';
+
+interface ClashRow {
+  on_date: string;
+  start_time: string;
+  end_time: string;
+  client_name: string | null;
+  client_phone: string | null;
+}
+
+/**
+ * Move every client of one counsellor to another active counsellor: their access, and their upcoming booked
+ * presentations at the same date and time (past ones keep their counsellor). Super Admin only. When the new counsellor
+ * is not free at any of those times nothing moves and `clashes` lists them ("Client · Mon, 23 Nov 2026, 10:00–10:30 am").
+ * Logged in counsellor_client_moves.
+ */
+export async function moveCounsellorClients(
+  fromId: string,
+  toId: string
+): Promise<TeamServiceResult<{ clients: number; presentations: number; toName: string }> & { clashes?: string[] }> {
+  const staff = await getCurrentStaff();
+  if (!staff || !staff.isSuperAdmin) {
+    return { success: false, error: 'Unauthorized: Only Super Admin can move clients.' };
+  }
+  if (!fromId || !toId || fromId === toId) {
+    return { success: false, error: 'Choose another counsellor.' };
+  }
+
+  const adminClient = createAdminClient();
+  const readClashes = async (): Promise<string[]> => {
+    const { data, error } = await adminClient.rpc('counsellor_move_clashes', { p_from: fromId, p_to: toId });
+    if (error) throw new Error(`Could not check the presentations: ${error.message}`);
+    return ((data ?? []) as ClashRow[]).map(
+      (r) => `${r.client_name ?? r.client_phone ?? 'Client'} · ${presentationLabel(r.on_date, r.start_time, r.end_time)}`
+    );
+  };
+
+  const [{ data: to }, clashes] = await Promise.all([
+    adminClient.from('profiles').select('full_name, role, is_active').eq('id', toId).maybeSingle(),
+    readClashes(),
+  ]);
+  if (!to || to.role !== 'counsellor' || !to.is_active) {
+    return { success: false, error: 'Choose an active counsellor.' };
+  }
+  if (clashes.length > 0) return { success: false, error: MOVE_CLASH, clashes };
+
+  const { data, error } = await adminClient.rpc('move_counsellor_clients', {
+    p_from: fromId,
+    p_to: toId,
+    p_by: staff.profile.id,
+  });
+  if (error) {
+    // Someone booked the new counsellor meanwhile: the database refused, nothing moved.
+    if (error.message.includes(MOVE_CLASH)) return { success: false, error: MOVE_CLASH, clashes: await readClashes() };
+    console.error('Failed to move counsellor clients:', error);
+    return { success: false, error: 'The clients could not be moved. Please try again.' };
+  }
+  const moved = (data ?? {}) as { clients?: number; presentations?: number };
+  return {
+    success: true,
+    data: { clients: Number(moved.clients ?? 0), presentations: Number(moved.presentations ?? 0), toName: to.full_name as string },
+  };
+}
+
 /**
  * Toggle active status of a coordinator or counsellor.
- * A coordinator who still has clients cannot be made inactive: move their clients first.
+ * A coordinator or counsellor who still has clients cannot be made inactive: move their clients first. (The database
+ * refuses it too, also for a counsellor with upcoming presentations.)
  */
 export async function toggleTeamMemberStatus(
   profileId: string,
@@ -211,11 +301,15 @@ export async function toggleTeamMemberStatus(
     const adminClient = createAdminClient();
 
     if (!isActive) {
-      const { count } = await adminClient
-        .from('client_coordinators')
-        .select('phone', { count: 'exact', head: true })
-        .eq('coordinator_id', profileId);
-      if ((count ?? 0) > 0) {
+      const [asCoordinator, asCounsellor] = await Promise.all([
+        adminClient.from('client_coordinators').select('phone', { count: 'exact', head: true }).eq('coordinator_id', profileId),
+        adminClient
+          .from('client_counsellors')
+          .select('id', { count: 'exact', head: true })
+          .eq('counsellor_id', profileId)
+          .is('ended_at', null),
+      ]);
+      if ((asCoordinator.count ?? 0) + (asCounsellor.count ?? 0) > 0) {
         return { success: false, error: MOVE_CLIENTS_FIRST };
       }
     }

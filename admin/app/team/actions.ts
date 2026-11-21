@@ -5,6 +5,7 @@ import {
   toggleTeamMemberStatus,
   resetTeamMemberPassword,
   moveCoordinatorClients,
+  moveCounsellorClients,
 } from '../../lib/services/team';
 import { ROLE_LABELS } from '../../lib/roles';
 import { revalidatePath } from 'next/cache';
@@ -13,6 +14,8 @@ export interface TeamActionState {
   success: boolean;
   error?: string;
   message?: string;
+  /** Move clients (counsellors): the upcoming presentations the new counsellor is not free for. */
+  clashes?: string[];
 }
 
 export async function createTeamMemberAction(
@@ -51,7 +54,23 @@ export async function toggleStatusAction(
   return { success: true };
 }
 
-export async function moveClientsAction(fromId: string, toId: string): Promise<TeamActionState> {
+export async function moveClientsAction(
+  fromId: string,
+  toId: string,
+  role: 'coordinator' | 'counsellor'
+): Promise<TeamActionState> {
+  if (role === 'counsellor') {
+    const result = await moveCounsellorClients(fromId, toId);
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || 'The clients could not be moved.', clashes: result.clashes };
+    }
+    revalidatePath('/team');
+    revalidatePath('/presentations');
+    const { clients, presentations, toName } = result.data;
+    const parts = [`${clients} ${clients === 1 ? 'client' : 'clients'}`];
+    if (presentations > 0) parts.push(`${presentations} upcoming ${presentations === 1 ? 'presentation' : 'presentations'}`);
+    return { success: true, message: `${parts.join(' and ')} moved to ${toName}.` };
+  }
   const result = await moveCoordinatorClients(fromId, toId);
   if (!result.success || !result.data) {
     return { success: false, error: result.error || 'The clients could not be moved.' };

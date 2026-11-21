@@ -168,6 +168,9 @@ export async function createClientRecord(
   if (!staff) {
     return { success: false, error: 'Unauthorized: Staff session required.' };
   }
+  if (staff.profile.role === 'counsellor') {
+    return { success: false, error: 'Counsellors cannot add clients.' };
+  }
 
   const fullName = input.fullName.trim();
   if (!fullName || fullName.length < 2) {

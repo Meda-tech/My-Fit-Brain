@@ -59,6 +59,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
   const [moveFrom, setMoveFrom] = useState<Profile | null>(null);
   const [moveTo, setMoveTo] = useState('');
   const [moving, setMoving] = useState(false);
+  const [clashes, setClashes] = useState<string[] | null>(null);
 
   const [state, formAction, isPending] = useActionState<TeamActionState | null, FormData>(
     async (prev, formData) => {
@@ -94,9 +95,10 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
     }
   };
 
-  // Coordinators who can take the clients: active, and not the one they come from.
+  const moveRoleWord = moveFrom?.role === 'counsellor' ? 'counsellor' : 'coordinator';
+  // Who can take the clients: active, the same role, and not the one they come from.
   const moveTargets = moveFrom
-    ? initialTeam.filter((m) => m.role === 'coordinator' && m.is_active && m.id !== moveFrom.id)
+    ? initialTeam.filter((m) => m.role === moveFrom.role && m.is_active && m.id !== moveFrom.id)
     : [];
 
   const handleMoveClients = async (e: React.FormEvent) => {
@@ -104,7 +106,12 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
     if (!moveFrom || !moveTo) return;
     try {
       setMoving(true);
-      const res = await moveClientsAction(moveFrom.id, moveTo);
+      const res = await moveClientsAction(moveFrom.id, moveTo, moveFrom.role === 'counsellor' ? 'counsellor' : 'coordinator');
+      if (!res.success && res.clashes?.length) {
+        // Nothing moved: keep the dialog open with the clashing presentations, so another counsellor can be picked.
+        setClashes(res.clashes);
+        return;
+      }
       if (!res.success) {
         setErrorMessage(res.error || 'The clients could not be moved.');
       } else {
@@ -140,7 +147,8 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  const clientsOf = (member: Profile) => (member.role === 'coordinator' ? clientCounts[member.id] ?? 0 : null);
+  const clientsOf = (member: Profile) =>
+    member.role === 'coordinator' || member.role === 'counsellor' ? clientCounts[member.id] ?? 0 : null;
 
   const roleBadge = (member: Profile) => {
     const clients = clientsOf(member);
@@ -188,6 +196,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
           onClick={() => {
             setErrorMessage(null);
             setMoveTo('');
+            setClashes(null);
             setMoveFrom(member);
           }}
           className="2xl:w-full"
@@ -436,20 +445,21 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
             role="dialog"
             aria-modal="true"
             aria-labelledby="move-clients-title"
-            className="max-w-105 w-full p-6"
+            className="max-w-105 w-full max-h-[90dvh] overflow-y-auto p-6"
           >
             <h2 id="move-clients-title" className="text-[22px] leading-[1.3] font-semibold text-teal mb-2">
               Move clients
             </h2>
             <p className="text-[14px] text-ink-soft mb-4">
-              All {clientsOf(moveFrom)} clients of {moveFrom.full_name}, with their purchases, go to the coordinator
-              you choose.
+              {moveFrom.role === 'counsellor'
+                ? `All ${clientsOf(moveFrom)} clients of ${moveFrom.full_name} go to the counsellor you choose, with their upcoming presentations at the same date and time. ${moveFrom.full_name} no longer sees them. Past presentations stay with ${moveFrom.full_name}.`
+                : `All ${clientsOf(moveFrom)} clients of ${moveFrom.full_name}, with their purchases, go to the coordinator you choose.`}
             </p>
 
             {moveTargets.length === 0 ? (
               <>
                 <p className="text-[14px] text-ink mb-4">
-                  There is no other active coordinator. Add one first.
+                  There is no other active {moveRoleWord}. Add one first.
                 </p>
                 <div className="flex justify-end">
                   <Button variant="secondary" onClick={() => setMoveFrom(null)}>
@@ -461,13 +471,16 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
               <form onSubmit={handleMoveClients} className="space-y-4">
                 <div>
                   <label htmlFor="moveTo" className={labelClasses}>
-                    New coordinator {requiredMark}
+                    New {moveRoleWord} {requiredMark}
                   </label>
                   <select
                     id="moveTo"
                     required
                     value={moveTo}
-                    onChange={(e) => setMoveTo(e.target.value)}
+                    onChange={(e) => {
+                      setMoveTo(e.target.value);
+                      setClashes(null);
+                    }}
                     className={inputClasses}
                   >
                     <option value="" disabled>
@@ -481,11 +494,29 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
                   </select>
                 </div>
 
+                {clashes && clashes.length > 0 && (
+                  <Notice
+                    variant="error"
+                    role="alert"
+                    icon={<AlertCircle size={18} strokeWidth={2} className="text-coral-deep" />}
+                  >
+                    <p className="m-0 font-medium">
+                      {moveTargets.find((m) => m.id === moveTo)?.full_name ?? 'This counsellor'} is not free at these
+                      times. Nothing was moved. Pick another counsellor.
+                    </p>
+                    <ul className="m-0 mt-2 list-disc space-y-1 pl-5 text-[14px]">
+                      {clashes.map((c) => (
+                        <li key={c}>{c}</li>
+                      ))}
+                    </ul>
+                  </Notice>
+                )}
+
                 <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
                   <Button variant="secondary" onClick={() => setMoveFrom(null)}>
                     Cancel
                   </Button>
-                  <Button type="submit" loading={moving} loadingText="Moving...">
+                  <Button type="submit" loading={moving} loadingText="Moving..." disabled={!!clashes?.length}>
                     Move clients
                   </Button>
                 </div>
