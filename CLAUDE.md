@@ -589,6 +589,9 @@ Use tokens, never raw hex in components. Hex lives only in `mfb-tokens.css` and 
 
 - Headings: Poppins — H1 SemiBold 40–48px teal or ink; H2 SemiBold 28–32px teal; H3 Medium 20–22px ink.
 - Body: DM Sans Regular 16–18px ink-soft; captions 13–14px ink-muted. Buttons: Poppins SemiBold 16px.
+- Times: always 12-hour with am / pm, never 24-hour (owner, 2026-11-21): `hm()` / `slotRange()` in
+  `admin/lib/availability.ts`, `hour12: true` in every `Intl` time format, `TimeSelect` instead of a native time input.
+  A slot is shown as its whole range: "Sun, 22 Nov 2026, 9:00–9:30 pm" (`presentationLabel`, SQL `presentation_label`).
 - Self-hosted with `next/font/local`; fallback Arial.
 - Hindi: Noto Serif Devanagari (headings), Noto Sans Devanagari (body), line-height × 1.15 under `:lang(hi)`.
 
