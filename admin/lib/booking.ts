@@ -13,13 +13,13 @@ export interface FreeSlotRow {
 
 export interface FreeDay {
   date: string;
-  /** The next 2 dates that have free slots. Later dates can still be picked, no reason needed. */
+  /** The first 2 dates that have free slots. The third can still be picked, no reason needed. */
   preferred: boolean;
   counsellors: { id: string; name: string; slots: { start: string; end: string }[] }[];
 }
 
 export const PREFERRED_DAYS = 2;
-/** How far ahead the picker looks. */
+/** How far ahead the picker asks; the database cuts it to the next 3 working days (booking_last_day()). */
 export const BOOKING_DAYS_AHEAD = 30;
 
 /** Free slots grouped by date, then counsellor (by name), slots in time order. */

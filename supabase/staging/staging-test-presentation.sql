@@ -16,7 +16,7 @@ CREATE TEMP TABLE t ON COMMIT DROP AS
 SELECT (SELECT id FROM public.profiles WHERE email = 'superadmin@example.com') AS admin,
        (SELECT id FROM public.profiles WHERE email = 'counsellor@example.com') AS counsellor,
        (SELECT id FROM public.profiles WHERE email = 'counsellor2@example.com') AS other_counsellor,
-       current_date + ((8 - extract(isodow FROM current_date)::int) % 7) + 7 AS monday;
+       public.booking_last_day() AS monday;
 
 CREATE FUNCTION pg_temp.fails_with(p_sql text, p_message text) RETURNS boolean LANGUAGE plpgsql AS $$
 BEGIN

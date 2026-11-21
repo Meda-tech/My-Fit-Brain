@@ -16,7 +16,8 @@ interface Picked {
 }
 
 // "Book presentation": one panel with the FREE future slots of all active counsellors, by date then counsellor.
-// The next 2 dates with free slots are marked Preferred; later dates can be picked too, no reason needed.
+// Only the next 3 working days (owner, 2026-11-21; the database refuses later dates). The first 2 dates with free
+// slots are marked Preferred; the third can be picked too, no reason needed.
 // Pick a slot → confirm (client, assessment, counsellor, date and time) → booked. The database refuses a slot that
 // someone else booked meanwhile.
 export function BookPresentationButton({
@@ -127,8 +128,10 @@ export function BookPresentationButton({
               ) : loading ? (
                 <p className="m-0 text-ink-muted">Loading free slots…</p>
               ) : days.length === 0 ? (
-                <p className="m-0 text-ink-muted">No free slots in the next 30 days. Ask a super admin to add availability.</p>
+                <p className="m-0 text-ink-muted">No free slots in the next 3 working days. Ask a super admin to add availability.</p>
               ) : (
+                <>
+                <p className="m-0 mb-4 text-[14px] text-ink-muted">Free slots in the next 3 working days.</p>
                 <ol className="m-0 grid list-none gap-5 p-0">
                   {days.map((d) => (
                     <li key={d.date}>
@@ -161,6 +164,7 @@ export function BookPresentationButton({
                     </li>
                   ))}
                 </ol>
+                </>
               )}
             </div>
 

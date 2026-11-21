@@ -17,7 +17,7 @@ function addDays(date: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Free future slots of every active counsellor for the next 30 days, by date then counsellor. */
+/** Free future slots of every active counsellor in the next 3 working days, by date then counsellor. */
 export async function freeSlots(): Promise<FreeDay[]> {
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) return [];
@@ -38,6 +38,7 @@ const BOOK_MESSAGES = [
   'This slot is no longer free. Pick another.',
   'This slot has already started. Pick a later one.',
   'This slot was just booked by someone else. Pick another.',
+  'Pick a slot in the next 3 working days.',
 ];
 const CANCEL_MESSAGES = [
   'Only super admins can cancel a booking.',

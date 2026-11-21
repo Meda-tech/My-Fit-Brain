@@ -12,11 +12,11 @@ BEGIN
   END IF;
 END $$;
 
--- A Monday 1–2 weeks ahead (a normal work day with no changes), 10:00.
+-- The last day the window allows (the 3rd working day; a normal work day, 2+ days ahead), 10:00. Named "monday" from before.
 CREATE TEMP TABLE t ON COMMIT DROP AS
 SELECT (SELECT id FROM public.profiles WHERE email = 'superadmin@example.com') AS admin,
        (SELECT id FROM public.profiles WHERE email = 'counsellor@example.com') AS counsellor,
-       current_date + ((8 - extract(isodow FROM current_date)::int) % 7) + 7 AS monday;
+       public.booking_last_day() AS monday;
 
 CREATE FUNCTION pg_temp.fails_with(p_sql text, p_message text) RETURNS boolean LANGUAGE plpgsql AS $$
 BEGIN
@@ -110,6 +110,11 @@ SELECT 'another purchase cannot take the same slot; the same purchase cannot boo
 SELECT 'even writing straight into the table, the database refuses a second booking of the slot',
   pg_temp.fails(format('INSERT INTO public.presentation_bookings (purchase_id, counsellor_id, on_date, start_time, end_time) VALUES (%L, %L, %L, ''10:00'', ''10:30'')',
                        (SELECT p2 FROM t_p), (SELECT counsellor FROM t), (SELECT monday FROM t)));
+SELECT 'only the next 3 working days: a later date is refused and never listed',
+  pg_temp.fails_with(format('SELECT public.presentation_book(%L, %L, %L, ''10:00'', %L)',
+                            (SELECT p2 FROM t_p), (SELECT counsellor FROM t), (SELECT monday FROM t) + 7, (SELECT admin FROM t)),
+                     'Pick a slot in the next 3 working days.')
+  AND NOT EXISTS (SELECT 1 FROM public.free_presentation_slots(current_date, current_date + 29) f WHERE f.on_date > (SELECT monday FROM t));
 SELECT 'Mark off over a booked slot is refused',
   pg_temp.fails_with(format('SELECT public.availability_add(%L, ''off'', %L, null, null, null, %L)',
                             (SELECT counsellor FROM t), (SELECT monday FROM t), (SELECT admin FROM t)),

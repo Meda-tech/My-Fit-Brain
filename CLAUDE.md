@@ -431,8 +431,11 @@ results with you"). The client never sees a report in the app.
   go-live). Closed (outcome `booked`) when a presentation is booked; ended when the purchase is refunded/cancelled.
 - **Book presentation** (button on the Booking call's My tasks row and in the side panel; also in the panel of a
   paid, completed, unbooked purchase whose Booking call is closed): one dialog with the FREE future slots of all
-  active counsellors for the next 30 days (`free_presentation_slots()`, built on `counsellor_slots()`), by date then
-  counsellor; the next 2 dates with free slots are "Preferred", later dates selectable without a reason → confirm
+  active counsellors in the **next 3 working days only** (owner, 2026-11-21; `booking_last_day()`: today counts when
+  it is a working day, working days = `availability_settings.work_days`; migration
+  `20261121500000_booking_three_working_days.sql`, checks `docs/tasks/29-booking-window-verify.sql`;
+  `free_presentation_slots()` never lists a later slot and `presentation_book()` refuses one, for every role), by date
+  then counsellor; the first 2 dates with free slots are "Preferred", the third selectable without a reason → confirm
   (client, assessment, counsellor, date and time) → `presentation_book()`.
 - `presentation_bookings` (counsellor, date, slot, booked by / at; cancel who / when / why). The DATABASE refuses a
   double booking: unique (counsellor, date, start) and unique (purchase) among active bookings, plus a per-counsellor-
