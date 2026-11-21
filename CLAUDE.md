@@ -366,7 +366,9 @@ results with you"). The client never sees a report in the app.
   rules; widening one is covered by the standing permission (say so in the summary). Cleanup
   `20261121000000_calls_cleanup.sql`: outcome `before_go_live` (calls closed by the go-live rule), event `reopened`.
 - **Payment call** (on an unpaid attempt): starts 30 minutes after the first try if still unpaid, or at once when a
-  payment actually failed; due 2 working hours after it starts. One per attempt; a new try adds a history line.
+  payment actually failed; due 2 working hours after it starts. **No call ever starts before go-live** (trigger
+  `calls_start_at_go_live`, `20261122000000_payment_calls_go_live.sql`, checks `docs/tasks/33-payment-calls-go-live-verify.sql`):
+  a try in the 7 days before go-live gets its Payment call at go-live, due 2 working hours later. One per attempt; a new try adds a history line.
   Closes by itself when the attempt becomes a Paid purchase. **Reopens** (owner, 2026-11-20) when a try after it
   closed (Done or Not interested) fails, or is still unpaid 30 minutes later: due 2 working hours after that, history
   line "Tried again – failed, <time>" (event `try_failed`) and "Payment call reopened" (event `reopened`); a new try also joins and reopens an attempt closed as Not
