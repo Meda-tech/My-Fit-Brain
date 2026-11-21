@@ -8,6 +8,7 @@ import { Card, cn } from '../../components/brand';
 import { PurchasePanel } from '../../components/purchases/PurchasePanel';
 import { CallDoneButton } from '../../components/calls/CallDoneButton';
 import { BookPresentationButton } from '../../components/booking/BookPresentationButton';
+import { PackagePaymentDialog } from '../../components/packages/PackagePaymentDialog';
 import { TaskFilters } from '../../components/calls/TaskFilters';
 import { CALL_KIND_LABELS, TASK_SHOWS, dueLabel, isCallLate, isTaskShow, tasksHref, type TaskShow } from '../../lib/calls';
 import { canViewPurchases, getPurchase, syncCalls } from '../../lib/services/purchases';
@@ -108,6 +109,7 @@ export default async function TasksPage({
                     </p>
                     <div className="relative z-10 flex flex-wrap justify-end gap-2">
                       {t.can_book && <BookPresentationButton purchaseId={t.purchase_id} clientLabel={t.client_name ?? t.phone} testName={t.test_name} />}
+                      {t.kind === 'package' && <PackagePaymentDialog purchaseId={t.purchase_id} clientLabel={t.client_name ?? t.phone} />}
                       <CallDoneButton callId={t.call_id} kind={t.kind} priorCalls={t.prior_calls} />
                     </div>
                   </div>

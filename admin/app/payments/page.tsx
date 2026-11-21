@@ -6,6 +6,7 @@ import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { PaymentsTable } from '../../components/payments/PaymentsTable';
 import { ExportDialog } from '../../components/payments/ExportDialog';
+import { PaymentKindSwitch } from '../../components/payments/PaymentKindSwitch';
 import { formatAmount } from '../../components/payments/format';
 import {
   PAGE_SIZE,
@@ -124,6 +125,9 @@ export default async function PaymentsPage({
           />
         }
       />
+
+      {/* The package payments (step 6) have their own list. */}
+      <PaymentKindSwitch current="assessment" />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <Metric

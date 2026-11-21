@@ -9,6 +9,8 @@ import { createAdminClient } from '../supabase/admin';
 import { razorpayConfig, razorpayGateway } from './razorpay';
 import { formatPrice, type PaymentDeps } from './service';
 import { supabasePaymentStore } from './store';
+import { packageDeps } from '../package/server';
+import { handlePackageWebhook } from '../package/service';
 
 // Server wiring for payments: Razorpay keys from the environment, stores on the service role.
 
@@ -20,6 +22,8 @@ export function paymentDeps(): PaymentDeps {
     assessment: serviceDeps(),
     newId: () => randomUUID(),
     now: () => new Date(),
+    // The one webhook URL serves both: an order that is not an assessment payment may be a package payment.
+    otherOrder: (event, entity) => handlePackageWebhook(packageDeps(), event, entity),
   };
 }
 

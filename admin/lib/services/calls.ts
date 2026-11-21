@@ -2,7 +2,7 @@ import { createClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
 import {
-  CALL_CHOICES,
+  ALL_CALL_CHOICES,
   CALL_NOTE_MAX,
   CALL_REASONS,
   assessmentContext,
@@ -186,7 +186,7 @@ export async function markCall(input: MarkCallInput): Promise<{ success: boolean
   if (!call) return { success: false, error: 'This call was not found.' };
   if (call.status !== 'open') return { success: false, error: 'This call is already closed.' };
 
-  if (!(CALL_CHOICES as readonly string[]).includes(input.choice)) return { success: false, error: 'Choose what happened on the call.' };
+  if (!(ALL_CALL_CHOICES as readonly string[]).includes(input.choice)) return { success: false, error: 'Choose what happened on the call.' };
   const choice = input.choice as CallChoice;
   const note = (input.note ?? '').trim();
   if (note.length > CALL_NOTE_MAX) return { success: false, error: 'The note is too long (2,000 characters at most).' };

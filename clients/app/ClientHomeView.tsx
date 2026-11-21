@@ -9,6 +9,8 @@ import { BinduDot, Button, ButtonLink, Card, Pill } from '../components/brand';
 import type { AttemptSummary, PurchaseCard, TestCard } from '../lib/assessment/server';
 import { startPurchaseAction } from './assessment/actions';
 import { FeatureList } from '../components/AssessmentOffer';
+import { PackageOfferCard, PackagePaidCard } from '../components/PackageOfferCard';
+import type { PackageOfferCard as PackageOffer, PackagePaidCard as PackagePaid } from '../lib/package/server';
 import { pick, type Text } from '@mfb/questionnaire';
 
 interface ClientHomeViewProps {
@@ -17,13 +19,17 @@ interface ClientHomeViewProps {
   /** Paid, not started: Start creates the assessment. */
   purchases: PurchaseCard[];
   attempts: AttemptSummary[];
+  /** The package (step 6): open offers after the report presentation, and paid packages. */
+  pkg: { offers: PackageOffer[]; paid: PackagePaid[]; enabled: boolean };
+  /** The client's full name (checkout prefill). */
+  fullName: string;
 }
 
 function formatDate(iso: string, lang: 'en' | 'hi'): string {
   return new Date(iso).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function ClientHomeView({ firstName, tests, purchases, attempts }: ClientHomeViewProps) {
+export function ClientHomeView({ firstName, tests, purchases, attempts, pkg, fullName }: ClientHomeViewProps) {
   const { lang } = useLanguage();
   const t = translations[lang];
   const local = (p: Text | null) => (p ? pick(p, lang) : null);
@@ -43,6 +49,18 @@ export function ClientHomeView({ firstName, tests, purchases, attempts }: Client
           {t.home.welcome} {firstName}
         </h1>
       </div>
+
+      {/* The package: the offer after the report presentation, or the confirmation once it is paid. */}
+      {(pkg.offers.length > 0 || pkg.paid.length > 0) && (
+        <section className="mb-8 grid gap-4" aria-label={t.pkg.title}>
+          {pkg.offers.map((offer) => (
+            <PackageOfferCard key={offer.purchaseId} offer={offer} enabled={pkg.enabled} prefillName={fullName} />
+          ))}
+          {pkg.paid.map((paid) => (
+            <PackagePaidCard key={paid.paidAt} paid={paid} />
+          ))}
+        </section>
+      )}
 
       {/* Your assessments first: that is where a returning client continues. */}
       {(purchases.length > 0 || attempts.length > 0) && (

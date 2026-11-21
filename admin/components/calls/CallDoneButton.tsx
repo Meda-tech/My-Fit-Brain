@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, X } from 'lucide-react';
 import { Button, Card, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import {
-  CALL_CHOICES,
+  choicesFor,
   choiceLabel,
   CALL_KIND_LABELS,
   CALL_NOTE_MAX,
@@ -123,7 +123,7 @@ export function CallDoneButton({
               <fieldset>
                 <legend className={labelClasses}>What happened?</legend>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {CALL_CHOICES.map((c) => (
+                  {choicesFor(kind).map((c) => (
                     <label key={c} className={cn(OPTION, 'border-sand')}>
                       <input
                         type="radio"
@@ -155,7 +155,10 @@ export function CallDoneButton({
                     onChange={(e) => setFollowUp(e.target.value)}
                     className={inputClasses}
                   />
-                  <p className={helpTextClasses}>Within 2 working days: by {limits.maxText}. The call stays open until then.</p>
+                  <p className={helpTextClasses}>
+                    Within 2 working days: by {limits.maxText}.{" "}
+                    {choice === "agreed" ? "The call stays open until the package payment arrives." : "The call stays open until then."}
+                  </p>
                 </div>
               )}
 

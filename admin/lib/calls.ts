@@ -2,7 +2,8 @@
 // closes and checks calls (migration 20261120120000_calls.sql, call_mark()).
 
 export type CallKind = 'payment' | 'assessment' | 'booking' | 'package';
-export type CallChoice = 'done' | 'call_later' | 'not_picked' | 'not_interested';
+/** agreed = "Client agreed – will pay" (Package calls only, step 6): the call stays open with a follow-up. */
+export type CallChoice = 'done' | 'call_later' | 'not_picked' | 'not_interested' | 'agreed';
 export type CallReason = 'too_costly' | 'not_now' | 'wrong_number' | 'other';
 export type CallEvent =
   | 'created'
@@ -13,8 +14,20 @@ export type CallEvent =
   | 'ended'
   | 'reopened'
   | 'presentation_booked'
-  | 'booking_cancelled';
-export type CallOutcome = 'done' | 'not_interested' | 'paid' | 'assessment_completed' | 'ended' | 'before_go_live' | 'booked';
+  | 'booking_cancelled'
+  | 'package_paid'
+  | 'package_payment_failed'
+  | 'package_payment_not_completed'
+  | 'package_refund_needed';
+export type CallOutcome =
+  | 'done'
+  | 'not_interested'
+  | 'paid'
+  | 'assessment_completed'
+  | 'ended'
+  | 'before_go_live'
+  | 'booked'
+  | 'package_paid';
 
 export const CALL_KIND_LABELS: Record<CallKind, string> = {
   payment: 'Payment call',
@@ -23,12 +36,20 @@ export const CALL_KIND_LABELS: Record<CallKind, string> = {
   package: 'Package call',
 };
 
+/** The choices of "Mark as call done". A Package call has no Done: "Client agreed – will pay" keeps it open. */
 export const CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested'];
+export const PACKAGE_CALL_CHOICES: readonly CallChoice[] = ['agreed', 'call_later', 'not_picked', 'not_interested'];
+export function choicesFor(kind: CallKind): readonly CallChoice[] {
+  return kind === 'package' ? PACKAGE_CALL_CHOICES : CALL_CHOICES;
+}
+export const ALL_CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested', 'agreed'];
+
 export const CALL_CHOICE_LABELS: Record<CallChoice, string> = {
   done: 'Done',
   call_later: 'Call later',
   not_picked: 'Not picked',
   not_interested: 'Not interested',
+  agreed: 'Client agreed – will pay',
 };
 
 export const CALL_REASONS: readonly CallReason[] = ['too_costly', 'not_now', 'wrong_number', 'other'];
@@ -46,9 +67,13 @@ export const CALL_EVENT_LABELS: Record<CallEvent, string> = {
   paid: 'Paid: call closed',
   assessment_completed: 'Assessment completed: call closed',
   ended: 'Refunded or cancelled: call closed',
-  reopened: 'Payment call reopened',
+  reopened: 'Call reopened',
   presentation_booked: 'Presentation booked',
   booking_cancelled: 'Booking cancelled',
+  package_paid: 'Package paid: call closed',
+  package_payment_failed: 'Package payment failed',
+  package_payment_not_completed: 'Package payment started, not completed',
+  package_refund_needed: 'Paid a second time: refund needed',
 };
 
 export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
@@ -59,6 +84,7 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   ended: 'Closed: refunded or cancelled',
   before_go_live: 'Closed: paid more than 7 days before go-live',
   booked: 'Closed: presentation booked',
+  package_paid: 'Package paid',
 };
 
 export const CALL_NOTE_MAX = 2000;
@@ -66,8 +92,9 @@ export const CALL_NOTE_MAX = 2000;
 export const FOLLOW_UP_WORKING_HOURS = 18;
 export const NEEDS_EARLIER_CALL = 'At least one follow-up call is needed first.';
 
+/** These choices keep the call open and need a follow-up date and time. */
 export function needsFollowUp(choice: CallChoice): boolean {
-  return choice === 'call_later' || choice === 'not_picked';
+  return choice === 'call_later' || choice === 'not_picked' || choice === 'agreed';
 }
 
 // --- India time (UTC+5:30, no daylight saving) and working hours ------------------------------------------

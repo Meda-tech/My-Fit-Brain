@@ -21,7 +21,7 @@ select 'at most one open payment attempt per phone and assessment',
 union all
 select 'an open attempt is the newest row of its phone and assessment',
   not exists (select 1 from public.purchases a join public.purchases l
-                on l.phone = a.phone and l.test_code = a.test_code and (l.created_at, l.id) > (a.created_at, a.id)
+                on l.phone = a.phone and l.test_code = a.test_code and l.kind = 'assessment' and (l.created_at, l.id) > (a.created_at, a.id)
               where a.status = 'not_paid' and a.closed_at is null)
 union all
 select 'one paid payment per purchase',

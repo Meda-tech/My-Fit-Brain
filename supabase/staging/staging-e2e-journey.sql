@@ -1,5 +1,5 @@
 -- STAGING ONLY. One full end-to-end journey (owner request, step 5):
--- failed try → paid → assessment completed → booked → presentation done → Package call → Client agreed.
+-- failed try → paid → assessment completed → booked → presentation done → Package call (Client agreed – will pay) → package paid.
 -- Real functions and triggers, one transaction, ROLLED BACK at the end: nothing is kept.
 -- (Inside one transaction the clock does not move: every "actual" time is the same moment; the planned times show
 -- the working-hours rules from that moment.)
@@ -57,12 +57,22 @@ ORDER BY f.on_date, f.start_time LIMIT 1;
 SELECT public.presentation_mark_done((SELECT id FROM public.presentation_bookings WHERE purchase_id = (SELECT purchase FROM e2e) AND status = 'booked'),
                                      (SELECT admin FROM e2e))::text = '' AS step6;
 
--- 7. Package call: Client agreed.
+-- 7. Package call: "Client agreed – will pay" (step 6: the call stays open with a follow-up).
 SELECT public.call_mark((SELECT id FROM public.calls WHERE purchase_id = (SELECT purchase FROM e2e) AND kind = 'package'),
-                        (SELECT coordinator FROM e2e), 'done', null, 'E2E: agreed', null)::text = '' AS step7;
+                        (SELECT coordinator FROM e2e), 'agreed', null, 'E2E: agreed, will pay', now() + interval '1 hour')::text = '' AS step7;
+
+-- 8. The client pays the package in the app (Razorpay): the order, then the confirmed payment.
+SELECT public.package_payment_start('5eed0000-0000-4000-8000-00000e2e0a01', (SELECT purchase FROM e2e), '5eed0000-0000-4000-8000-00000e2e00c1',
+                                    'order_E2E_PACKAGE', (SELECT amount_paise FROM public.package_offer((SELECT purchase FROM e2e))))::text = '' AS step8a;
+SELECT public.package_payment_mark_paid('5eed0000-0000-4000-8000-00000e2e0a01', 'pay_E2E_PACKAGE', 'upi', now()) AS step8b;
 
 -- The result.
 \echo
+\echo '== Package =='
+SELECT x.kind, x.status, x.amount_paise / 100 AS rupees, x.source, pp.package_name, pp.sessions, pp.price_paise / 100 AS price, pp.advance_paise / 100 AS advance
+FROM public.purchases x JOIN public.package_payments pp ON pp.package_purchase_id = x.id
+WHERE x.parent_purchase_id = (SELECT purchase FROM e2e);
+
 \echo '== Purchase =='
 SELECT pu.status, pu.test_code, pu.phone, c.full_name AS client, pr.full_name AS coordinator,
        (SELECT count(*) FROM public.purchase_payments pp WHERE pp.purchase_id = pu.id) AS payments_in_it

@@ -11,6 +11,7 @@ import { formatAmount, formatDate, formatDateTime, formatTime } from '../../comp
 import { JOURNEY_STAGE_LABELS, PURCHASE_TABS, PURCHASE_TAB_LABELS, defaultPurchaseTab, isPurchaseTab, type PurchaseTab } from '../../lib/purchases';
 import { CALL_KIND_LABELS, isCallLate, outcomeLabel } from '../../lib/calls';
 import { presentationLabel } from '../../lib/booking';
+import { listPackagePurchases, type PackagePurchaseRow } from '../../lib/services/packages';
 import {
   PURCHASE_PAGE_SIZE,
   canViewPurchases,
@@ -102,11 +103,15 @@ export default async function PurchasesPage({
   const sp = await searchParams;
   await syncCalls();
   const counts = await purchaseTabCounts();
+  // Type "Package" (super admins only): the paid packages. Coordinators never see them here.
+  const superAdmin = profile.role === 'super_admin';
+  const packageTab = superAdmin && sp.tab === 'package';
   const tab: PurchaseTab = isPurchaseTab(sp.tab) ? sp.tab : defaultPurchaseTab(profile.role, counts.unpaid);
   const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
-  const [{ rows, total }, open] = await Promise.all([
-    listPurchases(tab, page),
+  const [{ rows, total }, open, packages] = await Promise.all([
+    packageTab ? Promise.resolve({ rows: [] as PurchaseRow[], total: 0 }) : listPurchases(tab, page),
     sp.open && UUID.test(sp.open) ? getPurchase(sp.open) : Promise.resolve(null),
+    superAdmin ? listPackagePurchases() : Promise.resolve([] as PackagePurchaseRow[]),
   ]);
   const now = new Date();
   const pages = Math.max(1, Math.ceil(total / PURCHASE_PAGE_SIZE));
@@ -137,21 +142,38 @@ export default async function PurchasesPage({
             <Link
               key={t}
               href={href({ tab: t })}
-              aria-current={t === tab ? 'page' : undefined}
+              aria-current={t === tab && !packageTab ? 'page' : undefined}
               className={cn(
                 'flex min-h-12 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[15px] font-semibold',
-                t === tab ? 'border-teal text-teal' : 'border-transparent text-ink-muted hover:text-teal'
+                t === tab && !packageTab ? 'border-teal text-teal' : 'border-transparent text-ink-muted hover:text-teal'
               )}
             >
               {PURCHASE_TAB_LABELS[t]}
-              <span className={cn('rounded-full px-2 text-[12px] leading-5', t === tab ? 'bg-mist text-teal' : 'bg-cream text-ink-muted')}>
+              <span className={cn('rounded-full px-2 text-[12px] leading-5', t === tab && !packageTab ? 'bg-mist text-teal' : 'bg-cream text-ink-muted')}>
                 {counts[t]}
               </span>
             </Link>
           ))}
+          {superAdmin && (
+            <Link
+              href="/purchases?tab=package"
+              aria-current={packageTab ? 'page' : undefined}
+              className={cn(
+                'ml-auto flex min-h-12 items-center gap-2 whitespace-nowrap border-b-2 px-3 text-[15px] font-semibold',
+                packageTab ? 'border-teal text-teal' : 'border-transparent text-ink-muted hover:text-teal'
+              )}
+            >
+              Package
+              <span className={cn('rounded-full px-2 text-[12px] leading-5', packageTab ? 'bg-mist text-teal' : 'bg-cream text-ink-muted')}>
+                {packages.length}
+              </span>
+            </Link>
+          )}
         </nav>
 
-        {rows.length === 0 ? (
+        {packageTab ? (
+          <PackagePurchases rows={packages} />
+        ) : rows.length === 0 ? (
           <div className="p-10 text-center sm:p-12">
             <ShoppingBag size={40} strokeWidth={2} className="mx-auto mb-2 text-teal" aria-hidden />
             <p className="text-[16px] font-medium text-ink">{EMPTY[tab]}</p>
@@ -284,5 +306,44 @@ export default async function PurchasesPage({
 
       {open && <PurchasePanel purchase={open} closeHref={href({ page })} now={now} canCancelBooking={profile.role === 'super_admin'} />}
     </AdminShell>
+  );
+}
+
+// Type "Package" (super admins): each paid package with its client, amount and the assessment purchase it belongs to.
+function PackagePurchases({ rows }: { rows: PackagePurchaseRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="p-10 text-center sm:p-12">
+        <ShoppingBag size={40} strokeWidth={2} className="mx-auto mb-2 text-teal" aria-hidden />
+        <p className="text-[16px] font-medium text-ink">No packages paid yet.</p>
+      </div>
+    );
+  }
+  return (
+    <ul className="divide-y divide-sand">
+      {rows.map((r) => (
+        <li key={r.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:gap-6 sm:px-5">
+          <div className="min-w-0 flex-1">
+            <p className="m-0 font-semibold text-ink">
+              {r.client_name ?? r.phone}
+              {r.client_name && <span className="ml-2 font-mono text-[12px] font-normal text-ink-muted">{r.phone}</span>}
+            </p>
+            <p className="m-0 text-[14px] text-ink-soft">
+              Package{r.package_name ? `: ${r.package_name}` : ''}
+              {r.sessions ? `, ${r.sessions} sessions` : ''} · {formatAmount(r.amount_paise)} · {r.source === 'manual' ? 'manual payment' : 'Razorpay'}
+            </p>
+            <p className="m-0 text-[13px] text-ink-muted">
+              Paid {formatDateTime(r.paid_at)} · Coordinator: {r.coordinator_name ?? 'None yet'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <PurchaseStatusPill status={r.status === 'refunded' ? 'refunded' : r.status === 'cancelled' ? 'cancelled' : 'paid'} />
+            <Link href={`/purchases?tab=paid&open=${r.parent_purchase_id}`} className="flex min-h-11 items-center text-[14px] font-semibold text-teal hover:underline">
+              Assessment purchase
+            </Link>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

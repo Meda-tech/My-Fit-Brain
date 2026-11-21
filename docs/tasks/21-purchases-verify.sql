@@ -16,15 +16,15 @@ union all
 select 'every payment belongs to one purchase',
   not exists (select 1 from public.payments p where not exists (select 1 from public.purchase_payments pp where pp.payment_id = p.id))
 union all
-select 'every purchase has its five journey stages, in order',
+select 'every assessment purchase has its five journey stages, in order',
   not exists (select 1 from public.purchases pu
-              where (select count(*) from public.purchase_stages s where s.purchase_id = pu.id) <> 5)
+              where pu.kind = 'assessment' and (select count(*) from public.purchase_stages s where s.purchase_id = pu.id) <> 5)
   and not exists (select 1 from public.purchase_stages
                   where (stage, position) not in (('payment', 1), ('assessment', 2), ('presentation_booking', 3),
                                                   ('report_presentation', 4), ('package_call', 5)))
 union all
 select 'a paid purchase has a paid payment; a not-paid purchase has none',
-  not exists (select 1 from public.purchases pu where pu.status in ('paid', 'refunded') and not exists (
+  not exists (select 1 from public.purchases pu where pu.kind = 'assessment' and pu.status in ('paid', 'refunded') and not exists (
                 select 1 from public.purchase_payments pp join public.payments p on p.id = pp.payment_id
                 where pp.purchase_id = pu.id and p.status = 'paid'))
   and not exists (select 1 from public.purchases pu where pu.status = 'not_paid' and exists (

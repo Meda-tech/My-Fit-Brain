@@ -45,6 +45,14 @@ export interface PaymentDeps {
   assessment: ServiceDeps;
   newId(): string;
   now(): Date;
+  /**
+   * Webhook events for an order that is not an assessment payment (package payments, lib/package). The
+   * signature is already checked. Optional: without it such events are ignored, as before.
+   */
+  otherOrder?: (
+    event: string,
+    entity: { id: string; order_id: string | null; error_code?: string | null; error_description?: string | null }
+  ) => Promise<WebhookOutcome>;
 }
 
 export class PaymentError extends Error {
@@ -287,6 +295,9 @@ export async function handleWebhook(
         });
         outcome = 'processed';
       }
+    } else if (deps.otherOrder) {
+      // Not an assessment payment: a package payment, if it is one of ours.
+      outcome = await deps.otherOrder(event, entity);
     }
   }
 

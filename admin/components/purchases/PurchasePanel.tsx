@@ -1,7 +1,8 @@
 import { Phone } from 'lucide-react';
 import { SidePanel } from './SidePanel';
 import { PurchaseStatusPill, StagePill } from './PurchasePills';
-import { formatAmount, formatDateTime, formatTime, paymentMethodLabel } from '../payments/format';
+import { formatAmount, formatDate, formatDateTime, formatTime, paymentMethodLabel } from '../payments/format';
+import { PackagePaymentDialog } from '../packages/PackagePaymentDialog';
 import { CopyButton } from '../CopyButton';
 import { CLIENTS_URL } from '../../lib/site';
 import { CallDoneButton } from '../calls/CallDoneButton';
@@ -203,6 +204,18 @@ export function PurchasePanel({
                       ? outcomeLabel('package', p.package_call.outcome)
                       : 'closed'}
                 </p>
+              )}
+              {p.package_paid ? (
+                <p className="m-0 mt-2 text-[15px] font-semibold text-teal">
+                  Package paid {formatAmount(p.package_paid.amount_paise)} on {formatDate(p.package_paid.paid_at)} (
+                  {p.package_paid.provider === 'offline' ? `manual: ${paymentMethodLabel(p.package_paid)}` : paymentMethodLabel(p.package_paid)})
+                </p>
+              ) : (
+                p.can_add_package_payment && (
+                  <div className="mt-3">
+                    <PackagePaymentDialog purchaseId={p.id} clientLabel={clientLabel} />
+                  </div>
+                )
               )}
             </>
           ) : (

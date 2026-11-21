@@ -11,6 +11,7 @@ import {
 } from '../purchases';
 import type { AssessmentProgress, CallChoice, CallEvent, CallKind, CallOutcome, CallReason } from '../calls';
 import type { Presentation } from '../booking';
+import type { PackagePaid } from '../package';
 import type { PaymentProvider, PaymentStatus, RefundStatus } from './payments';
 
 // Purchases (step 1) and their calls (step 2). Reads use the staff session, so RLS decides: super admins see every
@@ -65,6 +66,10 @@ export interface PurchaseRow {
   can_book: boolean;
   /** The Package call (step 5), open or closed, if there is one. */
   package_call: { status: 'open' | 'closed'; outcome: CallOutcome | null; due_at: string } | null;
+  /** The paid package of this assessment purchase (step 6), if any. */
+  package_paid: PackagePaid | null;
+  /** Report presentation done and no package paid yet: Add package payment is possible. */
+  can_add_package_payment: boolean;
   stages: StageRow[];
   current_stage: JourneyStage | null;
 }
@@ -126,7 +131,8 @@ const COLUMNS =
   'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, source, coordinator_id, paid_at, created_at, ' +
   'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status, attempt_id)), ' +
   'calls(id, kind, status, outcome, due_at), ' +
-  'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, status, booked_at, booked_by_name, done_at, done_by_name)';
+  'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, status, booked_at, booked_by_name, done_at, done_by_name), ' +
+  'package_payments!package_payments_purchase_id_fkey(amount_paise, paid_at, provider, method, status, package_purchase_id)';
 
 /** Rows shown on the screen: purchases, open attempts and attempts closed as Not interested. */
 const SHOWN = 'status.neq.not_paid,closed_at.is.null,closed_reason.eq.not_interested';
@@ -152,6 +158,7 @@ interface RawPurchase {
   purchase_payments: { payments: One<{ created_at: string; status: string; attempt_id: string | null }> }[] | null;
   calls: { id: string; kind: CallKind; status: string; outcome: CallOutcome | null; due_at: string }[] | null;
   presentation_bookings: (Omit<Presentation, 'counsellor_name'> & { status: string })[] | null;
+  package_payments: (PackagePaid & { status: string; package_purchase_id: string | null })[] | null;
 }
 
 export interface NameLookup {
@@ -210,7 +217,8 @@ async function assessmentProgress(raw: RawPurchase[]): Promise<Map<string, Asses
 async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
   const counsellorIds = raw.flatMap((r) => (r.presentation_bookings ?? []).filter((b) => b.status === 'booked').map((b) => b.counsellor_id));
   const [names, progress] = await Promise.all([nameLookup(db, raw, counsellorIds), assessmentProgress(raw)]);
-  return raw.map(({ purchase_stages, purchase_payments, calls, presentation_bookings, client_id, coordinator_id, closed_reason, ...r }) => {
+  return raw.map(({ purchase_stages, purchase_payments, calls, presentation_bookings, package_payments, client_id, coordinator_id, closed_reason, ...r }) => {
+    const packagePaid = (package_payments ?? []).find((p) => p.status === 'paid' && p.package_purchase_id);
     const booked = (presentation_bookings ?? []).find((b) => b.status === 'booked');
     const stages = [...(purchase_stages ?? [])].sort((a, b) => a.position - b.position);
     const tries = (purchase_payments ?? [])
@@ -238,6 +246,10 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
         const pc = (calls ?? []).find((c) => c.kind === 'package');
         return pc ? { status: pc.status as 'open' | 'closed', outcome: pc.outcome, due_at: pc.due_at } : null;
       })(),
+      package_paid: packagePaid
+        ? { amount_paise: packagePaid.amount_paise, paid_at: packagePaid.paid_at, provider: packagePaid.provider, method: packagePaid.method }
+        : null,
+      can_add_package_payment: r.status === 'paid' && !packagePaid && !!booked?.done_at,
       stages,
       current_stage: currentStage(stages),
     };
@@ -257,8 +269,8 @@ export async function purchaseTabCounts(): Promise<Record<PurchaseTab, number>> 
   const db = await createClient();
   const head = () => db.from('purchases').select('id', { count: 'exact', head: true });
   const [unpaid, paid] = await Promise.all([
-    head().eq('status', 'not_paid').or(UNPAID_SHOWN),
-    head().in('status', [...PURCHASE_STATUSES]),
+    head().eq('kind', 'assessment').eq('status', 'not_paid').or(UNPAID_SHOWN),
+    head().eq('kind', 'assessment').in('status', [...PURCHASE_STATUSES]),
   ]);
   if (unpaid.error?.code === '42P01' || paid.error?.code === '42P01') return { unpaid: 0, paid: 0, all: 0 };
   const u = unpaid.count ?? 0;
@@ -275,7 +287,8 @@ export async function listPurchases(tab: PurchaseTab, page: number): Promise<{ r
   if (!canViewPurchases(profile.role)) return { rows: [], total: 0 };
   const db = await createClient();
   const from = (page - 1) * PURCHASE_PAGE_SIZE;
-  let q = db.from('purchases').select(COLUMNS, { count: 'exact' });
+  // Assessment purchases only: Package purchases are not part of these tabs (super admins: listPackagePurchases).
+  let q = db.from('purchases').select(COLUMNS, { count: 'exact' }).eq('kind', 'assessment');
   if (tab === 'unpaid') {
     q = q.eq('status', 'not_paid').or(UNPAID_SHOWN).order('created_at', { ascending: false });
   } else if (tab === 'paid') {
@@ -302,7 +315,7 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) return null;
   const db = await createClient();
-  const { data } = await db.from('purchases').select(COLUMNS).eq('id', id).or(SHOWN).maybeSingle();
+  const { data } = await db.from('purchases').select(COLUMNS).eq('id', id).eq('kind', 'assessment').or(SHOWN).maybeSingle();
   if (!data) return null;
   const [row] = await withNames(db, [data as unknown as RawPurchase]);
 

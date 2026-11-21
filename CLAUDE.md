@@ -140,7 +140,8 @@ Never invent questions, values or report text. If something is not covered, stop
   step, the public /pricing page and the client's own payment receipt (completed screen: amount paid, date,
   method, Razorpay ID). The payment step and /pricing show ₹3,500 next to the regular price ₹7,000 struck
   through, with "Introductory price" (owner decision 2026-10-31; `REGULAR_PRICE_PAISE` is display only, never
-  charged). Keep it only while ₹7,000 is the real regular price.
+  charged). Keep it only while ₹7,000 is the real regular price. The package offer card on Home (after the report
+  presentation, step 6) is a payment step too and shows the package price, the advance and the amount to pay.
 - "What you get" (payment step, Home cards, /pricing; `pay.features` in `clients/lib/i18n.ts`, EN + HI):
   the assessment, one consultation, report review and guidance with your counsellor, personalised action
   plan, follow-up support, educational resources and guidance. No "diagnostic" or "treatment" wording.
@@ -444,13 +445,57 @@ results with you"). The client never sees a report in the app.
   start onwards (not before), super admins at any time; once. Saves when and who on the booking; journey Report
   presentation actual = marked time; creates the **Package call** for the client's coordinator, due 2 working hours
   later; journey Package call planned = that due time. A presentation marked done can no longer be cancelled.
-- **Package call**: same Mark as call done rules; Done is shown as **"Client agreed"** (`choiceLabel`,
-  `outcomeLabel` in `lib/calls.ts`; the database keeps `done`). Client agreed fills the journey's Package call actual
-  time (trigger `calls_package_journey`). Context line "Presentation done <date> by <counsellor>". No package purchase
-  or payment yet.
+- **Package call**: same Mark as call done rules, with its own choices since step 6 (below). Context line
+  "Presentation done <date> by <counsellor>". (Step 5 closed it with Done = "Client agreed"; older rows may still
+  hold outcome `done`, shown as "Client agreed".)
 - My tasks (super admins): extra filter **Presentations not marked done** (slot time passed, not marked), each with
   the button. Purchases (Paid tab) and the side panel show "Presentation done <date>" and the Package call status;
   super admins can also mark done (or cancel the booking) from the panel.
+
+### Package offer and package payment (step 6, owner 2026-11-21)
+
+- Migration `20261121300000_packages.sql`, checks `docs/tasks/27-packages-verify.sql`, behaviour test
+  `supabase/staging/staging-test-packages.sql`; the full journey `staging-e2e-journey.sql` now ends with the paid
+  package. Wider allowed values (standing permission): `purchases.kind` + `package`, `calls.outcome` +
+  `package_paid`, `call_logs.choice` + `agreed` (with a follow-up), four `package_*` events.
+- **The ₹3,500 assessment payments are not touched**: package payments live in their own table `package_payments`
+  with their own functions, routes and store (`clients/lib/package/`). Never add package logic to `payments`.
+- **Package settings** (`packages`, one active row; Admin → Settings, super admins): name, sessions (8), frequency
+  text ("1 session every week"), price (₹35,000). Never hard-coded. Every payment keeps a copy of the package as it
+  was offered.
+- **Amount** = package price − the amount paid for that assessment purchase (₹35,000 − ₹3,500 = ₹31,500), always
+  calculated in the database (`package_offer()`); full payment only, no expiry. The offer exists once the report
+  presentation is marked done, until a package is paid for that assessment purchase.
+- **Client app**: Home shows the offer card ("Your report presentation is done · A plan made for you · 8 sessions ·
+  1 session every week", package price, already paid (advance), you pay now, Pay) and, once paid, "Payment received.
+  Our team will contact you to schedule your sessions." EN + HI (`pkg` in `clients/lib/i18n.ts`). This card is a
+  payment step, so it shows prices. `/api/package/order` and `/api/package/verify` (signed-in client, own offer,
+  server amount, signature check, payment fetched from Razorpay); the one webhook URL serves both payment kinds
+  (`PaymentDeps.otherOrder`); Home recovers a payment the browser never confirmed. Checkout name and description:
+  "My Fit Brain" only. Up to 5 orders an hour per offer.
+- **Paid** (Razorpay or manual) → `package_settle()`: a new purchase of kind `package` (₹31,500, `parent_purchase_id`
+  = the assessment purchase, same client, phone and coordinator); the Package call closes (outcome `package_paid`);
+  the assessment journey's Package call actual = package paid time. One paid package per assessment purchase (unique
+  index): a second paid payment makes no package and is flagged `refund_status = 'needed'` ("Refund needed").
+- **Failed or abandoned try**: failed at once, or still not completed after 30 minutes (`calls_sync()` →
+  `package_calls_sync()`): a history line on the Package call, and a closed call (Not interested) reopens, due
+  2 working hours later.
+- **Add package payment** (button on the Package call's My tasks row and in the purchase's side panel; coordinators
+  for their own clients, super admins): the same form and rules as the manual assessment payment
+  (`admin/lib/services/packages.ts`, `PackagePaymentDialog`): amount fixed and read-only, method, date, reference,
+  proof to the SAME Google Drive folder first, then `package_payment_manual()`; "Verified by coordinator", "Accounts
+  check: Pending". No cancel for package payments yet.
+- **Package call choices** (`choicesFor('package')`): **Client agreed – will pay** (`agreed`: the call stays open, a
+  follow-up within 2 working days is required), Call later / Not picked (follow-up), Not interested (after an
+  earlier call, with a reason). Done is refused on Package calls.
+- **Where it shows**: Package purchases are NOT in the coordinators' Purchases tabs (assessment rows only, `kind =
+  'assessment'` in every list); super admins have the type **Package** in Purchases. Payments has a switch
+  Assessment payments · **Package payments** (`/payments/packages`; super admins all, a coordinator their own
+  clients by RLS, counsellors none). The assessment purchase's side panel shows "Package paid ₹31,500 on <date>
+  (<method>)".
+- Staging end-to-end: `supabase/staging/staging-e2e-package-setup.sql` makes two fake clients at the offer stage;
+  `admin/test/staging-e2e-package-manual.test.ts` (only with `RUN_STAGING_E2E=1`) records a manual package payment
+  with a real proof upload.
 
 ### Counsellor flow (admin)
 

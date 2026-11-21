@@ -10,6 +10,7 @@ import {
   BookOpen,
   ShieldCheck,
   CalendarClock,
+  Settings,
   Presentation,
   LogOut,
   Menu,
@@ -122,6 +123,7 @@ export function AdminShellClient({
       ? [
           { href: '/availability', label: 'Counsellor availability', icon: CalendarClock },
           { href: '/team', label: 'Team', icon: ShieldCheck },
+          { href: '/settings', label: 'Settings', icon: Settings },
         ]
       : []),
   ];
