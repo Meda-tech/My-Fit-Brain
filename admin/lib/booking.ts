@@ -53,6 +53,9 @@ export interface Presentation {
   end_time: string;
   booked_at: string;
   booked_by_name: string | null;
+  /** Report presentation done (step 5): when and by whom. */
+  done_at: string | null;
+  done_by_name: string | null;
 }
 
 export const CANCEL_REASON_MIN = 3;

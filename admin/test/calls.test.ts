@@ -5,6 +5,8 @@ import {
   CALL_KIND_LABELS,
   CALL_REASON_LABELS,
   addWorkingHours,
+  choiceLabel,
+  packageContext,
   assessmentContext,
   fromIstInput,
   needsFollowUp,
@@ -39,7 +41,10 @@ describe('working hours (same cases as the database check)', () => {
 
 describe('calls', () => {
   it('uses the team words', () => {
-    expect(CALL_KIND_LABELS).toEqual({ payment: 'Payment call', assessment: 'Assessment call', booking: 'Booking call' });
+    expect(CALL_KIND_LABELS).toEqual({ payment: 'Payment call', assessment: 'Assessment call', booking: 'Booking call', package: 'Package call' });
+    expect(choiceLabel('package', 'done')).toBe('Client agreed');
+    expect(choiceLabel('booking', 'done')).toBe('Done');
+    expect(packageContext('2026-11-21T06:00:00Z', 'Test Counsellor')).toBe('Presentation done 21 Nov by Test Counsellor');
     expect(CALL_CHOICES.map((c) => CALL_CHOICE_LABELS[c])).toEqual(['Done', 'Call later', 'Not picked', 'Not interested']);
     expect(Object.values(CALL_REASON_LABELS)).toEqual(['Too costly', 'Not now', 'Wrong number', 'Other']);
     expect(needsFollowUp('call_later') && needsFollowUp('not_picked') && !needsFollowUp('done')).toBe(true);

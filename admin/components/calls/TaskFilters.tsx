@@ -5,24 +5,28 @@ import { useRouter } from 'next/navigation';
 import { cn, inputClasses } from '../brand';
 import { TASK_SHOWS, TASK_SHOW_LABELS, tasksHref, type TaskShow } from '../../lib/calls';
 
-// My tasks filters, at the top: All · Late only · Upcoming (everyone), and the coordinator (super admins only).
+// My tasks filters, at the top: All · Late only · Upcoming (everyone), Presentations not marked done and the
+// coordinator (super admins only).
 export function TaskFilters({
   coordinators,
   coordinatorId,
   show,
   counts,
+  showUnmarked = false,
 }: {
   coordinators: { id: string; full_name: string }[] | null;
   coordinatorId: string;
   show: TaskShow;
   counts: Record<TaskShow, number>;
+  /** Super admins: the extra filter "Presentations not marked done". */
+  showUnmarked?: boolean;
 }) {
   const router = useRouter();
 
   return (
     <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-      <nav aria-label="Show" className="flex w-full gap-1 overflow-x-auto rounded-full border border-sand bg-white p-1 sm:w-fit">
-        {TASK_SHOWS.map((s) => (
+      <nav aria-label="Show" className="flex w-full flex-wrap gap-1 rounded-3xl border border-sand bg-white p-1 sm:w-fit sm:rounded-full">
+        {[...TASK_SHOWS, ...(showUnmarked ? (['unmarked'] as const) : [])].map((s) => (
           <Link
             key={s}
             href={tasksHref(coordinatorId, s)}

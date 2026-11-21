@@ -7,10 +7,11 @@ import { CLIENTS_URL } from '../../lib/site';
 import { CallDoneButton } from '../calls/CallDoneButton';
 import { BookPresentationButton } from '../booking/BookPresentationButton';
 import { CancelBookingButton } from '../booking/CancelBookingButton';
+import { PresentationDoneButton } from '../presentations/PresentationDoneButton';
 import { presentationLabel } from '../../lib/booking';
 import { cn } from '../brand';
 import { JOURNEY_STAGE_LABELS, PURCHASE_KIND_LABELS, isLate } from '../../lib/purchases';
-import { CALL_CHOICE_LABELS, CALL_EVENT_LABELS, CALL_KIND_LABELS, CALL_REASON_LABELS, isCallLate } from '../../lib/calls';
+import { CALL_EVENT_LABELS, CALL_KIND_LABELS, CALL_REASON_LABELS, choiceLabel, isCallLate, outcomeLabel } from '../../lib/calls';
 import type { CallLogRow, CallRow, PurchaseDetail, PurchasePayment } from '../../lib/services/purchases';
 
 const PAYMENT_STATUS: Record<string, string> = {
@@ -61,13 +62,13 @@ function PaymentItem({ p }: { p: PurchasePayment }) {
   );
 }
 
-function logText(l: CallLogRow): string {
+function logText(l: CallLogRow, kind: CallRow['kind']): string {
   // "Tried again – failed, 4:19 pm" (owner's words, 2026-11-20).
   if (l.entry === 'event' && l.event === 'try_failed') return `${CALL_EVENT_LABELS.try_failed}, ${formatTime(l.at)}`;
   // "Presentation booked: Test Counsellor, Mon 23 Nov 2026, 10:00" (the note holds what was booked / why cancelled).
   if (l.entry === 'event' && l.event && l.note) return `${CALL_EVENT_LABELS[l.event]}: ${l.note}`;
   if (l.entry === 'event') return l.event ? CALL_EVENT_LABELS[l.event] : '';
-  const parts = [l.choice ? CALL_CHOICE_LABELS[l.choice] : ''];
+  const parts = [l.choice ? choiceLabel(kind, l.choice) : ''];
   if (l.reason) parts.push(CALL_REASON_LABELS[l.reason]);
   if (l.follow_up_at) parts.push(`follow-up ${formatDateTime(l.follow_up_at)}`);
   return parts.join(' · ');
@@ -121,7 +122,7 @@ function CallBox({ calls, now, book }: { calls: CallRow[]; now: Date; book: Reac
                 {formatDateTime(l.at)} · {CALL_KIND_LABELS[l.kind]}
                 {l.by_name ? ` · ${l.by_name}` : ''}
               </p>
-              <p className={cn('m-0', l.entry === 'call' ? 'font-medium text-ink' : 'text-ink-soft')}>{l.text ?? logText(l)}</p>
+              <p className={cn('m-0', l.entry === 'call' ? 'font-medium text-ink' : 'text-ink-soft')}>{l.text ?? logText(l, l.kind)}</p>
               {l.note && l.entry === 'call' && <p className="m-0 mt-1 whitespace-pre-line text-ink-soft">{l.note}</p>}
             </li>
           ))}
@@ -187,10 +188,35 @@ export function PurchasePanel({
           <p className="m-0 text-[13px] text-ink-muted">
             Booked by {p.presentation.booked_by_name ?? '—'}, {formatDateTime(p.presentation.booked_at)}
           </p>
-          {canCancelBooking && (
-            <div className="mt-2">
-              <CancelBookingButton bookingId={p.presentation.id} />
-            </div>
+          {p.presentation.done_at ? (
+            <>
+              <p className="m-0 mt-2 text-[14px] font-semibold text-teal">
+                Presentation done {formatDateTime(p.presentation.done_at)}
+                {p.presentation.done_by_name ? ` by ${p.presentation.done_by_name}` : ''}
+              </p>
+              {p.package_call && (
+                <p className="m-0 text-[14px] text-ink">
+                  Package call:{' '}
+                  {p.package_call.status === 'open'
+                    ? `open, due ${formatDateTime(p.package_call.due_at)}`
+                    : p.package_call.outcome
+                      ? outcomeLabel('package', p.package_call.outcome)
+                      : 'closed'}
+                </p>
+              )}
+            </>
+          ) : (
+            canCancelBooking && (
+              // Super admins: mark it done at any time (e.g. a forgotten one), or cancel the booking.
+              <div className="mt-2 flex flex-wrap gap-2">
+                <PresentationDoneButton
+                  bookingId={p.presentation.id}
+                  summary={`${clientLabel} · ${presentationLabel(p.presentation.on_date, p.presentation.start_time)}`}
+                  variant="secondary"
+                />
+                <CancelBookingButton bookingId={p.presentation.id} />
+              </div>
+            )
           )}
         </section>
       ) : (

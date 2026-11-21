@@ -7,6 +7,7 @@ import {
   CALL_REASONS,
   assessmentContext,
   bookingContext,
+  packageContext,
   fromIstInput,
   needsFollowUp,
   paymentContext,
@@ -49,7 +50,7 @@ interface TaskPurchase {
   purchase_payments: { payments: One<{ created_at: string; status: string; attempt_id: string | null }> }[] | null;
   status: string;
   purchase_stages: { stage: string; done_at: string | null }[] | null;
-  presentation_bookings: { status: string }[] | null;
+  presentation_bookings: { status: string; done_at: string | null; counsellor_id: string }[] | null;
 }
 
 interface RawTask {
@@ -72,7 +73,7 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
     .select(
       'id, kind, due_at, purchase_id, call_logs(entry), ' +
         'purchases!inner(test_code, phone, client_id, coordinator_id, paid_at, status, purchase_payments(payments(created_at, status, attempt_id)), ' +
-        'purchase_stages(stage, done_at), presentation_bookings(status))'
+        'purchase_stages(stage, done_at), presentation_bookings(status, done_at, counsellor_id))'
     )
     .eq('status', 'open');
   if (profile.role === 'super_admin' && opts.coordinatorId) q = q.eq('purchases.coordinator_id', opts.coordinatorId);
@@ -85,7 +86,8 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
   const raw = ((data ?? []) as unknown as RawTask[])
     .map((t) => ({ t, p: one(t.purchases) }))
     .filter((x): x is { t: RawTask; p: TaskPurchase } => !!x.p);
-  const names = await nameLookup(db, raw.map(({ p }) => p));
+  const counsellorIds = raw.flatMap(({ p }) => (p.presentation_bookings ?? []).filter((b) => b.status === 'booked').map((b) => b.counsellor_id));
+  const names = await nameLookup(db, raw.map(({ p }) => p), counsellorIds);
 
   // How far the client got with the assessment (only ids of rows the staff member may see).
   const attemptIds = [
@@ -109,6 +111,10 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
       context = paymentContext(tries.length, last?.created_at ?? t.due_at, last?.status === 'failed', now);
     } else if (t.kind === 'booking') {
       context = bookingContext((p.purchase_stages ?? []).find((s) => s.stage === 'assessment')?.done_at ?? null);
+    } else if (t.kind === 'package') {
+      const done = (p.purchase_stages ?? []).find((s) => s.stage === 'report_presentation')?.done_at ?? null;
+      const booked = (p.presentation_bookings ?? []).find((b) => b.status === 'booked');
+      context = packageContext(done, booked ? names.coordinator(booked.counsellor_id) : null);
     } else {
       const statuses = tries.map((x) => (x.attempt_id ? attemptStatus.get(x.attempt_id) : undefined));
       const progress: AssessmentProgress = statuses.includes('completed')

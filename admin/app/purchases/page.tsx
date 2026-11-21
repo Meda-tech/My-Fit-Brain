@@ -9,7 +9,7 @@ import { PurchasePanel } from '../../components/purchases/PurchasePanel';
 import { PurchaseStatusPill } from '../../components/purchases/PurchasePills';
 import { formatAmount, formatDate, formatDateTime, formatTime } from '../../components/payments/format';
 import { JOURNEY_STAGE_LABELS, PURCHASE_TABS, PURCHASE_TAB_LABELS, defaultPurchaseTab, isPurchaseTab, type PurchaseTab } from '../../lib/purchases';
-import { CALL_KIND_LABELS, isCallLate } from '../../lib/calls';
+import { CALL_KIND_LABELS, isCallLate, outcomeLabel } from '../../lib/calls';
 import { presentationLabel } from '../../lib/booking';
 import {
   PURCHASE_PAGE_SIZE,
@@ -43,13 +43,24 @@ function triesText(n: number): string {
   return `${n} ${n === 1 ? 'try' : 'tries'}`;
 }
 
-/** The booked report presentation (step 4): counsellor, date and time. */
+/**
+ * The booked report presentation (step 4: counsellor, date and time), "Presentation done <date>" once marked
+ * (step 5), and the Package call's result once it is closed (an open one shows in the Call column).
+ */
 function PresentationLine({ r }: { r: PurchaseRow }) {
   if (!r.presentation) return null;
+  const p = r.presentation;
   return (
-    <span className="block text-[12px] font-medium text-teal">
-      Presentation: {r.presentation.counsellor_name ?? 'Counsellor'}, {presentationLabel(r.presentation.on_date, r.presentation.start_time)}
-    </span>
+    <>
+      <span className="block text-[12px] font-medium text-teal">
+        {p.done_at
+          ? `Presentation done ${formatDate(p.done_at)}${p.counsellor_name ? ` by ${p.counsellor_name}` : ''}`
+          : `Presentation: ${p.counsellor_name ?? 'Counsellor'}, ${presentationLabel(p.on_date, p.start_time)}`}
+      </span>
+      {r.package_call?.status === 'closed' && r.package_call.outcome && (
+        <span className="block text-[12px] font-medium text-ink">Package call: {outcomeLabel('package', r.package_call.outcome)}</span>
+      )}
+    </>
   );
 }
 

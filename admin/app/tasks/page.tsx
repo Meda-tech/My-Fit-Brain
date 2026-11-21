@@ -12,6 +12,9 @@ import { TaskFilters } from '../../components/calls/TaskFilters';
 import { CALL_KIND_LABELS, TASK_SHOWS, dueLabel, isCallLate, isTaskShow, tasksHref, type TaskShow } from '../../lib/calls';
 import { canViewPurchases, getPurchase, syncCalls } from '../../lib/services/purchases';
 import { listCoordinators, listTasks } from '../../lib/services/calls';
+import { unmarkedPresentations, type PresentationRow } from '../../lib/services/presentations';
+import { PresentationDoneButton } from '../../components/presentations/PresentationDoneButton';
+import { presentationLabel } from '../../lib/booking';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +24,7 @@ const EMPTY: Record<TaskShow, string> = {
   all: 'No calls to make right now.',
   late: 'No late calls.',
   upcoming: 'No upcoming calls.',
+  unmarked: 'Every presentation whose time has passed is marked done.',
 };
 
 // My tasks: the open Payment and Assessment calls in ONE list by due time, soonest (late) first (owner,
@@ -37,18 +41,23 @@ export default async function TasksPage({
   const sp = await searchParams;
   const superAdmin = profile.role === 'super_admin';
   const coordinatorId = superAdmin && sp.coordinator && UUID.test(sp.coordinator) ? sp.coordinator : '';
-  const show: TaskShow = isTaskShow(sp.show) ? sp.show : sp.late === '1' ? 'late' : 'all';
+  const asked: TaskShow = isTaskShow(sp.show) ? sp.show : sp.late === '1' ? 'late' : 'all';
+  const show: TaskShow = asked === 'unmarked' && !superAdmin ? 'all' : asked;
 
   await syncCalls();
-  const [tasks, coordinators, open] = await Promise.all([
+  const [tasks, coordinators, open, unmarked] = await Promise.all([
     listTasks({ coordinatorId }),
     superAdmin ? listCoordinators() : Promise.resolve(null),
     sp.open && UUID.test(sp.open) ? getPurchase(sp.open) : Promise.resolve(null),
+    superAdmin ? unmarkedPresentations() : Promise.resolve([] as PresentationRow[]),
   ]);
 
   const now = new Date();
-  const inShow = (s: TaskShow) => (t: { due_at: string }) => s === 'all' || (s === 'late') === isCallLate(t.due_at, now);
-  const counts = Object.fromEntries(TASK_SHOWS.map((s) => [s, tasks.filter(inShow(s)).length])) as Record<TaskShow, number>;
+  const inShow = (s: TaskShow) => (t: { due_at: string }) => s !== 'unmarked' && (s === 'all' || (s === 'late') === isCallLate(t.due_at, now));
+  const counts = {
+    ...(Object.fromEntries(TASK_SHOWS.map((s) => [s, tasks.filter(inShow(s)).length])) as Record<TaskShow, number>),
+    unmarked: unmarked.length,
+  };
   const rows = tasks.filter(inShow(show));
 
   return (
@@ -58,9 +67,11 @@ export default async function TasksPage({
         description={superAdmin ? 'Every open call, soonest first.' : 'The calls to make for your clients, soonest first.'}
       />
 
-      <TaskFilters coordinators={coordinators} coordinatorId={coordinatorId} show={show} counts={counts} />
+      <TaskFilters coordinators={coordinators} coordinatorId={coordinatorId} show={show} counts={counts} showUnmarked={superAdmin} />
 
-      {rows.length === 0 ? (
+      {show === 'unmarked' ? (
+        <UnmarkedList rows={unmarked} />
+      ) : rows.length === 0 ? (
         <Card className="p-10 text-center sm:p-12">
           <PhoneCall size={40} strokeWidth={2} className="mx-auto mb-2 text-teal" aria-hidden />
           <p className="text-[16px] font-medium text-ink">{EMPTY[show]}</p>
@@ -109,5 +120,42 @@ export default async function TasksPage({
 
       {open && <PurchasePanel purchase={open} closeHref={tasksHref(coordinatorId, show)} now={now} canCancelBooking={superAdmin} />}
     </AdminShell>
+  );
+}
+
+// Super admins: presentations whose slot time has passed but nobody marked done, oldest first. Marking one done
+// here creates its Package call (as from My presentations).
+function UnmarkedList({ rows }: { rows: PresentationRow[] }) {
+  if (rows.length === 0) {
+    return (
+      <Card className="p-10 text-center sm:p-12">
+        <PhoneCall size={40} strokeWidth={2} className="mx-auto mb-2 text-teal" aria-hidden />
+        <p className="text-[16px] font-medium text-ink">{EMPTY.unmarked}</p>
+      </Card>
+    );
+  }
+  return (
+    <Card className="overflow-hidden">
+      <ul className="divide-y divide-sand">
+        {rows.map((r) => {
+          const client = r.client_name ?? r.phone;
+          return (
+            <li key={r.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.04em] text-coral-deep">Presentation not marked done</p>
+                <Link href={`/purchases?tab=paid&open=${r.purchase_id}`} className="font-semibold text-ink hover:underline">
+                  {client}
+                </Link>
+                <p className="m-0 text-[14px] text-ink-soft">
+                  {r.test_name} · {r.counsellor_name ?? 'Counsellor'} · {presentationLabel(r.on_date, r.start_time)}
+                </p>
+                <p className="m-0 text-[13px] text-ink-muted">Coordinator: {r.coordinator_name ?? 'None yet'}</p>
+              </div>
+              <PresentationDoneButton bookingId={r.id} summary={`${client} · ${presentationLabel(r.on_date, r.start_time)}`} />
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }

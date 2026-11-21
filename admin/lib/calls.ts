@@ -1,7 +1,7 @@
 // Calls (step 2): the words and the small rules the screens show. No database access; the database makes,
 // closes and checks calls (migration 20261120120000_calls.sql, call_mark()).
 
-export type CallKind = 'payment' | 'assessment' | 'booking';
+export type CallKind = 'payment' | 'assessment' | 'booking' | 'package';
 export type CallChoice = 'done' | 'call_later' | 'not_picked' | 'not_interested';
 export type CallReason = 'too_costly' | 'not_now' | 'wrong_number' | 'other';
 export type CallEvent =
@@ -20,6 +20,7 @@ export const CALL_KIND_LABELS: Record<CallKind, string> = {
   payment: 'Payment call',
   assessment: 'Assessment call',
   booking: 'Booking call',
+  package: 'Package call',
 };
 
 export const CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested'];
@@ -117,12 +118,18 @@ function istDay(at: Date): string {
  * My tasks shows one list in due-time order (owner, 2026-11-20). The filter at the top: All · Late only (due time
  * passed) · Upcoming (not due yet).
  */
-export type TaskShow = 'all' | 'late' | 'upcoming';
+/** 'unmarked' (super admins only): presentations whose slot time passed but nobody marked done (step 5). */
+export type TaskShow = 'all' | 'late' | 'upcoming' | 'unmarked';
 export const TASK_SHOWS: readonly TaskShow[] = ['all', 'late', 'upcoming'];
-export const TASK_SHOW_LABELS: Record<TaskShow, string> = { all: 'All', late: 'Late only', upcoming: 'Upcoming' };
+export const TASK_SHOW_LABELS: Record<TaskShow, string> = {
+  all: 'All',
+  late: 'Late only',
+  upcoming: 'Upcoming',
+  unmarked: 'Presentations not marked done',
+};
 
 export function isTaskShow(v: unknown): v is TaskShow {
-  return typeof v === 'string' && (TASK_SHOWS as readonly string[]).includes(v);
+  return typeof v === 'string' && ([...TASK_SHOWS, 'unmarked'] as readonly string[]).includes(v);
 }
 
 export function isCallLate(dueAt: string, now: Date): boolean {
@@ -175,4 +182,19 @@ export function tasksHref(coordinatorId: string, show: TaskShow, open?: string):
 /** "Assessment completed 20 Nov" (the Booking call's context line). */
 export function bookingContext(completedAt: string | null): string {
   return completedAt ? `Assessment completed ${day(completedAt)}` : 'Assessment completed';
+}
+
+/** The choice as the screens show it: on a Package call, Done is "Client agreed" (owner, 2026-11-21). */
+export function choiceLabel(kind: CallKind, choice: CallChoice): string {
+  return kind === 'package' && choice === 'done' ? 'Client agreed' : CALL_CHOICE_LABELS[choice];
+}
+
+/** A closed call's result in words: on a Package call, done is "Client agreed". */
+export function outcomeLabel(kind: CallKind, outcome: CallOutcome): string {
+  return kind === 'package' && outcome === 'done' ? 'Client agreed' : CALL_OUTCOME_LABELS[outcome];
+}
+
+/** "Presentation done 21 Nov by Test Counsellor" (the Package call's context line). */
+export function packageContext(doneAt: string | null, counsellorName: string | null): string {
+  return `Presentation done${doneAt ? ` ${day(doneAt)}` : ''}${counsellorName ? ` by ${counsellorName}` : ''}`;
 }

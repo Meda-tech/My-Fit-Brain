@@ -6,7 +6,7 @@ import { AlertCircle, X } from 'lucide-react';
 import { Button, Card, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import {
   CALL_CHOICES,
-  CALL_CHOICE_LABELS,
+  choiceLabel,
   CALL_KIND_LABELS,
   CALL_NOTE_MAX,
   CALL_REASONS,
@@ -134,7 +134,7 @@ export function CallDoneButton({
                         className="h-4 w-4 accent-teal"
                         required
                       />
-                      {CALL_CHOICE_LABELS[c]}
+                      {choiceLabel(kind, c)}
                     </label>
                   ))}
                 </div>

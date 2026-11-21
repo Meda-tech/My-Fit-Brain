@@ -431,6 +431,27 @@ results with you"). The client never sees a report in the app.
   booking, Booking call reopens (due 2 working hours) with a "Booking cancelled" history line. No reschedule,
   no-show or meeting link.
 
+### Report presentation done and the Package call (step 5, owner 2026-11-21)
+
+- Migration `20261121200000_presentation_done.sql`, checks `docs/tasks/26-presentation-done-verify.sql`, behaviour
+  test `supabase/staging/staging-test-presentation.sql`, end-to-end journey `supabase/staging/staging-e2e-journey.sql`
+  (both rolled back). Wider allowed values (standing permission): `calls.kind` + `package`.
+- Admin → **My presentations** (`/presentations`): counsellors see only their own booked presentations, super admins
+  all with a counsellor filter. Upcoming and Past: date and time, client, assessment, coordinator; **Open report**
+  links to `/attempts/<id>` (report access unchanged: super admins and counsellors). Reads run on the service role
+  after the role check, filtered to the counsellor (`lib/services/presentations.ts`).
+- **Report presentation done** (`presentation_mark_done()`, confirm dialog): the booked counsellor from the slot's
+  start onwards (not before), super admins at any time; once. Saves when and who on the booking; journey Report
+  presentation actual = marked time; creates the **Package call** for the client's coordinator, due 2 working hours
+  later; journey Package call planned = that due time. A presentation marked done can no longer be cancelled.
+- **Package call**: same Mark as call done rules; Done is shown as **"Client agreed"** (`choiceLabel`,
+  `outcomeLabel` in `lib/calls.ts`; the database keeps `done`). Client agreed fills the journey's Package call actual
+  time (trigger `calls_package_journey`). Context line "Presentation done <date> by <counsellor>". No package purchase
+  or payment yet.
+- My tasks (super admins): extra filter **Presentations not marked done** (slot time passed, not marked), each with
+  the button. Purchases (Paid tab) and the side panel show "Presentation done <date>" and the Package call status;
+  super admins can also mark done (or cancel the booking) from the panel.
+
 ### Counsellor flow (admin)
 
 - Client → attempt (`/attempts/<id>`): super admins and counsellors see the **counsellor view** (alerts and

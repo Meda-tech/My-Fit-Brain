@@ -10,6 +10,7 @@ import {
   BookOpen,
   ShieldCheck,
   CalendarClock,
+  Presentation,
   LogOut,
   Menu,
   X,
@@ -103,6 +104,8 @@ export function AdminShellClient({
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/clients', label: 'Clients', icon: Users },
     { href: '/assessments', label: 'Assessments', icon: ClipboardList },
+    // My presentations: counsellors (their own) and super admins (all).
+    ...(role === 'counsellor' || isSuperAdmin ? [{ href: '/presentations', label: 'My presentations', icon: Presentation }] : []),
     // Questionnaires: super admins and counsellors; coordinators have no access (owner, 2026-11-20).
     ...(role === 'coordinator' ? [] : [{ href: '/questionnaires', label: 'Questionnaires', icon: BookOpen }]),
     // Purchases and payments: super admins and coordinators only (RLS: purchases_select, can_view_payments()).
