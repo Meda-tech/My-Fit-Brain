@@ -141,7 +141,9 @@ Never invent questions, values or report text. If something is not covered, stop
   method, Razorpay ID). The payment step and /pricing show ₹3,500 next to the regular price ₹7,000 struck
   through, with "Introductory price" (owner decision 2026-10-31; `REGULAR_PRICE_PAISE` is display only, never
   charged). Keep it only while ₹7,000 is the real regular price. The package offer card on Home (after the report
-  presentation, step 6) is a payment step too and shows the package price, the advance and the amount to pay.
+  presentation, step 6) is a payment step too and shows the package price, the advance and the amount to pay. /pricing
+  also lists the Counselling package (price, advance, you pay; read from Admin → Settings) because the payment
+  gateway wants every product published.
 - "What you get" (payment step, Home cards, /pricing; `pay.features` in `clients/lib/i18n.ts`, EN + HI):
   the assessment, one consultation, report review and guidance with your counsellor, personalised action
   plan, follow-up support, educational resources and guidance. No "diagnostic" or "treatment" wording.

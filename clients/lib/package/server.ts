@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { ClientProfile } from '../assessment/types';
 import { createAdminClient } from '../supabase/admin';
 import { razorpayConfig, razorpayGateway } from '../payments/razorpay';
-import { formatPrice } from '../payments/service';
+import { ASSESSMENT_PRICE_PAISE, formatPrice } from '../payments/service';
 import { recoverOpenPackagePayments, type PackageDeps } from './service';
 import { supabasePackageStore } from './store';
 
@@ -16,6 +16,34 @@ export function packageDeps(): PackageDeps {
     gateway: config ? razorpayGateway(config) : null,
     newId: () => randomUUID(),
     now: () => new Date(),
+  };
+}
+
+export interface PublicPackage {
+  sessions: number;
+  frequency: string;
+  price: string;
+  advance: string;
+  amount: string;
+}
+
+/**
+ * The active package for the public /pricing page (the payment gateway wants every product listed), or null when
+ * it cannot be read. Same numbers as the client's offer: price − the ₹3,500 assessment advance.
+ */
+export async function publicPackage(): Promise<PublicPackage | null> {
+  const { data, error } = await createAdminClient()
+    .from('packages')
+    .select('sessions, frequency, price_paise')
+    .eq('is_active', true)
+    .maybeSingle();
+  if (error || !data || data.price_paise <= ASSESSMENT_PRICE_PAISE) return null;
+  return {
+    sessions: data.sessions,
+    frequency: data.frequency,
+    price: formatPrice(data.price_paise),
+    advance: formatPrice(ASSESSMENT_PRICE_PAISE),
+    amount: formatPrice(data.price_paise - ASSESSMENT_PRICE_PAISE),
   };
 }
 
