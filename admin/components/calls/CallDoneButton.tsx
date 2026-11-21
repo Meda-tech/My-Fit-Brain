@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, X } from 'lucide-react';
 import { Button, Card, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import {
@@ -43,7 +42,6 @@ export function CallDoneButton({
   variant?: 'primary' | 'secondary';
   className?: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<CallChoice | ''>('');
   const [reason, setReason] = useState<CallReason | ''>('');
@@ -79,7 +77,6 @@ export function CallDoneButton({
       return;
     }
     setOpen(false);
-    router.refresh();
   };
 
   return (

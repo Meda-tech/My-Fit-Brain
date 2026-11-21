@@ -65,16 +65,23 @@ export interface PackagePaidCard {
 }
 
 /**
- * What Home shows about the package: the client's open offers (report presentation done, nothing paid yet) and
- * their paid packages. Before reading, payments made at Razorpay that this app never heard back about are settled.
+ * Package payments made at Razorpay that this app never heard back about are settled. Home runs this before
+ * packageHome(), together with the other checks (never throws).
  */
-export async function packageHome(client: ClientProfile): Promise<{ offers: PackageOfferCard[]; paid: PackagePaidCard[]; enabled: boolean }> {
-  const deps = packageDeps();
+export async function recoverPackagePayments(client: ClientProfile): Promise<void> {
   try {
-    await recoverOpenPackagePayments(deps, client);
+    await recoverOpenPackagePayments(packageDeps(), client);
   } catch (err) {
     console.warn('Package payment recovery failed:', err instanceof Error ? err.message : err);
   }
+}
+
+/**
+ * What Home shows about the package: the client's open offers (report presentation done, nothing paid yet) and
+ * their paid packages. Run recoverPackagePayments() first.
+ */
+export async function packageHome(client: ClientProfile): Promise<{ offers: PackageOfferCard[]; paid: PackagePaidCard[]; enabled: boolean }> {
+  const deps = packageDeps();
   const [offers, paid] = await Promise.all([deps.packages.offers(client.id), deps.packages.paid(client.id)]);
   return {
     enabled: deps.gateway !== null,

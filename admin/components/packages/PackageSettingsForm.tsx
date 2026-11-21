@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button, Notice, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import { savePackageAction } from '../../app/purchases/package-actions';
@@ -10,7 +9,6 @@ import type { PackageSettings } from '../../lib/package';
 // The one active package (super admins): name, sessions, frequency text, price. The client pays the price minus
 // what they paid for the assessment; payments already made keep the package as it was sold.
 export function PackageSettingsForm({ settings, assessmentPrice }: { settings: PackageSettings; assessmentPrice: number }) {
-  const router = useRouter();
   const [name, setName] = useState(settings.name);
   const [sessions, setSessions] = useState(String(settings.sessions));
   const [frequency, setFrequency] = useState(settings.frequency);
@@ -31,7 +29,6 @@ export function PackageSettingsForm({ settings, assessmentPrice }: { settings: P
     setSaving(false);
     if (!res.success) return setError(res.error ?? 'The package could not be saved.');
     setSaved(true);
-    router.refresh();
   };
 
   return (

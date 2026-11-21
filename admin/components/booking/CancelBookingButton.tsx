@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Button, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import { CANCEL_REASON_MAX } from '../../lib/booking';
@@ -10,7 +9,6 @@ import { cancelBookingAction } from '../../app/tasks/booking-actions';
 // Super admins only: "Cancel booking" with a required reason, to fix mistakes. It frees the slot and reopens the
 // Booking call (due 2 working hours). No reschedule or no-show here.
 export function CancelBookingButton({ bookingId }: { bookingId: string }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +25,6 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
       return;
     }
     setOpen(false);
-    router.refresh();
   };
 
   if (!open) {

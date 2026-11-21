@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { FileText, Upload, X } from 'lucide-react';
 import { packageOfferAction, packageReferenceUsedAction, recordPackagePaymentAction } from '../../app/purchases/package-actions';
 import { Button, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
@@ -40,7 +39,6 @@ export function PackagePaymentDialog({
   variant?: 'primary' | 'secondary';
   className?: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [offer, setOffer] = useState<PackageOffer | null | 'loading'>('loading');
   const [pending, startTransition] = useTransition();
@@ -93,7 +91,6 @@ export function PackagePaymentDialog({
         const result = await recordPackagePaymentAction(purchaseId, form);
         if (!result.ok) return setError(result.error);
         setOpen(false);
-        router.refresh();
       } catch {
         setError('Proof could not be uploaded. Please try again.');
       }

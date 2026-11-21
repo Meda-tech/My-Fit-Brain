@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 import { PhoneCall } from 'lucide-react';
 import { requireStaff } from '../../lib/auth';
 import { AdminShell } from '../../components/AdminShell';
@@ -45,7 +46,9 @@ export default async function TasksPage({
   const asked: TaskShow = isTaskShow(sp.show) ? sp.show : sp.late === '1' ? 'late' : 'all';
   const show: TaskShow = asked === 'unmarked' && !superAdmin ? 'all' : asked;
 
-  await syncCalls();
+  // The 30-minute rule (Payment calls, package tries) runs after the page is sent, off the page's critical path:
+  // a call that reaches its 30 minutes shows on the next load. Paid / completed / booked are instant (triggers).
+  after(syncCalls);
   const [tasks, coordinators, open, unmarked] = await Promise.all([
     listTasks({ coordinatorId }),
     superAdmin ? listCoordinators() : Promise.resolve(null),

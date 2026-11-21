@@ -736,6 +736,15 @@ existing migrations, `.env*` files.
   Next.js 16 uses `proxy.ts` (the old `middleware.ts` name is deprecated).
 - Security headers live in each app's `next.config.ts` (HSTS, nosniff, frame and permissions policy;
   admin also `noindex`). Local-network origins are trusted in development only.
+- **Speed** (checked 2026-11-21): every Supabase call is a network trip (~300 ms from a developer's computer, even
+  for a call that does nothing; a few ms when the Vercel function region is Mumbai `bom1`, next to the databases in
+  `ap-south-1`). A page's time ≈ the number of trips that wait for one another, so:
+  - start every read that does not need another read's result at the same time (`Promise.all`); a page should need
+    about 3 waves: sign-in → the page's reads → names;
+  - never `await` work the page does not show: `calls_sync()` runs with `after()` (a call that reaches its
+    30 minutes shows on the next load; paid / completed / booked are instant through the triggers);
+  - after a server action that calls `revalidatePath` for the current page, do not also call `router.refresh()`
+    (it renders the whole page a second time). Keep `router.refresh()` only after `fetch` to an API route.
 
 ## Status
 

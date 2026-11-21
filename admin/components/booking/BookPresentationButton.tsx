@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, X } from 'lucide-react';
 import { Button, Card, Notice, Pill, cn } from '../brand';
 import { dayLabel, hm } from '../../lib/availability';
@@ -32,7 +31,6 @@ export function BookPresentationButton({
   variant?: 'primary' | 'secondary';
   className?: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [days, setDays] = useState<FreeDay[]>([]);
@@ -69,7 +67,6 @@ export function BookPresentationButton({
       return;
     }
     setOpen(false);
-    router.refresh();
   };
 
   return (

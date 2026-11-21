@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Button, Card, Notice, cn } from '../brand';
 import { markPresentationDoneAction } from '../../app/presentations/actions';
@@ -20,7 +19,6 @@ export function PresentationDoneButton({
   variant?: 'primary' | 'secondary';
   className?: string;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +33,6 @@ export function PresentationDoneButton({
       return;
     }
     setOpen(false);
-    router.refresh();
   };
 
   return (

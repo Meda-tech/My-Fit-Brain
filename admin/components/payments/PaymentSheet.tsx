@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
 import { cancelPaymentAction, markRefundedAction, movePurchaseAction } from '../../app/payments/actions';
 import { CANCEL_REASON_MAX_LENGTH } from '../../lib/offline-payments';
@@ -247,7 +246,6 @@ function SheetBody({
  * or cancel with a reason (offline; the row stays, nothing is deleted).
  */
 function PurchaseActions({ payment: p }: { payment: PaymentListRow }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<'idle' | 'move' | 'cancel'>('idle');
   const [phone, setPhone] = useState('');
@@ -268,7 +266,6 @@ function PurchaseActions({ payment: p }: { payment: PaymentListRow }) {
       setMode('idle');
       setPhone('');
       setReason('');
-      router.refresh();
     });
   };
 

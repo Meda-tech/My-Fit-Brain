@@ -315,11 +315,10 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) return null;
   const db = await createClient();
-  const { data } = await db.from('purchases').select(COLUMNS).eq('id', id).eq('kind', 'assessment').or(SHOWN).maybeSingle();
-  if (!data) return null;
-  const [row] = await withNames(db, [data as unknown as RawPurchase]);
-
-  const [{ data: links }, { data: callData }] = await Promise.all([
+  // The row, its payments and its calls are read at the same time (all by id; RLS decides what this staff member
+  // sees, so a row they may not see returns nothing and its payments / calls are not used).
+  const [{ data }, { data: links }, { data: callData }] = await Promise.all([
+    db.from('purchases').select(COLUMNS).eq('id', id).eq('kind', 'assessment').or(SHOWN).maybeSingle(),
     db
       .from('purchase_payments')
       .select(
@@ -331,14 +330,19 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
       .select('id, kind, status, outcome, created_at, due_at, closed_at, closed_note, call_logs(id, at, entry, choice, reason, note, follow_up_at, event, by_name)')
       .eq('purchase_id', id),
   ]);
+  if (!data) return null;
   type RawPayment = Omit<PurchasePayment, 'recorded_by_name' | 'accounts_check'> & { recorded_by: string | null };
   type RawLink = { accounts_check: PurchasePayment['accounts_check']; payments: One<RawPayment> };
   const raw = ((links ?? []) as unknown as RawLink[])
     .map((l) => ({ check: l.accounts_check, p: one(l.payments) }))
     .filter((l): l is { check: PurchasePayment['accounts_check']; p: RawPayment } => !!l.p);
 
+  // The row's names and the staff names of its payments, at the same time.
   const staffIds = [...new Set(raw.map((l) => l.p.recorded_by).filter((v): v is string => !!v))];
-  const { data: staff } = staffIds.length ? await createAdminClient().from('profiles').select('id, full_name').in('id', staffIds) : { data: [] };
+  const [[row], { data: staff }] = await Promise.all([
+    withNames(db, [data as unknown as RawPurchase]),
+    staffIds.length ? createAdminClient().from('profiles').select('id, full_name').in('id', staffIds) : Promise.resolve({ data: [] }),
+  ]);
   const staffName = new Map(((staff ?? []) as { id: string; full_name: string }[]).map((s) => [s.id, s.full_name]));
 
   const payments = raw

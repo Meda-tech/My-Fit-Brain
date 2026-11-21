@@ -87,17 +87,17 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
     .map((t) => ({ t, p: one(t.purchases) }))
     .filter((x): x is { t: RawTask; p: TaskPurchase } => !!x.p);
   const counsellorIds = raw.flatMap(({ p }) => (p.presentation_bookings ?? []).filter((b) => b.status === 'booked').map((b) => b.counsellor_id));
-  const names = await nameLookup(db, raw.map(({ p }) => p), counsellorIds);
-
-  // How far the client got with the assessment (only ids of rows the staff member may see).
+  // The names and how far each client got with the assessment (only ids of rows the staff member may see), at
+  // the same time.
   const attemptIds = [
     ...new Set(
       raw.flatMap(({ p }) => (p.purchase_payments ?? []).map((l) => one(l.payments)?.attempt_id).filter((v): v is string => !!v))
     ),
   ];
-  const { data: attempts } = attemptIds.length
-    ? await createAdminClient().from('attempts').select('id, status').in('id', attemptIds)
-    : { data: [] };
+  const [names, { data: attempts }] = await Promise.all([
+    nameLookup(db, raw.map(({ p }) => p), counsellorIds),
+    attemptIds.length ? createAdminClient().from('attempts').select('id, status').in('id', attemptIds) : Promise.resolve({ data: [] }),
+  ]);
   const attemptStatus = new Map(((attempts ?? []) as { id: string; status: string }[]).map((a) => [a.id, a.status]));
 
   return raw.map(({ t, p }) => {

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { FileText, Plus, Upload, X } from 'lucide-react';
 import { recordOfflinePaymentAction, referenceUsedAction } from '../../app/clients/[id]/actions';
 import { Button, Notice, helpTextClasses, inputClasses, labelClasses } from '../brand';
@@ -38,7 +37,6 @@ function fileSize(bytes: number): string {
 }
 
 export function OfflinePaymentDialog({ clientId, questionnaires, price, today, staffName }: Props) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<OfflineMethod>('upi');
@@ -98,7 +96,6 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
         setOpen(false);
         setUsedCount(0);
         setProof(null);
-        router.refresh();
       } catch {
         setError('Proof could not be uploaded. Please try again.');
       }

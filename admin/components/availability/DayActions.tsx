@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Button, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import { addAvailabilityAction, undoAvailabilityAction } from '../../app/availability/actions';
@@ -40,7 +39,6 @@ function TimeRange({ start, end, onStart, onEnd, idPrefix }: { start: string; en
 // The two changes on a date: Mark off (whole day or a time range, optional reason) and Add custom slots (a time
 // range split into slots). One form open at a time; the database checks every rule again.
 export function DayActions({ counsellorId, date, slotMinutes }: { counsellorId: string; date: string; slotMinutes: number }) {
-  const router = useRouter();
   const [mode, setMode] = useState<'off' | 'custom' | null>(null);
   const [wholeDay, setWholeDay] = useState(true);
   const [start, setStart] = useState('');
@@ -71,7 +69,6 @@ export function DayActions({ counsellorId, date, slotMinutes }: { counsellorId: 
       return;
     }
     setMode(null);
-    router.refresh();
   };
 
   if (!mode) {
@@ -134,7 +131,6 @@ export function DayActions({ counsellorId, date, slotMinutes }: { counsellorId: 
 
 /** Undo a Mark off or a custom slot range (refused when any of its slots is booked). */
 export function UndoButton({ changeId }: { changeId: string }) {
-  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const undo = async () => {
@@ -146,7 +142,6 @@ export function UndoButton({ changeId }: { changeId: string }) {
       setError(res.error ?? 'It could not be undone.');
       return;
     }
-    router.refresh();
   };
   return (
     <span className="grid justify-items-end gap-1">

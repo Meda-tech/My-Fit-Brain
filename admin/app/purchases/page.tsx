@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { after } from 'next/server';
 import { ShoppingBag } from 'lucide-react';
 import { requireStaff } from '../../lib/auth';
 import { AdminShell } from '../../components/AdminShell';
@@ -101,14 +102,19 @@ export default async function PurchasesPage({
   const { profile } = await requireStaff();
   if (!canViewPurchases(profile.role)) redirect('/dashboard');
   const sp = await searchParams;
-  await syncCalls();
-  const counts = await purchaseTabCounts();
+  // The 30-minute rule (Payment calls, package tries) runs after the page is sent, off the page's critical path:
+  // a call that reaches its 30 minutes shows on the next load. Paid / completed / booked are instant (triggers).
+  after(syncCalls);
   // Type "Package" (super admins only): the paid packages. Coordinators never see them here.
   const superAdmin = profile.role === 'super_admin';
   const packageTab = superAdmin && sp.tab === 'package';
-  const tab: PurchaseTab = isPurchaseTab(sp.tab) ? sp.tab : defaultPurchaseTab(profile.role, counts.unpaid);
+  // The tab counts are needed first only when a coordinator opens the page without a tab (their start tab depends
+  // on the Unpaid count); otherwise the counts and the list are read at the same time.
+  const countsFirst = !isPurchaseTab(sp.tab) && !packageTab && profile.role === 'coordinator' ? await purchaseTabCounts() : null;
+  const tab: PurchaseTab = isPurchaseTab(sp.tab) ? sp.tab : defaultPurchaseTab(profile.role, countsFirst?.unpaid ?? 0);
   const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
-  const [{ rows, total }, open, packages] = await Promise.all([
+  const [counts, { rows, total }, open, packages] = await Promise.all([
+    countsFirst ?? purchaseTabCounts(),
     packageTab ? Promise.resolve({ rows: [] as PurchaseRow[], total: 0 }) : listPurchases(tab, page),
     sp.open && UUID.test(sp.open) ? getPurchase(sp.open) : Promise.resolve(null),
     superAdmin ? listPackagePurchases() : Promise.resolve([] as PackagePurchaseRow[]),
