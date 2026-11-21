@@ -28,7 +28,8 @@ something must say so in plain words at its top. Verification SQL is `select` on
 - Work on STAGING. Additive SQL only. Never delete data or write deleting SQL without the owner's explicit
   permission. After each step, name the SQL file(s) to paste into production once the owner has tested.
 - Production stays untouched until the whole flow works (owner, 2026-11-20): each step's SQL files are collected
-  in `docs/deploy/production-log.md` under "To paste later, in order".
+  in `docs/deploy/production-log.md` under "To paste later, in order". (The whole flow went live on 2026-11-21;
+  new SQL files are collected there again, and the owner pastes them.)
 - Make every screen responsive: phones, tablets and laptops (owner, 2026-11-20).
 - Standing permission (owner, 2026-11-20): a CHECK rule / allowed-values list may be replaced by a WIDER one (new
   outcomes, events, statuses) when a step needs it, as long as no rows are removed or changed. Say so in the step's
@@ -862,4 +863,9 @@ existing migrations, `.env*` files.
   production; removed from staging; the code is only in local branch `archive/fms-2026-11-20` and
   `D:\Tech\Meda\mfb-backup-2026-11-20.bundle`. Do not reuse it unless the owner asks.
 - Done: Next.js 16.4.6 in both apps (security advisory on 16.4.2), on `main` 2026-11-20.
+- **Done: go-live, 2026-11-21, 5:52:58 pm IST.** Steps 1–11 (purchases, calls, availability, booking, presentation,
+  packages, counsellor access, before the system) are on production: 18 files and the one-time go-live step
+  (coordinator Reetu, counsellor Preeti, 18 clients assigned), all 110 checks true. Claude ran it with the owner's
+  permission for that go-live only; from then on the owner runs production SQL again (Database rules). Backup
+  taken just before: `D:\Tech\Meda\backups\prod-2026-11-21-1751\`. Details: `docs/deploy/production-log.md`.
 - Next: Task 07 — polish.

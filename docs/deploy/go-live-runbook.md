@@ -1,5 +1,9 @@
 # Go-live runbook
 
+> **Used on 2026-11-21: production went live at 5:52:58 pm IST** (rows 24–42 of `docs/deploy/production-log.md`).
+> Kept for reference and for a new environment. The check order below is the corrected one: on the day, check 25
+> was first run after file 7 and check 31 after file 14, which stopped the run twice (no harm done).
+
 For the owner. You run every step on production yourself; nothing here is run by Claude. Every SQL file below
 was rehearsed on a restored copy of the production backup of 21 Nov 2026: all 18 files ran without an error or a
 warning, and all 110 checks came back true (`docs/deploy/production-log.md`, "Backups and rehearsals").
@@ -113,17 +117,17 @@ without `|t` / `|f` are counts for reading. Any `|f`: stop and send the output t
 | 4 | `20261120130000_calls_go_live.sql` — **this moment becomes go-live** | | |
 | 5 | `20261121000000_calls_cleanup.sql` | yes | `23-calls-go-live-verify.sql` |
 | 6 | `20261121000001_counsellor_availability.sql` | | `24-availability-verify.sql` |
-| 7 | `20261121100000_presentation_booking.sql` | yes | `25-booking-verify.sql` |
+| 7 | `20261121100000_presentation_booking.sql` | yes | — (check 25 runs after file 14: it uses `before_system()`) |
 | 8 | `20261121200000_presentation_done.sql` | yes | `26-presentation-done-verify.sql` |
 | 9 | `20261121300000_packages.sql` | yes | `27-packages-verify.sql` |
 | 10 | `20261121400000_presentation_label_12h.sql` | | |
 | 11 | `20261121400001_presentation_label_range.sql` | | `28-presentation-label-verify.sql` |
 | 12 | `20261121500000_booking_three_working_days.sql` | | `29-booking-window-verify.sql` |
 | 13 | `20261121600000_counsellor_clients.sql` | | `30-counsellor-clients-verify.sql` |
-| 14 | `20261121700000_before_system.sql` | | |
+| 14 | `20261121700000_before_system.sql` | | `25-booking-verify.sql` |
 | 15 | `20261121700001_before_system_planned.sql` | | |
 | 16 | `20261121800000_admin_presentation_done.sql` | yes | |
-| 17 | `20261121900000_old_purchases_bookable.sql` | | `31-before-system-verify.sql` |
+| 17 | `20261121900000_old_purchases_bookable.sql` | | `31-before-system-verify.sql` (not earlier: one row tests file 17) |
 | 18 | `20261122000000_payment_calls_go_live.sql` | | `33-payment-calls-go-live-verify.sql`, then `23-calls-go-live-verify.sql` again |
 
 (The check files are in `docs/tasks/`; give the path as `docs/tasks/<name>`.)

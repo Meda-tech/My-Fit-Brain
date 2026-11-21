@@ -2,7 +2,8 @@
 
 Which files from `supabase/migrations/` are on the **production** database (`tmifixelvfdtutsakwor`).
 Claude never connects to production to change anything. The owner pastes each new file into the
-production **SQL Editor** and then it is added here.
+production **SQL Editor** and then it is added here. One exception: the go-live of 2026-11-21, which Claude ran on
+production with the owner's permission for that go-live only (rows 24–42 below); the rule applies again after it.
 
 How to add a line: after pasting file X into production and seeing it succeed, add a row with the date.
 
@@ -42,6 +43,25 @@ token table).
 | 21 | `20261103000000_offline_payments.sql` | before 2026-11-04 |
 | 22 | `20261103000001_drop_google_drive_connection.sql` | before 2026-11-04 |
 | 23 | `20261105000000_attempt_conclusions.sql` | 2026-11-05 (owner confirmed) |
+| 24 | `20261120100000_purchases.sql` | 2026-11-21, 5:52:46 pm IST (go-live, run by Claude with the owner's permission) |
+| 25 | `20261120110000_payment_attempts.sql` | 2026-11-21, 5:52:49 pm IST (go-live, run by Claude with the owner's permission) |
+| 26 | `20261120120000_calls.sql` | 2026-11-21, 5:52:54 pm IST (go-live, run by Claude with the owner's permission) |
+| 27 | `20261120130000_calls_go_live.sql` | 2026-11-21, 5:52:57 pm — **go-live = 5:52:58 pm** IST (go-live, run by Claude with the owner's permission) |
+| 28 | `20261121000000_calls_cleanup.sql` | 2026-11-21, 5:52:59 pm IST (go-live, run by Claude with the owner's permission) |
+| 29 | `20261121000001_counsellor_availability.sql` | 2026-11-21, 5:53:02 pm IST (go-live, run by Claude with the owner's permission) |
+| 30 | `20261121100000_presentation_booking.sql` | 2026-11-21, 5:53:06 pm IST (go-live, run by Claude with the owner's permission) |
+| 31 | `20261121200000_presentation_done.sql` | 2026-11-21, 5:54:19 pm IST (go-live, run by Claude with the owner's permission) |
+| 32 | `20261121300000_packages.sql` | 2026-11-21, 5:54:22 pm IST (go-live, run by Claude with the owner's permission) |
+| 33 | `20261121400000_presentation_label_12h.sql` | 2026-11-21, 5:54:28 pm IST (go-live, run by Claude with the owner's permission) |
+| 34 | `20261121400001_presentation_label_range.sql` | 2026-11-21, 5:54:29 pm IST (go-live, run by Claude with the owner's permission) |
+| 35 | `20261121500000_booking_three_working_days.sql` | 2026-11-21, 5:54:32 pm IST (go-live, run by Claude with the owner's permission) |
+| 36 | `20261121600000_counsellor_clients.sql` | 2026-11-21, 5:54:35 pm IST (go-live, run by Claude with the owner's permission) |
+| 37 | `20261121700000_before_system.sql` | 2026-11-21, 5:54:39 pm IST (go-live, run by Claude with the owner's permission) |
+| 38 | `20261121700001_before_system_planned.sql` | 2026-11-21, 5:55:32 pm IST (go-live, run by Claude with the owner's permission) |
+| 39 | `20261121800000_admin_presentation_done.sql` | 2026-11-21, 5:55:34 pm IST (go-live, run by Claude with the owner's permission) |
+| 40 | `20261121900000_old_purchases_bookable.sql` | 2026-11-21, 5:55:36 pm IST (go-live, run by Claude with the owner's permission) |
+| 41 | `20261122000000_payment_calls_go_live.sql` | 2026-11-21, 5:55:39 pm IST (go-live, run by Claude with the owner's permission) |
+| 42 | **One-time go-live step** `supabase/go-live/assign-old-clients.sql` (not a migration; never run it again) | 2026-11-21, 5:55:43 pm IST — result: coordinator Reetu, counsellor Preeti, 1 phone added, 0 purchases changed, 18 clients assigned to the counsellor |
 
 ## One-time data fixes (not migrations)
 
@@ -52,9 +72,14 @@ token table).
 
 ## To paste later, in order
 
-Owner decision 2026-11-20: production stays untouched until the whole flow (purchases, calls and the next steps)
-works on staging. Each step adds its files here. When the owner says so, paste ALL of them into the production SQL
-Editor in this order, one at a time, then run the checks. Do not paste a step on its own.
+Nothing waiting. (Production stayed untouched until the whole flow worked, owner decision 2026-11-20; the 18 files
+and the go-live step below went live on 2026-11-21 and are listed above as rows 24–42.)
+
+### Go-live of 2026-11-21: what each file did, and its checks
+
+Run on production by Claude (owner's permission, this go-live only), after a fresh backup
+(`D:\Tech\Meda\backups\prod-2026-11-21-1751\`, full.dump 641,279 bytes, data for 55 tables). Each file was its own
+transaction; each group was checked with `supabase/prod-readonly.ps1 -Check` (read-only).
 
 | # | File | On staging since | Checks |
 |---|---|---|---|
@@ -77,6 +102,18 @@ Editor in this order, one at a time, then run the checks. Do not paste a step on
 | 17 | `20261121900000_old_purchases_bookable.sql` (old purchases can be booked into a slot by hand: new body for `presentation_book()` only; removes nothing) | 2026-11-21 | `docs/tasks/31-before-system-verify.sql` |
 | 18 | `20261122000000_payment_calls_go_live.sql` (Payment calls for unpaid tries in the 7 days before go-live start at go-live, due 2 working hours later, like the other calls: new trigger `calls_start_at_go_live`, open Payment calls not yet worked get that start and due time; removes nothing) | 2026-11-21 | `docs/tasks/33-payment-calls-go-live-verify.sql`; then 23 again |
 | 19 | **One-time go-live step, not a migration:** `supabase/go-live/assign-old-clients.sql` (all existing clients get the only active coordinator; all existing clients with a paid assessment are assigned to the only active counsellor). It STOPS and changes nothing unless there is exactly one active coordinator and one active counsellor: then fix that in Admin → Team and paste it again. | 2026-11-21 | `docs/tasks/32-admin-presentation-verify.sql`: every row true |
+
+**Checks on production.** After the files: 21 (16/16), 21b (9/9), 23 (19/19), 24 (8/8), 26 (7/7), 27 (14/14),
+28 (1/1), 29 (3/3), 30 (7/7), 25 (11/11, after file 14), 31 (3/3, after file 17), 33 (3/3), 23 again (19/19).
+After the go-live step, all 13 check files again: **110 true, 0 false**.
+
+**Two stops on the way, both from check order, not from production** (the owner said continue each time):
+check 25 was first run after file 7 but now uses `before_system()` from file 14 (error, nothing changed); check 31
+was then run after file 14 but one row tests file 17. The runbook now runs 25 after file 14 and 31 after file 17.
+
+**Production right after go-live (read-only counts):** 24 assessment purchases and tries (14 before the system, 10 in
+the flow), 19 clients, 25 payments; open calls: 9 Booking and 1 Payment, all due Mon 23 Nov 10:52 am IST, none late;
+18 clients assigned to the counsellor.
 
 ## Backups and rehearsals
 
