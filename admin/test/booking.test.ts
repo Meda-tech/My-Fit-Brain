@@ -29,7 +29,9 @@ describe('book presentation', () => {
   });
 
   it('labels', () => {
-    expect(presentationLabel('2026-11-23', '10:00:00')).toBe('Mon, 23 Nov 2026, 10:00');
+    expect(presentationLabel('2026-11-23', '10:00:00', '10:30:00')).toBe('Mon, 23 Nov 2026, 10:00–10:30 am');
+    expect(presentationLabel('2026-11-23', '21:00:00', '21:30:00')).toBe('Mon, 23 Nov 2026, 9:00–9:30 pm');
+    expect(presentationLabel('2026-11-23', '11:30:00', '12:00:00')).toBe('Mon, 23 Nov 2026, 11:30 am–12:00 pm');
     expect(bookingContext('2026-11-20T08:00:00Z')).toBe('Assessment completed 20 Nov');
   });
 });

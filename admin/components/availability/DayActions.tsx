@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Button, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import { addAvailabilityAction, undoAvailabilityAction } from '../../app/availability/actions';
+import { TimeSelect } from '../TimeSelect';
 
 const OPTION =
   'flex min-h-11 cursor-pointer items-center gap-3 rounded-input border border-sand px-3.5 text-[15px] text-ink has-[:checked]:border-teal has-[:checked]:bg-mist';
@@ -24,13 +25,13 @@ function TimeRange({ start, end, onStart, onEnd, idPrefix }: { start: string; en
         <label htmlFor={`${idPrefix}-from`} className={labelClasses}>
           From
         </label>
-        <input id={`${idPrefix}-from`} type="time" step={1800} required value={start} onChange={(e) => onStart(e.target.value)} className={inputClasses} />
+        <TimeSelect id={`${idPrefix}-from`} required value={start} onChange={onStart} />
       </div>
       <div>
         <label htmlFor={`${idPrefix}-to`} className={labelClasses}>
           To
         </label>
-        <input id={`${idPrefix}-to`} type="time" step={1800} required value={end} onChange={(e) => onEnd(e.target.value)} className={inputClasses} />
+        <TimeSelect id={`${idPrefix}-to`} required value={end} onChange={onEnd} />
       </div>
     </div>
   );
@@ -113,7 +114,7 @@ export function DayActions({ counsellorId, date, slotMinutes }: { counsellorId: 
       ) : (
         <div>
           <TimeRange start={start} end={end} onStart={setStart} onEnd={setEnd} idPrefix={`custom-${date}`} />
-          <p className={helpTextClasses}>Split into {slotMinutes}-minute slots, e.g. 10:00–12:00 or 18:00–18:30.</p>
+          <p className={helpTextClasses}>Split into {slotMinutes}-minute slots, e.g. 10:00 am–12:00 pm or 6:00 pm–6:30 pm.</p>
         </div>
       )}
 

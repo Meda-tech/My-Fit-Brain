@@ -40,7 +40,7 @@ describe('journey: a finished journey', () => {
       { id: 'k', kind: 'package', status: 'closed', outcome: 'package_paid', due_at: '2026-11-24T09:00:00Z', closed_at: '2026-11-24T10:00:00Z', closed_note: null, prior_calls: 1,
         logs: [log({ at: '2026-11-24T06:00:00Z', choice: 'agreed', follow_up_at: '2026-11-24T09:00:00Z' })] },
     ],
-    presentation: { counsellor_name: 'Test Counsellor', on_date: '2026-11-23', start_time: '10:00:00', booked_at: '2026-11-20T10:00:00Z', booked_by_name: 'Test Coordinator', done_at: '2026-11-23T05:00:00Z', done_by_name: 'Test Counsellor' },
+    presentation: { counsellor_name: 'Test Counsellor', on_date: '2026-11-23', start_time: '10:00:00', end_time: '10:30:00', booked_at: '2026-11-20T10:00:00Z', booked_by_name: 'Test Coordinator', done_at: '2026-11-23T05:00:00Z', done_by_name: 'Test Counsellor' },
     packagePaid: { amount_paise: 3150000, paid_at: '2026-11-24T10:00:00Z', provider: 'razorpay', method: 'netbanking', recorded_by_name: null },
   };
   const j = buildJourney(input, NOW);

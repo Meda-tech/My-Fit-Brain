@@ -166,7 +166,7 @@ export function isCallLate(dueAt: string, now: Date): boolean {
 /** "Today, 4:19 pm" · "Tomorrow, 9:49 am" · "Mon, 23 Nov, 10:00 am" (India time). */
 export function dueLabel(dueAt: string, now: Date): string {
   const due = new Date(dueAt);
-  const t = due.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  const t = due.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
   if (istDay(due) === istDay(now)) return `Today, ${t}`;
   if (istDay(due) === istDay(new Date(now.getTime() + 24 * HOUR_MS))) return `Tomorrow, ${t}`;
   const d = due.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
@@ -176,7 +176,7 @@ export function dueLabel(dueAt: string, now: Date): string {
 // --- The one context line of a task -----------------------------------------------------------------------
 
 const time = (iso: string) =>
-  new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
 const day = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' });
 
 /** "2 tries, last 4:19 pm" (a date is added when the last try was not today); "· payment failed" when it failed. */

@@ -17,7 +17,7 @@ import {
   dayLabel,
   describeChange,
   describeSettings,
-  hm,
+  slotRange,
   isDate,
   isMonth,
   istToday,
@@ -236,7 +236,7 @@ function DayPanel({
             {slots.map((s) => (
               <li key={s.start_time} className={cn('rounded-input border px-2.5 py-2 text-[14px]', STATE_CLASSES[s.state])}>
                 <span className="block font-semibold">
-                  {hm(s.start_time)}–{hm(s.end_time)}
+                  {slotRange(s.start_time, s.end_time)}
                 </span>
                 <span className="text-[12px]">
                   {SLOT_STATE_LABELS[s.state]}

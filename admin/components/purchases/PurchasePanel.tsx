@@ -152,7 +152,7 @@ export function PurchasePanel({
         <>
           <PresentationDoneButton
             bookingId={p.presentation.id}
-            summary={`${clientLabel} · ${presentationLabel(p.presentation.on_date, p.presentation.start_time)}`}
+            summary={`${clientLabel} · ${presentationLabel(p.presentation.on_date, p.presentation.start_time, p.presentation.end_time)}`}
             variant={main('presentation')}
           />
           <CancelBookingButton bookingId={p.presentation.id} />

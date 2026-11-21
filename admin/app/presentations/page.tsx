@@ -91,7 +91,7 @@ function PresentationItem({ r, superAdmin, now }: { r: PresentationRow; superAdm
   return (
     <li className="flex flex-col gap-3 p-4 sm:px-5 lg:flex-row lg:items-center lg:gap-6">
       <div className="min-w-0 flex-1">
-        <p className="m-0 font-semibold text-ink">{presentationLabel(r.on_date, r.start_time)}</p>
+        <p className="m-0 font-semibold text-ink">{presentationLabel(r.on_date, r.start_time, r.end_time)}</p>
         <p className="m-0 text-[15px] text-ink">
           {client}
           {r.client_name && <span className="ml-2 font-mono text-[12px] text-ink-muted">{r.phone}</span>}
@@ -121,7 +121,7 @@ function PresentationItem({ r, superAdmin, now }: { r: PresentationRow; superAdm
         )}
         {!r.done_at &&
           (started || superAdmin ? (
-            <PresentationDoneButton bookingId={r.id} summary={`${client} · ${presentationLabel(r.on_date, r.start_time)}`} variant={started ? 'primary' : 'secondary'} />
+            <PresentationDoneButton bookingId={r.id} summary={`${client} · ${presentationLabel(r.on_date, r.start_time, r.end_time)}`} variant={started ? 'primary' : 'secondary'} />
           ) : (
             <span className={cn('text-[13px] text-ink-muted')}>Can be marked done from {hm(r.start_time)} on the day</span>
           ))}

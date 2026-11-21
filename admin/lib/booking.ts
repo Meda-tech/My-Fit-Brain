@@ -1,7 +1,7 @@
 // Book presentation (step 4): grouping the free slots for the picker, and the words. No database access; the
 // database lists the free slots (free_presentation_slots()) and books (presentation_book(), refuses a double booking).
 
-import { dayLabel, hm } from './availability';
+import { dayLabel, slotRange } from './availability';
 
 export interface FreeSlotRow {
   counsellor_id: string;
@@ -38,9 +38,9 @@ export function groupFreeSlots(rows: FreeSlotRow[], preferredDays = PREFERRED_DA
   return [...days.entries()].map(([date, counsellors], i) => ({ date, preferred: i < preferredDays, counsellors: [...counsellors.values()] }));
 }
 
-/** "Mon, 23 Nov 2026, 10:00". */
-export function presentationLabel(date: string, start: string): string {
-  return `${dayLabel(date)}, ${hm(start)}`;
+/** "Mon, 23 Nov 2026, 10:00–10:30 am": the whole slot, start to end. */
+export function presentationLabel(date: string, start: string, end: string | null): string {
+  return `${dayLabel(date)}, ${slotRange(start, end)}`;
 }
 
 /** Booked presentation of a purchase, as the screens show it. */

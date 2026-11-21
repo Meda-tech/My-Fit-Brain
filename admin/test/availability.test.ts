@@ -6,6 +6,8 @@ import {
   describeChange,
   describeSettings,
   hm,
+  twelveHourText,
+  dayTimes,
   isDate,
   isMonth,
   istToday,
@@ -26,11 +28,18 @@ describe('availability words', () => {
         lunch_start: '13:00:00',
         lunch_end: '13:30:00',
       })
-    ).toBe('30-minute slots, Monday–Saturday, 9:00–18:00, lunch 13:00–13:30');
+    ).toBe('30-minute slots, Monday–Saturday, 9:00 am–6:00 pm, lunch 1:00 pm–1:30 pm');
     expect(describeChange({ kind: 'off', start_time: null, end_time: null })).toBe('Off all day');
-    expect(describeChange({ kind: 'off', start_time: '14:00:00', end_time: '16:00:00' })).toBe('Off 14:00–16:00');
-    expect(describeChange({ kind: 'custom', start_time: '18:00:00', end_time: '18:30:00' })).toBe('Custom slots 18:00–18:30');
-    expect(hm('09:30:00')).toBe('9:30');
+    expect(describeChange({ kind: 'off', start_time: '14:00:00', end_time: '16:00:00' })).toBe('Off 2:00 pm–4:00 pm');
+    expect(describeChange({ kind: 'custom', start_time: '18:00:00', end_time: '18:30:00' })).toBe('Custom slots 6:00 pm–6:30 pm');
+    expect(hm('09:30:00')).toBe('9:30 am');
+    expect([hm('00:00'), hm('12:00'), hm('12:30:00'), hm('23:45')]).toEqual(['12:00 am', '12:00 pm', '12:30 pm', '11:45 pm']);
+    expect(twelveHourText('Test Counsellor, Mon 23 Nov 2026, 14:00 · Booked wrong')).toBe('Test Counsellor, Mon 23 Nov 2026, 2:00 pm · Booked wrong');
+    expect(twelveHourText('Mon 23 Nov 2026, 2:00 pm')).toBe('Mon 23 Nov 2026, 2:00 pm');
+    const times = dayTimes(30);
+    expect(times).toHaveLength(48);
+    expect(times.slice(0, 2)).toEqual([{ value: '00:00', label: '12:00 am' }, { value: '00:30', label: '12:30 am' }]);
+    expect(times[27]).toEqual({ value: '13:30', label: '1:30 pm' });
   });
 });
 

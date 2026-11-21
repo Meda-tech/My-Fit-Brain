@@ -71,7 +71,7 @@ function Times({ t }: { t: JourneyTask }) {
       {t.planned && (
         <span className={cn(t.late && 'font-semibold text-coral-deep')}>
           {t.late ? 'Late · was due ' : 'Planned '}
-          {formatDateTime(t.planned)}
+          {t.plannedLabel ?? formatDateTime(t.planned)}
         </span>
       )}
       {t.planned && t.actual && <span className="text-ink-muted"> · </span>}

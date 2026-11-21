@@ -152,11 +152,11 @@ function UnmarkedList({ rows }: { rows: PresentationRow[] }) {
                   {client}
                 </Link>
                 <p className="m-0 text-[14px] text-ink-soft">
-                  {r.test_name} · {r.counsellor_name ?? 'Counsellor'} · {presentationLabel(r.on_date, r.start_time)}
+                  {r.test_name} · {r.counsellor_name ?? 'Counsellor'} · {presentationLabel(r.on_date, r.start_time, r.end_time)}
                 </p>
                 <p className="m-0 text-[13px] text-ink-muted">Coordinator: {r.coordinator_name ?? 'None yet'}</p>
               </div>
-              <PresentationDoneButton bookingId={r.id} summary={`${client} · ${presentationLabel(r.on_date, r.start_time)}`} />
+              <PresentationDoneButton bookingId={r.id} summary={`${client} · ${presentationLabel(r.on_date, r.start_time, r.end_time)}`} />
             </li>
           );
         })}

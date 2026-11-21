@@ -9,6 +9,7 @@
 // because it was not needed (e.g. paid directly: no Payment call).
 
 import { formatAmount } from '../components/payments/amount';
+import { twelveHourText } from './availability';
 import { paymentMethodLabel } from '../components/payments/format';
 import { CALL_EVENT_LABELS, CALL_REASON_LABELS, choiceLabel, type CallChoice, type CallEvent, type CallKind, type CallOutcome, type CallReason } from './calls';
 
@@ -53,6 +54,8 @@ export interface JourneyTask {
   status: JourneyStatus;
   /** Due time (calls) or slot time (presentation). */
   planned: string | null;
+  /** How the planned time is shown when it is a slot: "Sun, 22 Nov 2026, 9:00–9:30 pm". */
+  plannedLabel?: string;
   /** When it was completed. */
   actual: string | null;
   /** Open and the due time has passed. */
@@ -109,14 +112,15 @@ export interface JourneyInput {
     counsellor_name: string | null;
     on_date: string;
     start_time: string;
+    end_time: string | null;
     booked_at: string;
     booked_by_name: string | null;
     done_at: string | null;
     done_by_name: string | null;
   } | null;
   packagePaid: { amount_paise: number; paid_at: string; provider: 'razorpay' | 'offline'; method: string | null; recorded_by_name: string | null } | null;
-  /** "Mon, 23 Nov 2026, 10:00" for a slot (the screens' own formatter). */
-  slotLabel: (date: string, start: string) => string;
+  /** "Mon, 23 Nov 2026, 10:00–10:30 am" for a slot (the screens' own formatter). */
+  slotLabel: (date: string, start: string, end: string | null) => string;
 }
 
 /** The slot start as an instant (India time). */
@@ -146,7 +150,8 @@ const SYSTEM_EVENTS: CallEvent[] = ['reopened', 'booking_cancelled', 'package_pa
 function systemItems(logs: LogIn[]): JourneyItem[] {
   return logs
     .filter((l) => l.entry === 'event' && l.event && SYSTEM_EVENTS.includes(l.event))
-    .map((l) => ({ at: l.at, kind: 'system' as const, title: CALL_EVENT_LABELS[l.event!], detail: l.note, note: null, by: l.by_name, followUp: null }));
+    // System notes written before times were shown in 12-hour form are shown in 12-hour form too.
+    .map((l) => ({ at: l.at, kind: 'system' as const, title: CALL_EVENT_LABELS[l.event!], detail: l.note ? twelveHourText(l.note) : null, note: null, by: l.by_name, followUp: null }));
 }
 
 const byTime = (a: JourneyItem, b: JourneyItem) => a.at.localeCompare(b.at);
@@ -274,7 +279,7 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
         at: pres.booked_at,
         kind: 'client',
         title: 'Presentation booked',
-        detail: `${pres.counsellor_name ?? 'Counsellor'} · ${input.slotLabel(pres.on_date, pres.start_time)}`,
+        detail: `${pres.counsellor_name ?? 'Counsellor'} · ${input.slotLabel(pres.on_date, pres.start_time, pres.end_time)}`,
         note: null,
         by: pres.booked_by_name,
         followUp: null,
@@ -310,6 +315,7 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
   );
   // Done at the slot or later is on time; only an open one past its slot is late.
   presentation.actualLate = false;
+  if (pres) presentation.plannedLabel = input.slotLabel(pres.on_date, pres.start_time, pres.end_time);
 
   // 5. Package call. Steps: package paid (app or manual), failed tries (from the history).
   const pkCall = call('package');

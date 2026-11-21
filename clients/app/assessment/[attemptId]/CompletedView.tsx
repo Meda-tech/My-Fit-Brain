@@ -36,7 +36,7 @@ export function CompletedView({ details }: { details: CompletedDetails | null })
   const date = (iso: string) =>
     new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' });
   const dateTime = (iso: string) =>
-    new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+    new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short', hour12: true, timeZone: 'Asia/Kolkata' });
   const name = details ? pick(details.testName, lang) : null;
   const receipt = details?.receipt ?? null;
 

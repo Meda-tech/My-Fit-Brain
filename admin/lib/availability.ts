@@ -38,17 +38,43 @@ export interface AvailabilityChange {
   removed_by_name: string | null;
 }
 
-/** "09:00:00" → "9:00" (24-hour, as the team writes times). */
+/** "09:00:00" → "9:00 am", "13:30" → "1:30 pm". Times are always shown in 12-hour form (owner, 2026-11-21). */
 export function hm(time: string | null): string {
   if (!time) return '';
-  const [h, m] = time.split(':');
-  return `${Number(h)}:${m}`;
+  const [h, m] = time.split(':').map(Number);
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`;
+}
+
+/** A slot as a range: "9:00–9:30 pm"; across noon or midnight "11:30 am–12:00 pm". */
+export function slotRange(start: string, end: string | null): string {
+  if (!end) return hm(start);
+  const a = hm(start);
+  const b = hm(end);
+  return a.slice(-2) === b.slice(-2) ? `${a.slice(0, -3)}–${b}` : `${a}–${b}`;
+}
+
+/**
+ * Old history lines written with 24-hour times (e.g. "…, Mon 23 Nov 2026, 14:00 · reason") shown in 12-hour form. Only
+ * for text the system wrote; a staff note is shown as typed.
+ */
+export function twelveHourText(text: string): string {
+  return text.replace(/\b([01]?\d|2[0-3]):([0-5]\d)\b(?!\s?[ap]m)/gi, (_, h: string, m: string) => hm(`${h}:${m}`));
+}
+
+/** "HH:MM" every `step` minutes of a day, for a 12-hour time dropdown. */
+export function dayTimes(step: number): { value: string; label: string }[] {
+  const out: { value: string; label: string }[] = [];
+  for (let t = 0; t < 24 * 60; t += step) {
+    const value = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+    out.push({ value, label: hm(value) });
+  }
+  return out;
 }
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-/** "30-minute slots, Monday–Saturday, 9:00–18:00, lunch 13:00–13:30". */
+/** "30-minute slots, Monday–Saturday, 9:00 am–6:00 pm, lunch 1:00 pm–1:30 pm". */
 export function describeSettings(s: AvailabilitySettings): string {
   const days = [...s.work_days].sort((a, b) => a - b);
   const consecutive = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
@@ -64,7 +90,7 @@ export function describeSettings(s: AvailabilitySettings): string {
   return parts.join(', ');
 }
 
-/** "Off all day" · "Off 14:00–16:00" · "Custom slots 10:00–12:00". */
+/** "Off all day" · "Off 2:00 pm–4:00 pm" · "Custom slots 10:00 am–12:00 pm". */
 export function describeChange(c: Pick<AvailabilityChange, 'kind' | 'start_time' | 'end_time'>): string {
   if (c.kind === 'off') return c.start_time ? `Off ${hm(c.start_time)}–${hm(c.end_time)}` : 'Off all day';
   return `Custom slots ${hm(c.start_time)}–${hm(c.end_time)}`;

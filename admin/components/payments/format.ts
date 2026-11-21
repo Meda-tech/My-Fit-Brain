@@ -7,7 +7,7 @@ export { formatAmount } from './amount';
 /** India time: the server runs in UTC once deployed. */
 export function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', hour12: true, timeZone: 'Asia/Kolkata' });
 }
 
 export function formatDate(iso: string | null): string {
@@ -17,7 +17,7 @@ export function formatDate(iso: string | null): string {
 
 export function formatTime(iso: string | null): string {
   if (!iso) return '';
-  return new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  return new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
 }
 
 const METHODS: Record<string, string> = {

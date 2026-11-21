@@ -28,7 +28,7 @@ const ddClasses = 'mt-0.5 text-[16px] text-ink';
 
 // Server time is UTC once deployed; staff read India time.
 function formatIndiaDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', hour12: true, timeZone: 'Asia/Kolkata' });
 }
 
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {

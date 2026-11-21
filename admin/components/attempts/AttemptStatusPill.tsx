@@ -14,5 +14,5 @@ export function AttemptStatusPill({ status }: { status: AttemptListRow['status']
 export function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   // India time: the server runs in UTC once deployed.
-  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
+  return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', hour12: true, timeZone: 'Asia/Kolkata' });
 }

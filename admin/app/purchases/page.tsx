@@ -57,7 +57,7 @@ function PresentationLine({ r }: { r: PurchaseRow }) {
       <span className="block text-[12px] font-medium text-teal">
         {p.done_at
           ? `Presentation done ${formatDate(p.done_at)}${p.counsellor_name ? ` by ${p.counsellor_name}` : ''}`
-          : `Presentation: ${p.counsellor_name ?? 'Counsellor'}, ${presentationLabel(p.on_date, p.start_time)}`}
+          : `Presentation: ${p.counsellor_name ?? 'Counsellor'}, ${presentationLabel(p.on_date, p.start_time, p.end_time)}`}
       </span>
       {r.package_call?.status === 'closed' && r.package_call.outcome && (
         <span className="block text-[12px] font-medium text-ink">Package call: {outcomeLabel('package', r.package_call.outcome)}</span>

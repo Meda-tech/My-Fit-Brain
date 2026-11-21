@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { AlertCircle, ArrowLeft, X } from 'lucide-react';
 import { Button, Card, Notice, Pill, cn } from '../brand';
-import { dayLabel, hm } from '../../lib/availability';
+import { dayLabel, slotRange } from '../../lib/availability';
 import { presentationLabel, type FreeDay } from '../../lib/booking';
 import { bookPresentationAction, freeSlotsAction } from '../../app/tasks/booking-actions';
 
@@ -12,6 +12,7 @@ interface Picked {
   counsellorName: string;
   date: string;
   start: string;
+  end: string;
 }
 
 // "Book presentation": one panel with the FREE future slots of all active counsellors, by date then counsellor.
@@ -115,7 +116,7 @@ export function BookPresentationButton({
                     ['Client', clientLabel],
                     ['Assessment', testName],
                     ['Counsellor', picked.counsellorName],
-                    ['Date and time', presentationLabel(picked.date, picked.start)],
+                    ['Date and time', presentationLabel(picked.date, picked.start, picked.end)],
                   ].map(([k, v]) => (
                     <div key={k} className="flex justify-between gap-4 border-b border-sand pb-2 last:border-0">
                       <dt className="text-ink-muted">{k}</dt>
@@ -144,13 +145,13 @@ export function BookPresentationButton({
                                 <button
                                   key={s.start}
                                   type="button"
-                                  onClick={() => setPicked({ counsellorId: c.id, counsellorName: c.name, date: d.date, start: s.start })}
+                                  onClick={() => setPicked({ counsellorId: c.id, counsellorName: c.name, date: d.date, start: s.start, end: s.end })}
                                   className={cn(
                                     'min-h-11 rounded-full border px-4 text-[14px] font-semibold transition-colors hover:bg-mist',
                                     d.preferred ? 'border-teal text-teal' : 'border-sand text-ink-soft hover:text-teal'
                                   )}
                                 >
-                                  {hm(s.start)}
+                                  {slotRange(s.start, s.end)}
                                 </button>
                               ))}
                             </div>

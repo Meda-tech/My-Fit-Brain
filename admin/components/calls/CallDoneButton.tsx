@@ -20,9 +20,10 @@ import {
   type CallReason,
 } from '../../lib/calls';
 import { markCallAction } from '../../app/tasks/actions';
+import { TimeSelect } from '../TimeSelect';
 
 const latest = (d: Date) =>
-  d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+  d.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
 
 const OPTION =
   'flex min-h-11 cursor-pointer items-center gap-3 rounded-input border px-3.5 text-[15px] text-ink has-[:checked]:border-teal has-[:checked]:bg-mist';
@@ -45,7 +46,10 @@ export function CallDoneButton({
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<CallChoice | ''>('');
   const [reason, setReason] = useState<CallReason | ''>('');
-  const [followUp, setFollowUp] = useState('');
+  const [followDate, setFollowDate] = useState('');
+  const [followTime, setFollowTime] = useState('');
+  // The same value the server reads: "YYYY-MM-DDTHH:MM", India time.
+  const followUp = followDate && followTime ? `${followDate}T${followTime}` : '';
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -57,7 +61,8 @@ export function CallDoneButton({
     setLimits({ min: toIstInput(now), max: toIstInput(max), maxText: latest(max) });
     setChoice('');
     setReason('');
-    setFollowUp('');
+    setFollowDate('');
+    setFollowTime('');
     setNote('');
     setError(null);
     setOpen(true);
@@ -68,6 +73,11 @@ export function CallDoneButton({
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!choice || blocked) return;
+    // Quick check here ("YYYY-MM-DDTHH:MM" strings compare in time order); the server checks again.
+    if (needsFollowUp(choice) && (!followUp || followUp <= limits.min || followUp > limits.max)) {
+      setError(`Pick a follow-up date and time within 2 working days (by ${limits.maxText}).`);
+      return;
+    }
     setSaving(true);
     setError(null);
     const res = await markCallAction({ callId, choice, reason: reason || null, note, followUp: followUp || null });
@@ -139,19 +149,30 @@ export function CallDoneButton({
 
               {choice && needsFollowUp(choice) && (
                 <div>
-                  <label htmlFor={`follow-up-${callId}`} className={labelClasses}>
-                    Follow-up date and time
-                  </label>
-                  <input
-                    id={`follow-up-${callId}`}
-                    type="datetime-local"
-                    required
-                    min={limits.min}
-                    max={limits.max}
-                    value={followUp}
-                    onChange={(e) => setFollowUp(e.target.value)}
-                    className={inputClasses}
-                  />
+                  <span className={labelClasses}>Follow-up date and time</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor={`follow-up-date-${callId}`} className="sr-only">
+                        Follow-up date
+                      </label>
+                      <input
+                        id={`follow-up-date-${callId}`}
+                        type="date"
+                        required
+                        min={limits.min.slice(0, 10)}
+                        max={limits.max.slice(0, 10)}
+                        value={followDate}
+                        onChange={(e) => setFollowDate(e.target.value)}
+                        className={inputClasses}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor={`follow-up-time-${callId}`} className="sr-only">
+                        Follow-up time
+                      </label>
+                      <TimeSelect id={`follow-up-time-${callId}`} required step={15} value={followTime} onChange={setFollowTime} />
+                    </div>
+                  </div>
                   <p className={helpTextClasses}>
                     Within 2 working days: by {limits.maxText}.{" "}
                     {choice === "agreed" ? "The call stays open until the package payment arrives." : "The call stays open until then."}
