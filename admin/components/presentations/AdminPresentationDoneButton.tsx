@@ -77,7 +77,7 @@ export function AdminPresentationDoneButton({
               {clientLabel} · {testName}
             </p>
             <p className="m-0 mt-2 text-[14px] text-ink-soft">
-              For a purchase from before the system. No slot is used.
+              Only for a presentation that already happened outside the system. No slot is used.
             </p>
 
             {loading ? (

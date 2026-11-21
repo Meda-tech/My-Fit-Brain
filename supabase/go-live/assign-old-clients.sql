@@ -1,5 +1,5 @@
 -- ONE-TIME GO-LIVE STEP (owner, 2026-11-21). Paste into the production SQL Editor ONCE, after every file of
--- "To paste later, in order" (the last one is 20261121800000_admin_presentation_done.sql, which adds the function).
+-- "To paste later, in order" (20261121800000_admin_presentation_done.sql adds the function).
 --
 -- REMOVES NOTHING. In plain words:
 --   * All existing clients (every phone with a client record, a purchase or a try) get the only active coordinator,

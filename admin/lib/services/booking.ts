@@ -39,7 +39,6 @@ const BOOK_MESSAGES = [
   'This slot has already started. Pick a later one.',
   'This slot was just booked by someone else. Pick another.',
   'Pick a slot in the next 3 working days.',
-  'This purchase is from before the system. It is not booked here.',
 ];
 const CANCEL_MESSAGES = [
   'Only super admins can cancel a booking.',

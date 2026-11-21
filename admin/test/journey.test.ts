@@ -150,6 +150,22 @@ describe('journey: a purchase from before the system (owner, 2026-11-21)', () =>
     expect(j.some((t) => t.late)).toBe(false);
   });
 
+  it('booked into a slot by hand: the Booking task is done as usual, the presentation is open with its slot', () => {
+    const j = buildJourney(
+      {
+        ...old,
+        presentation: {
+          counsellor_name: 'Test Counsellor', on_date: '2026-11-26', start_time: '10:00:00', end_time: '10:30:00', marked_by_admin: false,
+          booked_at: '2026-11-25T06:00:00Z', booked_by_name: 'Test Coordinator', done_at: null, done_by_name: null,
+        },
+      },
+      NOW
+    );
+    expect(j.map((t) => t.status)).toEqual(['before_system', 'before_system', 'done', 'open', 'upcoming']);
+    expect(j[2].items).toEqual([expect.objectContaining({ title: 'Presentation booked', by: 'Test Coordinator' })]);
+    expect(j[3]).toMatchObject({ plannedLabel: '2026-11-26 10:00', late: false });
+  });
+
   it('marked done by an admin: Report presentation done, "Marked by admin", no slot; the Package call runs as usual', () => {
     const j = buildJourney(
       {

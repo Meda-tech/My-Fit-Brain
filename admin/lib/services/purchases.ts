@@ -64,7 +64,7 @@ export interface PurchaseRow {
   presentation: Presentation | null;
   /** Paid, assessment completed, nothing booked yet: Book presentation is possible. */
   can_book: boolean;
-  /** Paid (or last tried) more than 7 days before go-live: no automatic calls, no booking; "Before the system". */
+  /** Paid (or last tried) more than 7 days before go-live: no automatic calls (booked by hand); "Before the system". */
   before_system: boolean;
   /** An old paid purchase, assessment completed, no presentation yet: a super admin may mark the presentation done. */
   can_mark_presentation_admin: boolean;
@@ -249,7 +249,7 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
       presentation: booked
         ? { id: booked.id, counsellor_id: booked.counsellor_id, counsellor_name: names.coordinator(booked.counsellor_id), on_date: booked.on_date, start_time: booked.start_time, end_time: booked.end_time, marked_by_admin: booked.marked_by_admin, booked_at: booked.booked_at, booked_by_name: booked.booked_by_name, done_at: booked.done_at, done_by_name: booked.done_by_name }
         : null,
-      can_book: r.status === 'paid' && !r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
+      can_book: r.status === 'paid' && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       can_mark_presentation_admin:
         r.status === 'paid' && r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       package_call: (() => {

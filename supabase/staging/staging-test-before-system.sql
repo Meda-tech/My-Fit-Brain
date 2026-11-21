@@ -88,18 +88,26 @@ SELECT public.calls_sync() >= 0 AS synced_again;
 SELECT 'completed after go-live: old gets no Booking call; new gets one',
   NOT EXISTS (SELECT 1 FROM public.calls WHERE purchase_id = (SELECT p_old FROM t_p))
   AND EXISTS (SELECT 1 FROM public.calls WHERE purchase_id = (SELECT p_new FROM t_p) AND kind = 'booking' AND status = 'open');
-SELECT 'an old purchase cannot be booked into a slot (only an admin can mark its presentation done)',
-  pg_temp.fails_with(format('SELECT public.presentation_book(%L, %L, %L, ''10:00'', %L)',
-                            (SELECT p_old FROM t_p), (SELECT c2 FROM t), (SELECT day FROM t), (SELECT admin FROM t)),
-                     'This purchase is from before the system. It is not booked here.');
+SELECT pg_temp.login('counsellor2@example.com') AS as_c2_before;
+SET LOCAL ROLE authenticated;
+SELECT 'before any booking the counsellor does not see the old client',
+  NOT EXISTS (SELECT 1 FROM public.clients WHERE id = '5eed0000-0000-4000-8000-0000000f00c1');
+RESET ROLE;
+SELECT 'an old purchase can be booked into a slot by hand (its coordinator); still no automatic Booking call',
+  public.presentation_book((SELECT p_old FROM t_p), (SELECT c2 FROM t), (SELECT day FROM t), '11:00',
+                           (SELECT coordinator_id FROM public.purchases WHERE id = (SELECT p_old FROM t_p))) IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM public.calls WHERE purchase_id = (SELECT p_old FROM t_p));
+SELECT 'journey of the booked old purchase: Report presentation planned = the slot',
+  (SELECT planned_at = (t.day + time '11:00') AT TIME ZONE 'Asia/Kolkata' AND status = 'open'
+   FROM public.purchase_stages, t WHERE purchase_id = (SELECT p_old FROM t_p) AND stage = 'report_presentation');
 SELECT public.presentation_book((SELECT p_new FROM t_p), c2, day, '10:00', admin) IS NOT NULL AS booked_new_with_c2 FROM t;
 
 SELECT pg_temp.login('counsellor2@example.com') AS as_c2;
 SET LOCAL ROLE authenticated;
-SELECT 'the counsellor sees the new client booked with them, not the old client',
+SELECT 'the counsellor sees the clients booked with them (new and old), not the unbooked one',
   EXISTS (SELECT 1 FROM public.clients WHERE id = '5eed0000-0000-4000-8000-0000000f00c3')
-  AND NOT EXISTS (SELECT 1 FROM public.clients WHERE id = '5eed0000-0000-4000-8000-0000000f00c1')
-  AND NOT EXISTS (SELECT 1 FROM public.attempts WHERE client_id = '5eed0000-0000-4000-8000-0000000f00c1');
+  AND EXISTS (SELECT 1 FROM public.clients WHERE id = '5eed0000-0000-4000-8000-0000000f00c1')
+  AND NOT EXISTS (SELECT 1 FROM public.clients WHERE id = '5eed0000-0000-4000-8000-0000000f00c2');
 RESET ROLE;
 SELECT pg_temp.login('superadmin@example.com') AS as_admin;
 SET LOCAL ROLE authenticated;
@@ -108,8 +116,14 @@ SELECT 'a super admin sees the old client and their assessment',
   AND EXISTS (SELECT 1 FROM public.attempts WHERE client_id = '5eed0000-0000-4000-8000-0000000f00c1');
 RESET ROLE;
 
-SELECT 'nothing from before the system is open (so nothing is late in My tasks or Purchases)',
+-- The booked old presentation is marked done (as a super admin, any time): the Package call is made, as usual.
+SELECT public.presentation_mark_done((SELECT id FROM public.presentation_bookings WHERE purchase_id = (SELECT p_old FROM t_p) AND status = 'booked'),
+                                     (SELECT admin FROM t))::text = '' AS old_presentation_done;
+SELECT 'old purchase after its presentation: Package call open, package offer for the client; no other call',
+  (SELECT count(*) = 1 AND bool_and(kind = 'package' AND status = 'open') FROM public.calls WHERE purchase_id = (SELECT p_old FROM t_p))
+  AND (SELECT count(*) = 1 FROM public.package_offers_for_client('5eed0000-0000-4000-8000-0000000f00c1'));
+SELECT 'no Payment, Assessment or Booking call from before the system is open (nothing late in My tasks or Purchases)',
   NOT EXISTS (SELECT 1 FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id
-              WHERE c.status = 'open' AND public.before_system(pu));
+              WHERE c.status = 'open' AND c.kind <> 'package' AND public.before_system(pu));
 
 ROLLBACK;

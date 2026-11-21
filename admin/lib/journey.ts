@@ -9,8 +9,9 @@
 // because it was not needed (e.g. paid directly: no Payment call).
 //
 // A purchase from before the system (paid more than 7 days before go-live; owner, 2026-11-21): tasks 1–3 show
-// "Before the system" (no automatic calls, never late). Task 4 is done only when a super admin marks the report
-// presentation done ("Marked by admin", no slot); from then on task 5 works as for any purchase.
+// "Before the system" (no automatic calls, never late). It can still be booked into a slot by hand (then task 3 is
+// done as usual), or a super admin marks a presentation that happened outside the system done ("Marked by admin",
+// no slot). From the presentation on, tasks 4–5 work as for any purchase.
 
 import { formatAmount } from '../components/payments/amount';
 import { twelveHourText } from './availability';
@@ -308,7 +309,8 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
       : completedAt && paid
         ? { status: 'open', actual: null, notNeeded: null } // no automatic call (go-live rule), still to book
         : { status: 'upcoming', actual: null, notNeeded: null };
-  const booking = task('booking', 'Coordinator', input.coordinatorName, bkCall, beforeSystem(bkState), [
+  // An old purchase booked into a slot by hand: the booking shows as done, like any other.
+  const booking = task('booking', 'Coordinator', input.coordinatorName, bkCall, pres && !byAdmin ? bkState : beforeSystem(bkState), [
     ...bookedItem,
     ...(bkCall ? [...callItems('booking', bkCall.logs), ...systemItems(bkCall.logs)] : []),
   ]);

@@ -547,10 +547,14 @@ results with you"). The client never sees a report in the app.
 - `before_system(purchases)` (also a column in the API): paid more than 7 days before go-live (`call_settings`); a
   try never paid: its latest try more than 7 days before go-live. Such a purchase never gets an automatic Payment,
   Assessment or Booking call (trigger `calls_before_system` on `calls`; open ones were closed with "Before the system:
-  no automatic call."), plans nothing, is never due or late, and cannot be booked into a slot (`presentation_book()`).
+  no automatic call."), plans nothing and is never due or late.
   Purchases shows "Before the system" as its stage; the journey shows "Before the system" on tasks 1–3.
-- **Mark report presentation done** (super admins; side panel, task 4 of an old paid purchase with a completed
-  assessment and no booking; `AdminPresentationDoneButton`, `presentation_mark_done_admin()`): the counsellor (the
+- **Book presentation by hand** (owner decision 2026-11-21, `20261121900000_old_purchases_bookable.sql`): an old paid
+  purchase with a completed assessment shows Book presentation in its side panel (the main button; super admins and
+  the client's coordinator; same slots and rules as any booking). No Booking call is made for it. Once booked it is
+  the normal flow: the counsellor marks it done, then the Package call and the offer.
+- **Mark report presentation done** (super admins; for a presentation that already happened outside the system; side
+  panel, task 4 of an old paid purchase with a completed assessment and no booking; `AdminPresentationDoneButton`, `presentation_mark_done_admin()`): the counsellor (the
   only active one pre-selected) and the date it happened (today by default, earlier allowed), no slot. Stored as a
   `presentation_bookings` row with `marked_by_admin`, `start_time / end_time` empty and `done_at` set, so everything
   after it is the normal flow with no special code: journey "Done · Marked by admin", the package offer in the client

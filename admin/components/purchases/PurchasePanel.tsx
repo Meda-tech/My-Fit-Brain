@@ -146,7 +146,10 @@ export function PurchasePanel({
     booking:
       p.can_book || task('booking').callId ? (
         <>
-          {p.can_book && <BookPresentationButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant={main('booking')} />}
+          {p.can_book && (
+            // An old purchase has no Booking call: booking by hand is its main button.
+            <BookPresentationButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant={p.before_system ? 'primary' : main('booking')} />
+          )}
           {markDone('booking', 'secondary')}
         </>
       ) : null,
@@ -161,8 +164,9 @@ export function PurchasePanel({
           <CancelBookingButton bookingId={p.presentation.id} />
         </>
       ) : p.can_mark_presentation_admin && canCancelBooking ? (
-        // An old purchase (before the system): a super admin marks the presentation done, without a slot.
-        <AdminPresentationDoneButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} />
+        // An old purchase whose presentation already happened outside the system: a super admin marks it done,
+        // without a slot. (Booking a slot is the main button, on the Booking call row.)
+        <AdminPresentationDoneButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant="secondary" />
       ) : null,
     package: (
       <>
