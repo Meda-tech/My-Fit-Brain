@@ -74,6 +74,7 @@ MyFitBrain/
    ├─ baseline/               schema-only export of production (no data), the starting point of staging
    ├─ go-live/                one-time go-live steps to paste on production (not migrations; staging never runs them)
    ├─ staging-migrate.ps1     applies new migrations / runs one SQL file on STAGING only
+   ├─ prod-readonly.ps1       OWNER ONLY: read-only production backup and check runs
    ├─ seed-staging.sql        fake staging data (staff logins, questionnaires, clients, purchases)
    └─ .env.db                 PROD_DB_URL, STAGING_DB_URL, STAGING_STAFF_PASSWORD — git-ignored, never print
 ```
@@ -782,7 +783,9 @@ so copy the master file there before using a new combination.
      `docs/deploy/production-log.md`; move it to "Already on production" with the date once the owner
      confirms it ran.
 - `PROD_DB_URL` is for read-only, schema-only exports (`supabase db dump`, no data) and nothing else. Never
-  read production client data. No local database.
+  read production client data. No local database. Exception, run by the OWNER only: `supabase/prod-readonly.ps1`
+  (read-only sessions) takes full backups into `D:\Tech\Meda\backups\` (outside the repo, never in git) and prints
+  check files on production. Go-live steps: `docs/deploy/go-live-runbook.md`.
 - Never delete data or write deleting SQL without asking first (see the permanent rule at the top).
 - Gender, relationship status, staff roles and age limits come only from `lib/options.ts` in each app
   (stored values = English strings; labels via i18n).
