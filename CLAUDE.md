@@ -400,10 +400,36 @@ results with you"). The client never sees a report in the app.
   (trigger).
 - `counsellor_slots(counsellor, from, to)` is the ONE place that turns the default and the changes into slots with
   Free / Booked / Off (a default slot wins over a custom one at the same time; Booked wins over Off). Booking must use
-  it. `availability_booked()` answers "no" until the booking step replaces its body.
+  it. `availability_booked()` reads the active presentation bookings (step 4).
 - Admin → **Counsellor availability** (`/availability?c=<counsellor>&m=<YYYY-MM>&d=<date>`): pick a counsellor →
-  month view (Monday first) with free / booked / off per date → a date opens a right-side panel: that day's slots,
-  Mark off and Add custom slots (past dates read only), the active changes with Undo, the history (collapsed).
+  month view (Monday first) with free / booked / off per date → a date opens a right-side panel: that day's slots
+  (a booked slot shows the client's name), Mark off and Add custom slots (past dates read only), the active changes
+  with Undo, the history (collapsed).
+
+### Booking call and Book presentation (step 4, owner 2026-11-21)
+
+- Migration `20261121100000_presentation_booking.sql`, checks `docs/tasks/25-booking-verify.sql`, behaviour test
+  `supabase/staging/staging-test-booking.sql` (rolled back). Wider allowed values (standing permission):
+  `calls.kind` + `booking`, `calls.outcome` + `booked`, `call_logs.event` + `presentation_booked`,
+  `booking_cancelled`.
+- **Booking call** (on a Paid purchase): starts when the assessment is completed, due 2 working hours later; same
+  Mark as call done rules. Journey: Presentation booking planned = its first due time. Same go-live rule as the
+  Assessment call (completed more than 7 days before go-live → no automatic call; in the 7 days before → starts at
+  go-live). Closed (outcome `booked`) when a presentation is booked; ended when the purchase is refunded/cancelled.
+- **Book presentation** (button on the Booking call's My tasks row and in the side panel; also in the panel of a
+  paid, completed, unbooked purchase whose Booking call is closed): one dialog with the FREE future slots of all
+  active counsellors for the next 30 days (`free_presentation_slots()`, built on `counsellor_slots()`), by date then
+  counsellor; the next 2 dates with free slots are "Preferred", later dates selectable without a reason → confirm
+  (client, assessment, counsellor, date and time) → `presentation_book()`.
+- `presentation_bookings` (counsellor, date, slot, booked by / at; cancel who / when / why). The DATABASE refuses a
+  double booking: unique (counsellor, date, start) and unique (purchase) among active bookings, plus a per-counsellor-
+  day lock. Coordinators book only for their own clients, super admins for anyone. Never deleted (trigger).
+- On booking: the slot is Booked for everyone; Presentation booking actual = booked at; Report presentation planned
+  = the slot; the Booking call closes with "Presentation booked: <counsellor>, <date time>". Purchases (Paid tab)
+  and the side panel show the presentation.
+- **Cancel booking**: super admins only, reason required (3–300). Frees the slot, journey back to Presentation
+  booking, Booking call reopens (due 2 working hours) with a "Booking cancelled" history line. No reschedule,
+  no-show or meeting link.
 
 ### Counsellor flow (admin)
 

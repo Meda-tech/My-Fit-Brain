@@ -7,6 +7,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { Card, cn } from '../../components/brand';
 import { PurchasePanel } from '../../components/purchases/PurchasePanel';
 import { CallDoneButton } from '../../components/calls/CallDoneButton';
+import { BookPresentationButton } from '../../components/booking/BookPresentationButton';
 import { TaskFilters } from '../../components/calls/TaskFilters';
 import { CALL_KIND_LABELS, TASK_SHOWS, dueLabel, isCallLate, isTaskShow, tasksHref, type TaskShow } from '../../lib/calls';
 import { canViewPurchases, getPurchase, syncCalls } from '../../lib/services/purchases';
@@ -89,12 +90,15 @@ export default async function TasksPage({
                     </p>
                     {superAdmin && <p className="m-0 text-[13px] text-ink-muted">Coordinator: {t.coordinator_name ?? 'None yet'}</p>}
                   </div>
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
                     <p className={cn('m-0 text-[14px] sm:text-right', late ? 'font-semibold text-coral-deep' : 'text-ink-soft')}>
                       {late ? 'Late · was due ' : 'Due '}
                       <span className="whitespace-nowrap">{dueLabel(t.due_at, now)}</span>
                     </p>
-                    <CallDoneButton callId={t.call_id} kind={t.kind} priorCalls={t.prior_calls} className="relative z-10" />
+                    <div className="relative z-10 flex flex-wrap justify-end gap-2">
+                      {t.can_book && <BookPresentationButton purchaseId={t.purchase_id} clientLabel={t.client_name ?? t.phone} testName={t.test_name} />}
+                      <CallDoneButton callId={t.call_id} kind={t.kind} priorCalls={t.prior_calls} />
+                    </div>
                   </div>
                 </li>
               );
@@ -103,7 +107,7 @@ export default async function TasksPage({
         </Card>
       )}
 
-      {open && <PurchasePanel purchase={open} closeHref={tasksHref(coordinatorId, show)} now={now} />}
+      {open && <PurchasePanel purchase={open} closeHref={tasksHref(coordinatorId, show)} now={now} canCancelBooking={superAdmin} />}
     </AdminShell>
   );
 }

@@ -35,6 +35,7 @@ import {
   getAvailabilitySettings,
   listCounsellors,
 } from '../../lib/services/availability';
+import { bookingsOfDay } from '../../lib/services/booking';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,13 +64,14 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
     `/availability?${new URLSearchParams({ ...(counsellor ? { c: counsellor.id } : {}), m: q.m ?? month, ...(q.d ? { d: q.d } : {}) })}`;
 
   const { from, to } = monthRange(month);
-  const [slots, daySlots, changes] = counsellor
+  const [slots, daySlots, changes, booked] = counsellor
     ? await Promise.all([
         counsellorSlots(counsellor.id, from, to),
         day ? counsellorSlots(counsellor.id, day, day) : Promise.resolve([] as Slot[]),
         day ? dayChanges(counsellor.id, day) : Promise.resolve([] as AvailabilityChange[]),
+        day ? bookingsOfDay(counsellor.id, day) : Promise.resolve(new Map<string, string>()),
       ])
-    : [[], [], []];
+    : [[], [], [], new Map<string, string>()];
   const counts = countByDay(slots);
 
   return (
@@ -128,7 +130,7 @@ export default async function AvailabilityPage({ searchParams }: { searchParams:
 
       {counsellor && day && (
         <SidePanel title={dayLabel(day)} closeHref={href({})}>
-          <DayPanel counsellorName={counsellor.full_name} counsellorId={counsellor.id} day={day} past={day < today} slots={daySlots} changes={changes} slotMinutes={settings?.slot_minutes ?? 30} />
+          <DayPanel counsellorName={counsellor.full_name} counsellorId={counsellor.id} day={day} past={day < today} slots={daySlots} changes={changes} booked={booked} slotMinutes={settings?.slot_minutes ?? 30} />
         </SidePanel>
       )}
     </AdminShell>
@@ -196,6 +198,7 @@ function DayPanel({
   slots,
   changes,
   slotMinutes,
+  booked,
 }: {
   counsellorName: string;
   counsellorId: string;
@@ -203,6 +206,8 @@ function DayPanel({
   past: boolean;
   slots: Slot[];
   changes: AvailabilityChange[];
+  /** Booked slot start → the client's name. */
+  booked: Map<string, string>;
   slotMinutes: number;
 }) {
   const counts = countByDay(slots).get(day) ?? { free: 0, booked: 0, off: 0 };
@@ -235,6 +240,7 @@ function DayPanel({
                 </span>
                 <span className="text-[12px]">
                   {SLOT_STATE_LABELS[s.state]}
+                  {s.state === 'booked' && booked.get(s.start_time) ? ` · ${booked.get(s.start_time)}` : ''}
                   {s.custom_change ? ' · custom' : ''}
                 </span>
               </li>

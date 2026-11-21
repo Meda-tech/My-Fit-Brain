@@ -6,6 +6,7 @@ import {
   CALL_NOTE_MAX,
   CALL_REASONS,
   assessmentContext,
+  bookingContext,
   fromIstInput,
   needsFollowUp,
   paymentContext,
@@ -32,6 +33,8 @@ export interface TaskRow {
   coordinator_name: string | null;
   /** Earlier "Mark as call done" entries on this call (Not interested needs at least one). */
   prior_calls: number;
+  /** A Booking call whose presentation can be booked now. */
+  can_book: boolean;
 }
 
 type One<T> = T | T[] | null;
@@ -44,6 +47,9 @@ interface TaskPurchase {
   coordinator_id: string | null;
   paid_at: string | null;
   purchase_payments: { payments: One<{ created_at: string; status: string; attempt_id: string | null }> }[] | null;
+  status: string;
+  purchase_stages: { stage: string; done_at: string | null }[] | null;
+  presentation_bookings: { status: string }[] | null;
 }
 
 interface RawTask {
@@ -65,7 +71,8 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
     .from('calls')
     .select(
       'id, kind, due_at, purchase_id, call_logs(entry), ' +
-        'purchases!inner(test_code, phone, client_id, coordinator_id, paid_at, purchase_payments(payments(created_at, status, attempt_id)))'
+        'purchases!inner(test_code, phone, client_id, coordinator_id, paid_at, status, purchase_payments(payments(created_at, status, attempt_id)), ' +
+        'purchase_stages(stage, done_at), presentation_bookings(status))'
     )
     .eq('status', 'open');
   if (profile.role === 'super_admin' && opts.coordinatorId) q = q.eq('purchases.coordinator_id', opts.coordinatorId);
@@ -100,6 +107,8 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
     if (t.kind === 'payment') {
       const last = tries.at(-1);
       context = paymentContext(tries.length, last?.created_at ?? t.due_at, last?.status === 'failed', now);
+    } else if (t.kind === 'booking') {
+      context = bookingContext((p.purchase_stages ?? []).find((s) => s.stage === 'assessment')?.done_at ?? null);
     } else {
       const statuses = tries.map((x) => (x.attempt_id ? attemptStatus.get(x.attempt_id) : undefined));
       const progress: AssessmentProgress = statuses.includes('completed')
@@ -120,6 +129,11 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
       context,
       coordinator_name: names.coordinator(p.coordinator_id),
       prior_calls: (t.call_logs ?? []).filter((l) => l.entry === 'call').length,
+      can_book:
+        t.kind === 'booking' &&
+        p.status === 'paid' &&
+        !(p.presentation_bookings ?? []).some((b) => b.status === 'booked') &&
+        (p.purchase_stages ?? []).some((s) => s.stage === 'assessment' && !!s.done_at),
     };
   });
 }

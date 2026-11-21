@@ -1,15 +1,25 @@
 // Calls (step 2): the words and the small rules the screens show. No database access; the database makes,
 // closes and checks calls (migration 20261120120000_calls.sql, call_mark()).
 
-export type CallKind = 'payment' | 'assessment';
+export type CallKind = 'payment' | 'assessment' | 'booking';
 export type CallChoice = 'done' | 'call_later' | 'not_picked' | 'not_interested';
 export type CallReason = 'too_costly' | 'not_now' | 'wrong_number' | 'other';
-export type CallEvent = 'created' | 'new_try' | 'try_failed' | 'paid' | 'assessment_completed' | 'ended' | 'reopened';
-export type CallOutcome = 'done' | 'not_interested' | 'paid' | 'assessment_completed' | 'ended' | 'before_go_live';
+export type CallEvent =
+  | 'created'
+  | 'new_try'
+  | 'try_failed'
+  | 'paid'
+  | 'assessment_completed'
+  | 'ended'
+  | 'reopened'
+  | 'presentation_booked'
+  | 'booking_cancelled';
+export type CallOutcome = 'done' | 'not_interested' | 'paid' | 'assessment_completed' | 'ended' | 'before_go_live' | 'booked';
 
 export const CALL_KIND_LABELS: Record<CallKind, string> = {
   payment: 'Payment call',
   assessment: 'Assessment call',
+  booking: 'Booking call',
 };
 
 export const CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested'];
@@ -36,6 +46,8 @@ export const CALL_EVENT_LABELS: Record<CallEvent, string> = {
   assessment_completed: 'Assessment completed: call closed',
   ended: 'Refunded or cancelled: call closed',
   reopened: 'Payment call reopened',
+  presentation_booked: 'Presentation booked',
+  booking_cancelled: 'Booking cancelled',
 };
 
 export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
@@ -45,6 +57,7 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   assessment_completed: 'Closed: assessment completed',
   ended: 'Closed: refunded or cancelled',
   before_go_live: 'Closed: paid more than 7 days before go-live',
+  booked: 'Closed: presentation booked',
 };
 
 export const CALL_NOTE_MAX = 2000;
@@ -157,4 +170,9 @@ export function tasksHref(coordinatorId: string, show: TaskShow, open?: string):
   if (show !== 'all') q.set('show', show);
   if (open) q.set('open', open);
   return q.size ? `/tasks?${q}` : '/tasks';
+}
+
+/** "Assessment completed 20 Nov" (the Booking call's context line). */
+export function bookingContext(completedAt: string | null): string {
+  return completedAt ? `Assessment completed ${day(completedAt)}` : 'Assessment completed';
 }

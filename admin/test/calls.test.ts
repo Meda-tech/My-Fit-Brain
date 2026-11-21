@@ -39,7 +39,7 @@ describe('working hours (same cases as the database check)', () => {
 
 describe('calls', () => {
   it('uses the team words', () => {
-    expect(CALL_KIND_LABELS).toEqual({ payment: 'Payment call', assessment: 'Assessment call' });
+    expect(CALL_KIND_LABELS).toEqual({ payment: 'Payment call', assessment: 'Assessment call', booking: 'Booking call' });
     expect(CALL_CHOICES.map((c) => CALL_CHOICE_LABELS[c])).toEqual(['Done', 'Call later', 'Not picked', 'Not interested']);
     expect(Object.values(CALL_REASON_LABELS)).toEqual(['Too costly', 'Not now', 'Wrong number', 'Other']);
     expect(needsFollowUp('call_later') && needsFollowUp('not_picked') && !needsFollowUp('done')).toBe(true);

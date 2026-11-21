@@ -10,6 +10,7 @@ import { PurchaseStatusPill } from '../../components/purchases/PurchasePills';
 import { formatAmount, formatDate, formatDateTime, formatTime } from '../../components/payments/format';
 import { JOURNEY_STAGE_LABELS, PURCHASE_TABS, PURCHASE_TAB_LABELS, defaultPurchaseTab, isPurchaseTab, type PurchaseTab } from '../../lib/purchases';
 import { CALL_KIND_LABELS, isCallLate } from '../../lib/calls';
+import { presentationLabel } from '../../lib/booking';
 import {
   PURCHASE_PAGE_SIZE,
   canViewPurchases,
@@ -40,6 +41,16 @@ function rowTime(r: PurchaseRow): string {
 
 function triesText(n: number): string {
   return `${n} ${n === 1 ? 'try' : 'tries'}`;
+}
+
+/** The booked report presentation (step 4): counsellor, date and time. */
+function PresentationLine({ r }: { r: PurchaseRow }) {
+  if (!r.presentation) return null;
+  return (
+    <span className="block text-[12px] font-medium text-teal">
+      Presentation: {r.presentation.counsellor_name ?? 'Counsellor'}, {presentationLabel(r.presentation.on_date, r.presentation.start_time)}
+    </span>
+  );
 }
 
 /** The open call and its due time; coral-deep when late. */
@@ -158,6 +169,7 @@ export default async function PurchasesPage({
                         ? `${triesText(r.tries)}, last ${formatDate(rowTime(r))}, ${formatTime(rowTime(r))}`
                         : `${formatAmount(r.amount_paise)} · ${formatDate(rowTime(r))} · Now: ${stageText(r)}`}
                     </p>
+                    <PresentationLine r={r} />
                     <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1 text-[13px]">
                       <span className="text-ink-muted">Coordinator: {r.coordinator_name ?? 'None yet'}</span>
                       {r.open_call && (
@@ -218,7 +230,12 @@ export default async function PurchasesPage({
                       <td className={TD}>
                         <PurchaseStatusPill status={r.status} notInterested={r.not_interested} />
                       </td>
-                      {!unpaidTab && <td className={TD}>{stageText(r)}</td>}
+                      {!unpaidTab && (
+                        <td className={TD}>
+                          {stageText(r)}
+                          <PresentationLine r={r} />
+                        </td>
+                      )}
                       <td className={TD}>
                         <CallDue r={r} now={now} />
                       </td>
@@ -254,7 +271,7 @@ export default async function PurchasesPage({
         )}
       </Card>
 
-      {open && <PurchasePanel purchase={open} closeHref={href({ page })} now={now} />}
+      {open && <PurchasePanel purchase={open} closeHref={href({ page })} now={now} canCancelBooking={profile.role === 'super_admin'} />}
     </AdminShell>
   );
 }

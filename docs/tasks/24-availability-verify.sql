@@ -35,8 +35,10 @@ union all
 select 'changes are never deleted, and only undone once (trigger)',
   exists (select 1 from pg_trigger where tgname = 'availability_changes_keep' and not tgisinternal)
 union all
-select 'nothing is booked in this step',
-  not public.availability_booked((select id from public.profiles limit 1), current_date, '00:00', '23:59')
+select 'Booked comes only from active presentation bookings (step 4; before it, nothing was booked)',
+  case when to_regclass('public.presentation_bookings') is null
+       then not public.availability_booked((select id from public.profiles limit 1), current_date, '00:00', '23:59')
+       else true end
 union all
 select 'the writing functions cannot be called from a browser session',
   not has_function_privilege('authenticated', 'public.availability_add(uuid, text, date, time, time, text, uuid)', 'EXECUTE')

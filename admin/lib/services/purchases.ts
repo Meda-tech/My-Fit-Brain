@@ -10,6 +10,7 @@ import {
   type StageRow,
 } from '../purchases';
 import type { AssessmentProgress, CallChoice, CallEvent, CallKind, CallOutcome, CallReason } from '../calls';
+import type { Presentation } from '../booking';
 import type { PaymentProvider, PaymentStatus, RefundStatus } from './payments';
 
 // Purchases (step 1) and their calls (step 2). Reads use the staff session, so RLS decides: super admins see every
@@ -58,6 +59,10 @@ export interface PurchaseRow {
   open_call: OpenCall | null;
   /** How far the client got with the assessment (paid rows). */
   assessment_progress: AssessmentProgress;
+  /** The booked report presentation (step 4), if any. */
+  presentation: Presentation | null;
+  /** Paid, assessment completed, nothing booked yet: Book presentation is possible. */
+  can_book: boolean;
   stages: StageRow[];
   current_stage: JourneyStage | null;
 }
@@ -118,7 +123,8 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 const COLUMNS =
   'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, source, coordinator_id, paid_at, created_at, ' +
   'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status, attempt_id)), ' +
-  'calls(id, kind, status, due_at)';
+  'calls(id, kind, status, due_at), ' +
+  'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, status, booked_at, booked_by_name)';
 
 /** Rows shown on the screen: purchases, open attempts and attempts closed as Not interested. */
 const SHOWN = 'status.neq.not_paid,closed_at.is.null,closed_reason.eq.not_interested';
@@ -143,6 +149,7 @@ interface RawPurchase {
   purchase_stages: StageRow[] | null;
   purchase_payments: { payments: One<{ created_at: string; status: string; attempt_id: string | null }> }[] | null;
   calls: { id: string; kind: CallKind; status: string; due_at: string }[] | null;
+  presentation_bookings: (Omit<Presentation, 'counsellor_name'> & { status: string })[] | null;
 }
 
 export interface NameLookup {
@@ -154,13 +161,15 @@ export interface NameLookup {
 /** Names for rows: the client (linked, else registered with the number), the coordinator, the assessment. */
 export async function nameLookup(
   db: Db,
-  rows: { client_id: string | null; phone: string; coordinator_id: string | null }[]
+  rows: { client_id: string | null; phone: string; coordinator_id: string | null }[],
+  /** Other staff whose names are needed (e.g. counsellors). */
+  extraProfileIds: string[] = []
 ): Promise<NameLookup> {
   const clientIds = [...new Set(rows.map((r) => r.client_id).filter((v): v is string => !!v))];
   const phones = [...new Set(rows.filter((r) => !r.client_id).map((r) => r.phone))];
   // Client phones are stored as +91…; older rows may hold 91… or the 10 digits.
   const phoneForms = phones.flatMap((p) => [p, p.replace(/^\+/, ''), p.slice(-10)]);
-  const coordIds = [...new Set(rows.map((r) => r.coordinator_id).filter((v): v is string => !!v))];
+  const coordIds = [...new Set([...rows.map((r) => r.coordinator_id), ...extraProfileIds].filter((v): v is string => !!v))];
   const [byId, byPhone, coords, tests] = await Promise.all([
     clientIds.length ? db.from('clients').select('id, full_name').in('id', clientIds) : null,
     phoneForms.length ? db.from('clients').select('full_name, phone').in('phone', phoneForms) : null,
@@ -197,8 +206,10 @@ async function assessmentProgress(raw: RawPurchase[]): Promise<Map<string, Asses
 }
 
 async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
-  const [names, progress] = await Promise.all([nameLookup(db, raw), assessmentProgress(raw)]);
-  return raw.map(({ purchase_stages, purchase_payments, calls, client_id, coordinator_id, closed_reason, ...r }) => {
+  const counsellorIds = raw.flatMap((r) => (r.presentation_bookings ?? []).filter((b) => b.status === 'booked').map((b) => b.counsellor_id));
+  const [names, progress] = await Promise.all([nameLookup(db, raw, counsellorIds), assessmentProgress(raw)]);
+  return raw.map(({ purchase_stages, purchase_payments, calls, presentation_bookings, client_id, coordinator_id, closed_reason, ...r }) => {
+    const booked = (presentation_bookings ?? []).find((b) => b.status === 'booked');
     const stages = [...(purchase_stages ?? [])].sort((a, b) => a.position - b.position);
     const tries = (purchase_payments ?? [])
       .map((l) => one(l.payments))
@@ -217,6 +228,10 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
       last_try_failed: last?.status === 'failed',
       open_call: open ? { id: open.id, kind: open.kind, due_at: open.due_at } : null,
       assessment_progress: progress.get(r.id) ?? 'not_started',
+      presentation: booked
+        ? { id: booked.id, counsellor_id: booked.counsellor_id, counsellor_name: names.coordinator(booked.counsellor_id), on_date: booked.on_date, start_time: booked.start_time, end_time: booked.end_time, booked_at: booked.booked_at, booked_by_name: booked.booked_by_name }
+        : null,
+      can_book: r.status === 'paid' && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       stages,
       current_stage: currentStage(stages),
     };

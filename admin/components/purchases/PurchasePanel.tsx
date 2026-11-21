@@ -5,6 +5,9 @@ import { formatAmount, formatDateTime, formatTime, paymentMethodLabel } from '..
 import { CopyButton } from '../CopyButton';
 import { CLIENTS_URL } from '../../lib/site';
 import { CallDoneButton } from '../calls/CallDoneButton';
+import { BookPresentationButton } from '../booking/BookPresentationButton';
+import { CancelBookingButton } from '../booking/CancelBookingButton';
+import { presentationLabel } from '../../lib/booking';
 import { cn } from '../brand';
 import { JOURNEY_STAGE_LABELS, PURCHASE_KIND_LABELS, isLate } from '../../lib/purchases';
 import { CALL_CHOICE_LABELS, CALL_EVENT_LABELS, CALL_KIND_LABELS, CALL_REASON_LABELS, isCallLate } from '../../lib/calls';
@@ -61,6 +64,8 @@ function PaymentItem({ p }: { p: PurchasePayment }) {
 function logText(l: CallLogRow): string {
   // "Tried again – failed, 4:19 pm" (owner's words, 2026-11-20).
   if (l.entry === 'event' && l.event === 'try_failed') return `${CALL_EVENT_LABELS.try_failed}, ${formatTime(l.at)}`;
+  // "Presentation booked: Test Counsellor, Mon 23 Nov 2026, 10:00" (the note holds what was booked / why cancelled).
+  if (l.entry === 'event' && l.event && l.note) return `${CALL_EVENT_LABELS[l.event]}: ${l.note}`;
   if (l.entry === 'event') return l.event ? CALL_EVENT_LABELS[l.event] : '';
   const parts = [l.choice ? CALL_CHOICE_LABELS[l.choice] : ''];
   if (l.reason) parts.push(CALL_REASON_LABELS[l.reason]);
@@ -68,8 +73,9 @@ function logText(l: CallLogRow): string {
   return parts.join(' · ');
 }
 
-// The open call (with Mark as call done) and the call history of every call, collapsed.
-function CallBox({ calls, now }: { calls: CallRow[]; now: Date }) {
+// The open call (with Mark as call done; a Booking call also with Book presentation) and the call history of every
+// call, collapsed.
+function CallBox({ calls, now, book }: { calls: CallRow[]; now: Date; book: React.ReactNode }) {
   if (calls.length === 0) return null;
   const open = calls.find((c) => c.status === 'open');
   // The history lines, plus one line for a call a rule closed (its note, e.g. paid before go-live).
@@ -91,7 +97,14 @@ function CallBox({ calls, now }: { calls: CallRow[]; now: Date }) {
             {late ? 'Late · was due ' : 'Due '}
             {formatDateTime(open.due_at)}
           </p>
-          <CallDoneButton callId={open.id} kind={open.kind} priorCalls={open.prior_calls} variant="primary" className="mt-3" />
+          {open.kind === 'booking' && book ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {book}
+              <CallDoneButton callId={open.id} kind={open.kind} priorCalls={open.prior_calls} />
+            </div>
+          ) : (
+            <CallDoneButton callId={open.id} kind={open.kind} priorCalls={open.prior_calls} variant="primary" className="mt-3" />
+          )}
         </div>
       )}
       <details className="group">
@@ -109,7 +122,7 @@ function CallBox({ calls, now }: { calls: CallRow[]; now: Date }) {
                 {l.by_name ? ` · ${l.by_name}` : ''}
               </p>
               <p className={cn('m-0', l.entry === 'call' ? 'font-medium text-ink' : 'text-ink-soft')}>{l.text ?? logText(l)}</p>
-              {l.note && <p className="m-0 mt-1 whitespace-pre-line text-ink-soft">{l.note}</p>}
+              {l.note && l.entry === 'call' && <p className="m-0 mt-1 whitespace-pre-line text-ink-soft">{l.note}</p>}
             </li>
           ))}
         </ol>
@@ -121,8 +134,24 @@ function CallBox({ calls, now }: { calls: CallRow[]; now: Date }) {
 // The row in a right-side panel: who, what, status, coordinator, the open call and the call history. A purchase
 // shows its purchase journey with planned and actual times, and the payments (collapsed). An unpaid row (payment
 // attempt) lists its tries.
-export function PurchasePanel({ purchase: p, closeHref, now }: { purchase: PurchaseDetail; closeHref: string; now: Date }) {
+export function PurchasePanel({
+  purchase: p,
+  closeHref,
+  now,
+  canCancelBooking = false,
+}: {
+  purchase: PurchaseDetail;
+  closeHref: string;
+  now: Date;
+  /** Super admins: Cancel booking (with a reason). */
+  canCancelBooking?: boolean;
+}) {
   const unpaid = p.status === 'not_paid';
+  const clientLabel = p.client_name ?? p.phone;
+  const book = p.can_book ? (
+    <BookPresentationButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant="primary" />
+  ) : null;
+  const bookingCallOpen = p.calls.some((c) => c.kind === 'booking' && c.status === 'open');
   return (
     <SidePanel title={p.client_name ?? 'Not registered yet'} closeHref={closeHref}>
       <div className="mb-5 grid gap-2">
@@ -149,7 +178,28 @@ export function PurchasePanel({ purchase: p, closeHref, now }: { purchase: Purch
         )}
       </div>
 
-      <CallBox calls={p.calls} now={now} />
+      {p.presentation ? (
+        <section className="mb-6 rounded-card border border-teal/30 bg-mist p-4">
+          <h3 className="m-0 text-[16px] font-semibold text-teal">Report presentation</h3>
+          <p className="m-0 mt-1 font-medium text-ink">
+            {p.presentation.counsellor_name ?? 'Counsellor'} · {presentationLabel(p.presentation.on_date, p.presentation.start_time)}
+          </p>
+          <p className="m-0 text-[13px] text-ink-muted">
+            Booked by {p.presentation.booked_by_name ?? '—'}, {formatDateTime(p.presentation.booked_at)}
+          </p>
+          {canCancelBooking && (
+            <div className="mt-2">
+              <CancelBookingButton bookingId={p.presentation.id} />
+            </div>
+          )}
+        </section>
+      ) : (
+        // No open Booking call (e.g. marked Done, or none by the go-live rule) but it can still be booked.
+        book &&
+        !bookingCallOpen && <div className="mb-6">{book}</div>
+      )}
+
+      <CallBox calls={p.calls} now={now} book={book} />
 
       {unpaid ? (
         <>
