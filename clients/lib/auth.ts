@@ -53,8 +53,8 @@ export const getCurrentClient = cache(async (): Promise<CurrentClientSession | n
       const normalizedPhone = phoneValidation.valid
         ? phoneValidation.normalized
         : (user.phone.startsWith('+') ? user.phone : `+${user.phone}`);
-      const digitsOnly = normalizedPhone.replace(/\D/g, ''); // e.g. 919817285068
-      const tenDigits = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly; // e.g. 9817285068
+      const digitsOnly = normalizedPhone.replace(/\D/g, ''); // e.g. 91XXXXXXXXXX
+      const tenDigits = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly; // e.g. XXXXXXXXXX
 
       // Search with admin privileges (bypassing RLS) for unlinked record matching any phone format
       const { data: matchedClient } = await adminClient
