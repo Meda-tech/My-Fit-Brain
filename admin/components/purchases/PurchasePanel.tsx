@@ -1,7 +1,8 @@
 import { Phone } from 'lucide-react';
 import { SidePanel } from './SidePanel';
-import { PurchaseStatusPill, StagePill } from './PurchasePills';
-import { formatAmount, formatDate, formatDateTime, formatTime, paymentMethodLabel } from '../payments/format';
+import { PurchaseStatusPill } from './PurchasePills';
+import { JourneyView } from './JourneyView';
+import { formatAmount, formatDateTime, paymentMethodLabel } from '../payments/format';
 import { PackagePaymentDialog } from '../packages/PackagePaymentDialog';
 import { CopyButton } from '../CopyButton';
 import { CLIENTS_URL } from '../../lib/site';
@@ -10,10 +11,10 @@ import { BookPresentationButton } from '../booking/BookPresentationButton';
 import { CancelBookingButton } from '../booking/CancelBookingButton';
 import { PresentationDoneButton } from '../presentations/PresentationDoneButton';
 import { presentationLabel } from '../../lib/booking';
-import { cn } from '../brand';
-import { JOURNEY_STAGE_LABELS, PURCHASE_KIND_LABELS, isLate } from '../../lib/purchases';
-import { CALL_EVENT_LABELS, CALL_KIND_LABELS, CALL_REASON_LABELS, choiceLabel, isCallLate, outcomeLabel } from '../../lib/calls';
-import type { CallLogRow, CallRow, PurchaseDetail, PurchasePayment } from '../../lib/services/purchases';
+import { PURCHASE_KIND_LABELS } from '../../lib/purchases';
+import { buildJourney, type JourneyTask, type JourneyTaskKey } from '../../lib/journey';
+import type { PurchaseDetail, PurchasePayment } from '../../lib/services/purchases';
+import type { PackagePaid } from '../../lib/package';
 
 const PAYMENT_STATUS: Record<string, string> = {
   created: 'Not completed',
@@ -31,12 +32,23 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+function Proof({ url }: { url: string | null }) {
+  if (!url) return null;
+  return (
+    <Row label="Proof">
+      <a href={url} target="_blank" rel="noreferrer" className="font-medium text-teal hover:underline">
+        Open
+      </a>
+    </Row>
+  );
+}
+
 function PaymentItem({ p }: { p: PurchasePayment }) {
   const manual = p.provider === 'offline';
   return (
     <li className="rounded-card border border-sand p-4">
       <p className="mb-2 font-semibold text-ink">
-        {manual ? 'Manual payment' : 'Pay page'} · {formatAmount(p.amount_paise, p.currency)}
+        Assessment · {manual ? 'manual payment' : 'pay page'} · {formatAmount(p.amount_paise, p.currency)}
       </p>
       <dl className="grid gap-1.5">
         <Row label="Status">{p.refund_status === 'refunded' ? 'Refunded' : PAYMENT_STATUS[p.status] ?? p.status}</Row>
@@ -49,13 +61,7 @@ function PaymentItem({ p }: { p: PurchasePayment }) {
           <>
             <Row label="Verified by coordinator">{p.recorded_by_name ?? '—'}</Row>
             <Row label="Accounts check">{p.accounts_check === 'checked' ? 'Checked' : 'Pending'}</Row>
-            {p.proof_url && (
-              <Row label="Proof">
-                <a href={p.proof_url} target="_blank" rel="noreferrer" className="font-medium text-teal hover:underline">
-                  Open
-                </a>
-              </Row>
-            )}
+            <Proof url={p.proof_url} />
           </>
         )}
       </dl>
@@ -63,79 +69,35 @@ function PaymentItem({ p }: { p: PurchasePayment }) {
   );
 }
 
-function logText(l: CallLogRow, kind: CallRow['kind']): string {
-  // "Tried again – failed, 4:19 pm" (owner's words, 2026-11-20).
-  if (l.entry === 'event' && l.event === 'try_failed') return `${CALL_EVENT_LABELS.try_failed}, ${formatTime(l.at)}`;
-  // "Presentation booked: Test Counsellor, Mon 23 Nov 2026, 10:00" (the note holds what was booked / why cancelled).
-  if (l.entry === 'event' && l.event && l.note) return `${CALL_EVENT_LABELS[l.event]}: ${l.note}`;
-  if (l.entry === 'event') return l.event ? CALL_EVENT_LABELS[l.event] : '';
-  const parts = [l.choice ? choiceLabel(kind, l.choice) : ''];
-  if (l.reason) parts.push(CALL_REASON_LABELS[l.reason]);
-  if (l.follow_up_at) parts.push(`follow-up ${formatDateTime(l.follow_up_at)}`);
-  return parts.join(' · ');
-}
-
-// The open call (with Mark as call done; a Booking call also with Book presentation) and the call history of every
-// call, collapsed.
-function CallBox({ calls, now, book }: { calls: CallRow[]; now: Date; book: React.ReactNode }) {
-  if (calls.length === 0) return null;
-  const open = calls.find((c) => c.status === 'open');
-  // The history lines, plus one line for a call a rule closed (its note, e.g. paid before go-live).
-  const logs: (CallLogRow & { kind: CallRow['kind']; text?: string })[] = calls
-    .flatMap((c) => [
-      ...c.logs.map((l) => ({ ...l, kind: c.kind })),
-      ...(c.closed_note && c.closed_at
-        ? [{ id: `${c.id}-note`, at: c.closed_at, entry: 'event' as const, choice: null, reason: null, note: null, follow_up_at: null, event: null, by_name: null, kind: c.kind, text: c.closed_note }]
-        : []),
-    ])
-    .sort((a, b) => b.at.localeCompare(a.at));
-  const late = open ? isCallLate(open.due_at, now) : false;
+function PackagePaymentItem({ p }: { p: PackagePaid }) {
+  const manual = p.provider === 'offline';
   return (
-    <section className="mb-6 grid gap-3">
-      {open && (
-        <div className="rounded-card border border-sand bg-cream p-4">
-          <p className="m-0 font-semibold text-ink">{CALL_KIND_LABELS[open.kind]}</p>
-          <p className={cn('m-0 mt-0.5 text-[14px]', late ? 'font-semibold text-coral-deep' : 'text-ink-soft')}>
-            {late ? 'Late · was due ' : 'Due '}
-            {formatDateTime(open.due_at)}
-          </p>
-          {open.kind === 'booking' && book ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {book}
-              <CallDoneButton callId={open.id} kind={open.kind} priorCalls={open.prior_calls} />
-            </div>
-          ) : (
-            <CallDoneButton callId={open.id} kind={open.kind} priorCalls={open.prior_calls} variant="primary" className="mt-3" />
-          )}
-        </div>
-      )}
-      <details className="group">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-semibold text-teal">
-          <span className="transition-transform group-open:rotate-90" aria-hidden>
-            ›
-          </span>
-          Call history ({logs.length})
-        </summary>
-        <ol className="mt-2 grid gap-2">
-          {logs.map((l) => (
-            <li key={l.id} className="rounded-card border border-sand p-3 text-[14px]">
-              <p className="m-0 text-[12px] text-ink-muted">
-                {formatDateTime(l.at)} · {CALL_KIND_LABELS[l.kind]}
-                {l.by_name ? ` · ${l.by_name}` : ''}
-              </p>
-              <p className={cn('m-0', l.entry === 'call' ? 'font-medium text-ink' : 'text-ink-soft')}>{l.text ?? logText(l, l.kind)}</p>
-              {l.note && l.entry === 'call' && <p className="m-0 mt-1 whitespace-pre-line text-ink-soft">{l.note}</p>}
-            </li>
-          ))}
-        </ol>
-      </details>
-    </section>
+    <li className="rounded-card border border-sand p-4">
+      <p className="mb-2 font-semibold text-ink">
+        Package · {manual ? 'manual payment' : 'in the app'} · {formatAmount(p.amount_paise)}
+      </p>
+      <dl className="grid gap-1.5">
+        <Row label="Status">Paid</Row>
+        <Row label="Method">{paymentMethodLabel(p)}</Row>
+        <Row label="Paid">{formatDateTime(p.paid_at)}</Row>
+        {manual && (
+          <>
+            <Row label="Reference">
+              <span className="font-mono text-[12px]">{p.reference ?? '—'}</span>
+            </Row>
+            <Row label="Verified by coordinator">{p.recorded_by_name ?? '—'}</Row>
+            <Row label="Accounts check">Pending</Row>
+            <Proof url={p.proof_url} />
+          </>
+        )}
+      </dl>
+    </li>
   );
 }
 
-// The row in a right-side panel: who, what, status, coordinator, the open call and the call history. A purchase
-// shows its purchase journey with planned and actual times, and the payments (collapsed). An unpaid row (payment
-// attempt) lists its tries.
+// The purchase in a right-side panel: a short top (client, phone, assessment, amount, status, coordinator), the
+// purchase journey (our five tasks with the call attempts and client steps nested; each task's buttons next to it),
+// and the payments, collapsed, with their proof links.
 export function PurchasePanel({
   purchase: p,
   closeHref,
@@ -145,18 +107,69 @@ export function PurchasePanel({
   purchase: PurchaseDetail;
   closeHref: string;
   now: Date;
-  /** Super admins: Cancel booking (with a reason). */
+  /** Super admins: Cancel booking (with a reason) and Report presentation done at any time. */
   canCancelBooking?: boolean;
 }) {
-  const unpaid = p.status === 'not_paid';
   const clientLabel = p.client_name ?? p.phone;
-  const book = p.can_book ? (
-    <BookPresentationButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant="primary" />
-  ) : null;
-  const bookingCallOpen = p.calls.some((c) => c.kind === 'booking' && c.status === 'open');
+  const tasks = buildJourney(
+    {
+      status: p.status,
+      coordinatorName: p.coordinator_name,
+      calls: p.calls,
+      payments: p.payments,
+      presentation: p.presentation,
+      packagePaid: p.package_paid,
+      slotLabel: presentationLabel,
+    },
+    now
+  );
+  const task = (key: JourneyTaskKey) => tasks.find((t) => t.key === key) as JourneyTask;
+  // The one main button: the first open task's first action.
+  const firstOpen = tasks.find((t) => t.status === 'open')?.key;
+  const main = (key: JourneyTaskKey) => (firstOpen === key ? 'primary' : 'secondary');
+  const markDone = (key: JourneyTaskKey, variant: 'primary' | 'secondary' = main(key)) => {
+    const t = task(key);
+    return t.callId ? <CallDoneButton callId={t.callId} kind={key === 'presentation' ? 'booking' : key} priorCalls={t.priorCalls} variant={variant} /> : null;
+  };
+
+  const actions: Partial<Record<JourneyTaskKey, React.ReactNode>> = {
+    payment:
+      p.status === 'not_paid' ? (
+        <>
+          {markDone('payment')}
+          <CopyButton text={`${CLIENTS_URL}/pay/${p.test_code}`} label="Copy pay link" variant="secondary" />
+        </>
+      ) : null,
+    assessment: markDone('assessment'),
+    booking: (
+      <>
+        {p.can_book && <BookPresentationButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant={main('booking')} />}
+        {markDone('booking', 'secondary')}
+      </>
+    ),
+    presentation:
+      p.presentation && !p.presentation.done_at && canCancelBooking ? (
+        <>
+          <PresentationDoneButton
+            bookingId={p.presentation.id}
+            summary={`${clientLabel} · ${presentationLabel(p.presentation.on_date, p.presentation.start_time)}`}
+            variant={main('presentation')}
+          />
+          <CancelBookingButton bookingId={p.presentation.id} />
+        </>
+      ) : null,
+    package: (
+      <>
+        {markDone('package')}
+        {p.can_add_package_payment && <PackagePaymentDialog purchaseId={p.id} clientLabel={clientLabel} />}
+      </>
+    ),
+  };
+
+  const paymentCount = p.payments.length + (p.package_paid ? 1 : 0);
   return (
     <SidePanel title={p.client_name ?? 'Not registered yet'} closeHref={closeHref}>
-      <div className="mb-5 grid gap-2">
+      <div className="mb-5 grid gap-1">
         <a href={`tel:${p.phone}`} className="inline-flex min-h-11 w-fit items-center gap-2 font-mono text-[16px] font-semibold text-teal hover:underline">
           <Phone size={16} strokeWidth={2} aria-hidden />
           {p.phone}
@@ -169,143 +182,27 @@ export function PurchasePanel({
           <span>{formatAmount(p.amount_paise)}</span>
           <PurchaseStatusPill status={p.status} notInterested={p.not_interested} />
         </div>
-        <p className="text-[14px] text-ink-soft">
+        <p className="m-0 text-[14px] text-ink-soft">
           Coordinator: <span className="font-medium text-ink">{p.coordinator_name ?? 'None yet'}</span>
         </p>
-        {/* During a Payment call: the pay link for this assessment, to send to the client. */}
-        {unpaid && (
-          <div className="w-fit">
-            <CopyButton text={`${CLIENTS_URL}/pay/${p.test_code}`} label="Copy pay link" variant="secondary" />
-          </div>
-        )}
       </div>
 
-      {p.presentation ? (
-        <section className="mb-6 rounded-card border border-teal/30 bg-mist p-4">
-          <h3 className="m-0 text-[16px] font-semibold text-teal">Report presentation</h3>
-          <p className="m-0 mt-1 font-medium text-ink">
-            {p.presentation.counsellor_name ?? 'Counsellor'} · {presentationLabel(p.presentation.on_date, p.presentation.start_time)}
-          </p>
-          <p className="m-0 text-[13px] text-ink-muted">
-            Booked by {p.presentation.booked_by_name ?? '—'}, {formatDateTime(p.presentation.booked_at)}
-          </p>
-          {p.presentation.done_at ? (
-            <>
-              <p className="m-0 mt-2 text-[14px] font-semibold text-teal">
-                Presentation done {formatDateTime(p.presentation.done_at)}
-                {p.presentation.done_by_name ? ` by ${p.presentation.done_by_name}` : ''}
-              </p>
-              {p.package_call && (
-                <p className="m-0 text-[14px] text-ink">
-                  Package call:{' '}
-                  {p.package_call.status === 'open'
-                    ? `open, due ${formatDateTime(p.package_call.due_at)}`
-                    : p.package_call.outcome
-                      ? outcomeLabel('package', p.package_call.outcome)
-                      : 'closed'}
-                </p>
-              )}
-              {p.package_paid ? (
-                <p className="m-0 mt-2 text-[15px] font-semibold text-teal">
-                  Package paid {formatAmount(p.package_paid.amount_paise)} on {formatDate(p.package_paid.paid_at)} (
-                  {p.package_paid.provider === 'offline' ? `manual: ${paymentMethodLabel(p.package_paid)}` : paymentMethodLabel(p.package_paid)})
-                </p>
-              ) : (
-                p.can_add_package_payment && (
-                  <div className="mt-3">
-                    <PackagePaymentDialog purchaseId={p.id} clientLabel={clientLabel} />
-                  </div>
-                )
-              )}
-            </>
-          ) : (
-            canCancelBooking && (
-              // Super admins: mark it done at any time (e.g. a forgotten one), or cancel the booking.
-              <div className="mt-2 flex flex-wrap gap-2">
-                <PresentationDoneButton
-                  bookingId={p.presentation.id}
-                  summary={`${clientLabel} · ${presentationLabel(p.presentation.on_date, p.presentation.start_time)}`}
-                  variant="secondary"
-                />
-                <CancelBookingButton bookingId={p.presentation.id} />
-              </div>
-            )
-          )}
-        </section>
-      ) : (
-        // No open Booking call (e.g. marked Done, or none by the go-live rule) but it can still be booked.
-        book &&
-        !bookingCallOpen && <div className="mb-6">{book}</div>
-      )}
+      <JourneyView tasks={tasks} actions={actions} />
 
-      <CallBox calls={p.calls} now={now} book={book} />
-
-      {unpaid ? (
-        <>
-          <h3 className="mb-1 text-[16px] font-semibold text-teal">Tries ({p.payments.length})</h3>
-          <p className="mb-3 text-[13px] text-ink-muted">
-            {p.not_interested
-              ? 'Closed as Not interested on the Payment call. If this number pays this assessment, it moves to Paid.'
-              : 'Not paid yet. When this number pays this assessment, it moves to Paid.'}
-          </p>
-          <ul className="grid gap-3">
-            {p.payments.map((pay) => (
-              <PaymentItem key={pay.id} p={pay} />
-            ))}
-          </ul>
-        </>
-      ) : (
-        <PurchaseJourney purchase={p} now={now} />
-      )}
-    </SidePanel>
-  );
-}
-
-function PurchaseJourney({ purchase: p, now }: { purchase: PurchaseDetail; now: Date }) {
-  return (
-    <>
-      <h3 className="mb-3 text-[16px] font-semibold text-teal">Purchase journey</h3>
-      <ol className="mb-6 grid gap-3">
-        {p.stages.map((s, i) => (
-          <li key={s.stage} className="flex gap-3">
-            <span
-              aria-hidden
-              className={
-                s.status === 'done'
-                  ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal text-[13px] font-semibold text-white'
-                  : s.status === 'open'
-                    ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-teal text-[13px] font-semibold text-teal'
-                    : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-sand text-[13px] text-ink-muted'
-              }
-            >
-              {i + 1}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-ink">{JOURNEY_STAGE_LABELS[s.stage]}</span>
-                <StagePill status={s.status} late={isLate(s, now)} />
-              </div>
-              <p className="mt-0.5 text-[13px] text-ink-soft">
-                Planned: {formatDateTime(s.planned_at)} · Actual: {formatDateTime(s.done_at)}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
-
-      <details className="group">
+      <details className="group border-t border-sand pt-3">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-semibold text-teal">
           <span className="transition-transform group-open:rotate-90" aria-hidden>
             ›
           </span>
-          Payments ({p.payments.length})
+          Payments ({paymentCount})
         </summary>
         <ul className="mt-2 grid gap-3">
           {p.payments.map((pay) => (
             <PaymentItem key={pay.id} p={pay} />
           ))}
+          {p.package_paid && <PackagePaymentItem p={p.package_paid} />}
         </ul>
       </details>
-    </>
+    </SidePanel>
   );
 }

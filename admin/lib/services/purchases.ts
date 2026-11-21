@@ -91,6 +91,8 @@ export interface PurchasePayment {
   recorded_by_name: string | null;
   /** Manual payments only: "pending" until Accounts has checked it. */
   accounts_check: 'pending' | 'checked' | null;
+  /** The assessment this payment started (paid payments only): when it was started and completed. */
+  attempt: { started_at: string | null; completed_at: string | null } | null;
 }
 
 export interface CallLogRow {
@@ -132,7 +134,7 @@ const COLUMNS =
   'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status, attempt_id)), ' +
   'calls(id, kind, status, outcome, due_at), ' +
   'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, status, booked_at, booked_by_name, done_at, done_by_name), ' +
-  'package_payments!package_payments_purchase_id_fkey(amount_paise, paid_at, provider, method, status, package_purchase_id)';
+  'package_payments!package_payments_purchase_id_fkey(amount_paise, paid_at, provider, method, status, package_purchase_id, reference, proof_url, recorded_by_name)';
 
 /** Rows shown on the screen: purchases, open attempts and attempts closed as Not interested. */
 const SHOWN = 'status.neq.not_paid,closed_at.is.null,closed_reason.eq.not_interested';
@@ -247,7 +249,15 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
         return pc ? { status: pc.status as 'open' | 'closed', outcome: pc.outcome, due_at: pc.due_at } : null;
       })(),
       package_paid: packagePaid
-        ? { amount_paise: packagePaid.amount_paise, paid_at: packagePaid.paid_at, provider: packagePaid.provider, method: packagePaid.method }
+        ? {
+            amount_paise: packagePaid.amount_paise,
+            paid_at: packagePaid.paid_at,
+            provider: packagePaid.provider,
+            method: packagePaid.method,
+            reference: packagePaid.reference,
+            proof_url: packagePaid.proof_url,
+            recorded_by_name: packagePaid.recorded_by_name,
+          }
         : null,
       can_add_package_payment: r.status === 'paid' && !packagePaid && !!booked?.done_at,
       stages,
@@ -322,7 +332,7 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
     db
       .from('purchase_payments')
       .select(
-        'accounts_check, payments(id, provider, status, refund_status, method, amount_paise, currency, paid_at, created_at, reference, provider_order_id, provider_payment_id, proof_url, recorded_by)'
+        'accounts_check, payments(id, provider, status, refund_status, method, amount_paise, currency, paid_at, created_at, reference, provider_order_id, provider_payment_id, proof_url, recorded_by, attempts(started_at, completed_at))'
       )
       .eq('purchase_id', id),
     db
@@ -331,7 +341,10 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
       .eq('purchase_id', id),
   ]);
   if (!data) return null;
-  type RawPayment = Omit<PurchasePayment, 'recorded_by_name' | 'accounts_check'> & { recorded_by: string | null };
+  type RawPayment = Omit<PurchasePayment, 'recorded_by_name' | 'accounts_check' | 'attempt'> & {
+    recorded_by: string | null;
+    attempts: One<{ started_at: string | null; completed_at: string | null }>;
+  };
   type RawLink = { accounts_check: PurchasePayment['accounts_check']; payments: One<RawPayment> };
   const raw = ((links ?? []) as unknown as RawLink[])
     .map((l) => ({ check: l.accounts_check, p: one(l.payments) }))
@@ -346,7 +359,12 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
   const staffName = new Map(((staff ?? []) as { id: string; full_name: string }[]).map((s) => [s.id, s.full_name]));
 
   const payments = raw
-    .map(({ check, p: { recorded_by, ...p } }) => ({ ...p, recorded_by_name: recorded_by ? staffName.get(recorded_by) ?? null : null, accounts_check: check }))
+    .map(({ check, p: { recorded_by, attempts, ...p } }) => ({
+      ...p,
+      recorded_by_name: recorded_by ? staffName.get(recorded_by) ?? null : null,
+      accounts_check: check,
+      attempt: one(attempts),
+    }))
     .sort((a, b) => (b.paid_at ?? b.created_at).localeCompare(a.paid_at ?? a.created_at));
 
   type RawCall = Omit<CallRow, 'logs' | 'prior_calls'> & { call_logs: CallLogRow[] | null };

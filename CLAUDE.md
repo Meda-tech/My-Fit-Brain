@@ -341,9 +341,19 @@ results with you"). The client never sees a report in the app.
   `purchases_select`). Tabs **Unpaid** (open attempts and those closed as Not interested: tried, client,
   assessment, tries, status, call, coordinator) · **Paid** (date, client, assessment, amount, status, stage now,
   call, coordinator) · **All**. Each row shows its open call and due time. Coordinators open on Unpaid when they
-  have any, else Paid; super admins on All. A row opens a right-side panel (`?open=<id>`): the open call with
-  Mark as call done, the call history (collapsed), then the purchase journey and the payments (collapsed), or for
-  an unpaid row its tries. Cards below wide screens (xl), a table on wide screens.
+  have any, else Paid; super admins on All. A row opens a right-side panel (`?open=<id>`, full width on phones):
+  a short top (client, phone, assessment, amount, status, coordinator), then ONE **purchase journey** of our team's
+  five tasks in fixed order: 1. Payment call · 2. Assessment call · 3. Booking call · 4. Report presentation
+  (counsellor) · 5. Package call. Each task: who, Planned (due / slot) and Actual, late in coral-deep, status done
+  ✓ · open ● · upcoming ○ (greyed) · not interested ✕ · **not needed** (struck through, "Not needed – client <did X>
+  at <time>": the call closed by itself with no call attempt, or was never made). Nested under each task, in time
+  order: every call attempt (choice, reason, full note, who, follow-up) and the client's steps (tries and payment;
+  assessment started / completed; presentation booked; marked done; package paid); open task expanded, others
+  collapsed. The task's buttons (Mark as call done, Copy pay link, Book presentation, Report presentation done,
+  Cancel booking, Add package payment) sit on its row. Built by `buildJourney()` (`admin/lib/journey.ts`, tests
+  `admin/test/journey.test.ts`), shown by `components/purchases/JourneyView.tsx`. Payments (assessment and package,
+  with proof links) collapsed below. No separate Call history section. Cards below wide screens (xl), a table on
+  wide screens.
 
 ### Calls and My tasks (step 2, owner 2026-11-20)
 

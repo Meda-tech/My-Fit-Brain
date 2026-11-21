@@ -25,6 +25,10 @@ export interface PackagePaid {
   paid_at: string;
   provider: 'razorpay' | 'offline';
   method: string | null;
+  /** Manual payments: the reference, the proof and who recorded it. */
+  reference: string | null;
+  proof_url: string | null;
+  recorded_by_name: string | null;
 }
 
 export type PackagePaymentState = 'paid' | 'refund_needed' | 'refunded' | 'failed' | 'not_completed';
