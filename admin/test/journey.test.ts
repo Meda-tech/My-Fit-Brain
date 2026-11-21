@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildJourney, type JourneyInput } from '../lib/journey';
 
-const slotLabel = (d: string, s: string) => `${d} ${s.slice(0, 5)}`;
+const slotLabel = (d: string, s: string | null) => (s ? `${d} ${s.slice(0, 5)}` : d);
 const NOW = new Date('2026-11-25T10:00:00Z');
 const log = (over: Partial<JourneyInput['calls'][number]['logs'][number]>) => ({
   id: Math.random().toString(36).slice(2),
@@ -123,5 +123,50 @@ describe('journey: in progress', () => {
     );
     expect(j[4]).toMatchObject({ status: 'done', actual: '2026-11-24T06:00:00Z', actualLate: false });
     expect(j[4].items[0]).toMatchObject({ title: 'Package paid · manual payment', detail: 'Bank transfer · ₹31,500', by: 'Test Coordinator' });
+  });
+});
+
+describe('journey: a purchase from before the system (owner, 2026-11-21)', () => {
+  const old: JourneyInput = {
+    ...base,
+    status: 'paid',
+    beforeSystem: true,
+    payments: [
+      {
+        status: 'paid', provider: 'razorpay', method: 'upi', amount_paise: 350000, currency: 'INR', paid_at: '2026-11-01T07:00:00Z', created_at: '2026-11-01T06:50:00Z',
+        refund_status: null, recorded_by_name: null, attempt: { started_at: '2026-11-01T08:00:00Z', completed_at: '2026-11-01T09:00:00Z' },
+      },
+    ],
+    // The Assessment call the go-live rule closed.
+    calls: [{ id: 'a', kind: 'assessment', status: 'closed', outcome: 'before_go_live', due_at: '2026-11-01T09:00:00Z', closed_at: '2026-11-20T13:00:00Z', closed_note: 'Before the system: no automatic call.', prior_calls: 0, logs: [] }],
+    presentation: null,
+    packagePaid: null,
+  };
+
+  it('tasks 1–3 say "Before the system": nothing planned, nothing late, no call to mark; the presentation waits for the admin', () => {
+    const j = buildJourney(old, NOW);
+    expect(j.map((t) => t.status)).toEqual(['before_system', 'before_system', 'before_system', 'upcoming', 'upcoming']);
+    expect(j.slice(0, 3).every((t) => t.planned === null && !t.late && t.callId === null)).toBe(true);
+    expect(j.some((t) => t.late)).toBe(false);
+  });
+
+  it('marked done by an admin: Report presentation done, "Marked by admin", no slot; the Package call runs as usual', () => {
+    const j = buildJourney(
+      {
+        ...old,
+        presentation: {
+          counsellor_name: 'Test Counsellor', on_date: '2026-11-18', start_time: null, end_time: null, marked_by_admin: true,
+          booked_at: '2026-11-25T06:00:00Z', booked_by_name: 'Test Super Admin', done_at: '2026-11-25T06:00:00Z', done_by_name: 'Test Super Admin',
+        },
+        calls: [...old.calls, { id: 'k', kind: 'package', status: 'open', outcome: null, due_at: '2026-11-25T08:00:00Z', closed_at: null, closed_note: null, prior_calls: 0, logs: [] }],
+      },
+      NOW
+    );
+    expect(j.map((t) => t.status)).toEqual(['before_system', 'before_system', 'before_system', 'done', 'open']);
+    expect(j[3]).toMatchObject({ who: 'Test Counsellor', statusNote: 'Marked by admin', planned: null, actual: '2026-11-25T06:00:00Z' });
+    expect(j[3].items).toEqual([expect.objectContaining({ title: 'Marked done by admin', detail: 'Happened on 2026-11-18 · Test Counsellor', by: 'Test Super Admin' })]);
+    // No "Presentation booked" line: nothing was booked.
+    expect(j[2].items).toEqual([]);
+    expect(j[4]).toMatchObject({ status: 'open', callId: 'k', planned: '2026-11-25T08:00:00Z' });
   });
 });

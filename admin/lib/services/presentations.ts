@@ -18,8 +18,9 @@ export interface PresentationRow {
   counsellor_id: string;
   counsellor_name: string | null;
   on_date: string;
-  start_time: string;
-  end_time: string;
+  start_time: string | null;
+  end_time: string | null;
+  marked_by_admin: boolean;
   /** The slot start as an instant (India time). */
   starts_at: string;
   client_name: string | null;
@@ -40,8 +41,9 @@ interface RawRow {
   purchase_id: string;
   counsellor_id: string;
   on_date: string;
-  start_time: string;
-  end_time: string;
+  start_time: string | null;
+  end_time: string | null;
+  marked_by_admin: boolean;
   done_at: string | null;
   done_by_name: string | null;
   purchases: One<RowPurchase>;
@@ -56,12 +58,13 @@ interface RowPurchase {
 }
 
 const COLUMNS =
-  'id, purchase_id, counsellor_id, on_date, start_time, end_time, done_at, done_by_name, ' +
+  'id, purchase_id, counsellor_id, on_date, start_time, end_time, marked_by_admin, done_at, done_by_name, ' +
   'purchases(test_code, phone, client_id, coordinator_id, purchase_payments(payments(status, attempt_id)))';
 
 /** "2026-11-23" + "10:00:00" in India time → ISO instant. */
-function startsAt(date: string, time: string): string {
-  return new Date(`${date}T${time.slice(0, 8)}+05:30`).toISOString();
+function startsAt(date: string, time: string | null): string {
+  // No slot (marked by an admin for an old purchase): the start of that day.
+  return new Date(`${date}T${(time ?? '00:00:00').slice(0, 8)}+05:30`).toISOString();
 }
 
 async function toRows(raw: RawRow[]): Promise<PresentationRow[]> {
@@ -82,6 +85,7 @@ async function toRows(raw: RawRow[]): Promise<PresentationRow[]> {
       on_date: r.on_date,
       start_time: r.start_time,
       end_time: r.end_time,
+      marked_by_admin: r.marked_by_admin,
       starts_at: startsAt(r.on_date, r.start_time),
       client_name: names.client(p),
       phone: p.phone,
@@ -148,6 +152,62 @@ export async function markPresentationDone(bookingId: string): Promise<{ success
   if (error) {
     const known = MESSAGES.find((m) => error.message.includes(m));
     if (!known) console.error('presentation_mark_done failed:', error.message);
+    return { success: false, error: known ?? 'It could not be saved. Please try again.' };
+  }
+  return { success: true };
+}
+
+// --- Old purchases (before the system): a super admin marks the report presentation done, without a slot ---------
+
+/** Active counsellors for the "Mark report presentation done" dialog (super admins). */
+export async function activeCounsellors(): Promise<{ id: string; full_name: string }[]> {
+  const { profile } = await requireStaff();
+  if (profile.role !== 'super_admin') return [];
+  const { data } = await createAdminClient()
+    .from('profiles')
+    .select('id, full_name')
+    .eq('role', 'counsellor')
+    .eq('is_active', true)
+    .order('full_name');
+  return (data ?? []) as { id: string; full_name: string }[];
+}
+
+const ADMIN_MESSAGES = [
+  'Only super admins can mark this presentation done.',
+  'This purchase was not found.',
+  'Only a paid purchase can be marked.',
+  'This purchase runs the normal flow. Book the presentation instead.',
+  'The assessment is not completed yet.',
+  'This purchase already has a presentation.',
+  'Choose an active counsellor.',
+  'Choose today or an earlier date.',
+];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * "Mark report presentation done" on an old paid assessment purchase that has no booking (owner, 2026-11-21): the
+ * counsellor and the date it happened (today or earlier), no slot. The database checks every rule again, assigns
+ * the client to the counsellor and creates the Package call; from then on the purchase works like a new one.
+ */
+export async function markPresentationDoneByAdmin(input: {
+  purchaseId: string;
+  counsellorId: string;
+  date: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { profile } = await requireStaff();
+  if (profile.role !== 'super_admin') return { success: false, error: ADMIN_MESSAGES[0] };
+  if (!UUID.test(input.purchaseId)) return { success: false, error: ADMIN_MESSAGES[1] };
+  if (!UUID.test(input.counsellorId)) return { success: false, error: ADMIN_MESSAGES[6] };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { success: false, error: ADMIN_MESSAGES[7] };
+  const { error } = await createAdminClient().rpc('presentation_mark_done_admin', {
+    p_purchase: input.purchaseId,
+    p_counsellor: input.counsellorId,
+    p_date: input.date,
+    p_by: profile.id,
+  });
+  if (error) {
+    const known = ADMIN_MESSAGES.find((m) => error.message.includes(m));
+    if (!known) console.error('presentation_mark_done_admin failed:', error.message);
     return { success: false, error: known ?? 'It could not be saved. Please try again.' };
   }
   return { success: true };

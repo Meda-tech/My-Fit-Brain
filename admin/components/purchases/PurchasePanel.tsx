@@ -10,6 +10,7 @@ import { CallDoneButton } from '../calls/CallDoneButton';
 import { BookPresentationButton } from '../booking/BookPresentationButton';
 import { CancelBookingButton } from '../booking/CancelBookingButton';
 import { PresentationDoneButton } from '../presentations/PresentationDoneButton';
+import { AdminPresentationDoneButton } from '../presentations/AdminPresentationDoneButton';
 import { presentationLabel } from '../../lib/booking';
 import { PURCHASE_KIND_LABELS } from '../../lib/purchases';
 import { buildJourney, type JourneyTask, type JourneyTaskKey } from '../../lib/journey';
@@ -114,6 +115,7 @@ export function PurchasePanel({
   const tasks = buildJourney(
     {
       status: p.status,
+      beforeSystem: p.before_system,
       coordinatorName: p.coordinator_name,
       calls: p.calls,
       payments: p.payments,
@@ -141,12 +143,13 @@ export function PurchasePanel({
         </>
       ) : null,
     assessment: markDone('assessment'),
-    booking: (
-      <>
-        {p.can_book && <BookPresentationButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant={main('booking')} />}
-        {markDone('booking', 'secondary')}
-      </>
-    ),
+    booking:
+      p.can_book || task('booking').callId ? (
+        <>
+          {p.can_book && <BookPresentationButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant={main('booking')} />}
+          {markDone('booking', 'secondary')}
+        </>
+      ) : null,
     presentation:
       p.presentation && !p.presentation.done_at && canCancelBooking ? (
         <>
@@ -157,6 +160,9 @@ export function PurchasePanel({
           />
           <CancelBookingButton bookingId={p.presentation.id} />
         </>
+      ) : p.can_mark_presentation_admin && canCancelBooking ? (
+        // An old purchase (before the system): a super admin marks the presentation done, without a slot.
+        <AdminPresentationDoneButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} />
       ) : null,
     package: (
       <>

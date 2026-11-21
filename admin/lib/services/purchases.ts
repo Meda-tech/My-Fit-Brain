@@ -64,6 +64,10 @@ export interface PurchaseRow {
   presentation: Presentation | null;
   /** Paid, assessment completed, nothing booked yet: Book presentation is possible. */
   can_book: boolean;
+  /** Paid (or last tried) more than 7 days before go-live: no automatic calls, no booking; "Before the system". */
+  before_system: boolean;
+  /** An old paid purchase, assessment completed, no presentation yet: a super admin may mark the presentation done. */
+  can_mark_presentation_admin: boolean;
   /** The Package call (step 5), open or closed, if there is one. */
   package_call: { status: 'open' | 'closed'; outcome: CallOutcome | null; due_at: string } | null;
   /** The paid package of this assessment purchase (step 6), if any. */
@@ -130,10 +134,10 @@ export interface PurchaseDetail extends PurchaseRow {
 type Db = Awaited<ReturnType<typeof createClient>>;
 
 const COLUMNS =
-  'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, source, coordinator_id, paid_at, created_at, ' +
+  'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, source, coordinator_id, paid_at, created_at, before_system, ' +
   'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status, attempt_id)), ' +
   'calls(id, kind, status, outcome, due_at), ' +
-  'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, status, booked_at, booked_by_name, done_at, done_by_name), ' +
+  'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, marked_by_admin, status, booked_at, booked_by_name, done_at, done_by_name), ' +
   'package_payments!package_payments_purchase_id_fkey(amount_paise, paid_at, provider, method, status, package_purchase_id, reference, proof_url, recorded_by_name)';
 
 /** Rows shown on the screen: purchases, open attempts and attempts closed as Not interested. */
@@ -146,6 +150,8 @@ const one = <T>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 interface RawPurchase {
   id: string;
   kind: string;
+  /** Computed in the database (before_system()): paid, or last tried, more than 7 days before go-live. */
+  before_system: boolean;
   test_code: string;
   phone: string;
   client_id: string | null;
@@ -241,9 +247,11 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
       open_call: open ? { id: open.id, kind: open.kind, due_at: open.due_at } : null,
       assessment_progress: progress.get(r.id) ?? 'not_started',
       presentation: booked
-        ? { id: booked.id, counsellor_id: booked.counsellor_id, counsellor_name: names.coordinator(booked.counsellor_id), on_date: booked.on_date, start_time: booked.start_time, end_time: booked.end_time, booked_at: booked.booked_at, booked_by_name: booked.booked_by_name, done_at: booked.done_at, done_by_name: booked.done_by_name }
+        ? { id: booked.id, counsellor_id: booked.counsellor_id, counsellor_name: names.coordinator(booked.counsellor_id), on_date: booked.on_date, start_time: booked.start_time, end_time: booked.end_time, marked_by_admin: booked.marked_by_admin, booked_at: booked.booked_at, booked_by_name: booked.booked_by_name, done_at: booked.done_at, done_by_name: booked.done_by_name }
         : null,
-      can_book: r.status === 'paid' && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
+      can_book: r.status === 'paid' && !r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
+      can_mark_presentation_admin:
+        r.status === 'paid' && r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       package_call: (() => {
         const pc = (calls ?? []).find((c) => c.kind === 'package');
         return pc ? { status: pc.status as 'open' | 'closed', outcome: pc.outcome, due_at: pc.due_at } : null;

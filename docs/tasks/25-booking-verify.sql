@@ -26,7 +26,8 @@ select 'journey of a booked purchase: Presentation booking done, Report presenta
   not exists (select 1 from public.presentation_bookings b
               join public.purchase_stages pb on pb.purchase_id = b.purchase_id and pb.stage = 'presentation_booking'
               join public.purchase_stages rp on rp.purchase_id = b.purchase_id and rp.stage = 'report_presentation'
-              where b.status = 'booked'
+              join public.purchases pu on pu.id = b.purchase_id
+              where b.status = 'booked' and not public.before_system(pu)   -- old purchases use no slot and plan nothing
                 and (pb.done_at is null or rp.planned_at is distinct from (b.on_date + b.start_time) at time zone 'Asia/Kolkata'))
 union all
 select 'no open Booking call while a presentation is booked',
@@ -53,7 +54,9 @@ union all
 select 'journey: Presentation booking planned = the Booking call''s first due time',
   not exists (select 1 from public.calls c
               join public.purchase_stages s on s.purchase_id = c.purchase_id and s.stage = 'presentation_booking'
+              join public.purchases pu on pu.id = c.purchase_id
               where c.kind = 'booking' and s.planned_at is distinct from public.add_working_hours(c.created_at, 2)
+                and not public.before_system(pu)   -- before the system: no Booking call, nothing planned
                 and not exists (select 1 from public.call_logs l where l.call_id = c.id and l.event = 'booking_cancelled'))
 union all
 select 'a closed-by-booking call has its "Presentation booked" line',

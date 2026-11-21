@@ -39,6 +39,7 @@ const BOOK_MESSAGES = [
   'This slot has already started. Pick a later one.',
   'This slot was just booked by someone else. Pick another.',
   'Pick a slot in the next 3 working days.',
+  'This purchase is from before the system. It is not booked here.',
 ];
 const CANCEL_MESSAGES = [
   'Only super admins can cancel a booking.',
@@ -103,7 +104,8 @@ export async function bookingsOfDay(counsellorId: string, date: string): Promise
     .select('start_time, purchases(client_id, phone, coordinator_id)')
     .eq('counsellor_id', counsellorId)
     .eq('on_date', date)
-    .eq('status', 'booked');
+    .eq('status', 'booked')
+    .not('start_time', 'is', null); // a presentation marked by an admin uses no slot
   type Row = {
     start_time: string;
     purchases: { client_id: string | null; phone: string; coordinator_id: string | null } | { client_id: string | null; phone: string; coordinator_id: string | null }[] | null;

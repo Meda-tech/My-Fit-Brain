@@ -28,6 +28,8 @@ export const dynamic = 'force-dynamic';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function stageText(r: PurchaseRow): string {
+  // An old purchase: nothing runs until a super admin marks the report presentation done.
+  if (r.before_system && !r.presentation) return 'Before the system';
   if (r.status === 'not_paid') return JOURNEY_STAGE_LABELS.payment;
   if (r.status !== 'paid') return '—';
   if (r.current_stage === 'assessment') {

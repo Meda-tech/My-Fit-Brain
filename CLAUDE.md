@@ -72,6 +72,7 @@ MyFitBrain/
 └─ supabase/
    ├─ migrations/             paste-ready SQL, one BEGIN … COMMIT per file (never edit an applied one)
    ├─ baseline/               schema-only export of production (no data), the starting point of staging
+   ├─ go-live/                one-time go-live steps to paste on production (not migrations; staging never runs them)
    ├─ staging-migrate.ps1     applies new migrations / runs one SQL file on STAGING only
    ├─ seed-staging.sql        fake staging data (staff logins, questionnaires, clients, purchases)
    └─ .env.db                 PROD_DB_URL, STAGING_DB_URL, STAGING_STAFF_PASSWORD — git-ignored, never print
@@ -518,7 +519,9 @@ results with you"). The client never sees a report in the app.
   test `supabase/staging/staging-test-counsellor-clients.sql` (rolled back).
 - **A counsellor sees only their own clients** (client record, assessments, answers, results, client details, alerts,
   conclusion, PDF, My presentations). A client is assigned (`client_counsellors`) when a presentation is booked with
-  that counsellor (trigger on `presentation_bookings`); the assignment stays after the presentation and after a cancel.
+  that counsellor (trigger on `presentation_bookings`; also when a super admin marks an old purchase's presentation done,
+  and once at go-live for old clients with a paid assessment, see "Before the system"); the assignment stays after the
+  presentation and after a cancel.
   Super admins see everyone; coordinators and clients unchanged. Enforced by RESTRICTIVE rules on `clients`,
   `attempts`, `attempt_answers`, `attempt_details`, `attempt_results`, `attempt_alerts`, `attempt_conclusions`
   (`counsellor_login()`, `counsellor_client_ids()`, `counsellor_attempt_ids()`); every counsellor read of client data
@@ -532,6 +535,34 @@ results with you"). The client never sees a report in the app.
 - **Make inactive** is refused with "Move their clients first." while a counsellor has clients or upcoming
   presentations (service and trigger `profiles_keep_counsellor_clients`). An inactive counsellor gets no bookings and
   sees nothing at once.
+
+### Before the system (owner, 2026-11-21)
+
+- No historical data: no "Record past presentation", CSV import, "Assign counsellor" or old-payment options. Old
+  clients stay as they are; only purchases after go-live run the flow.
+- Migrations `20261121700000_before_system.sql`, `20261121700001_before_system_planned.sql`,
+  `20261121800000_admin_presentation_done.sql`; checks `docs/tasks/31-before-system-verify.sql` and
+  `docs/tasks/32-admin-presentation-verify.sql`; behaviour tests `supabase/staging/staging-test-before-system.sql`
+  and `staging-test-admin-presentation.sql` (rolled back).
+- `before_system(purchases)` (also a column in the API): paid more than 7 days before go-live (`call_settings`); a
+  try never paid: its latest try more than 7 days before go-live. Such a purchase never gets an automatic Payment,
+  Assessment or Booking call (trigger `calls_before_system` on `calls`; open ones were closed with "Before the system:
+  no automatic call."), plans nothing, is never due or late, and cannot be booked into a slot (`presentation_book()`).
+  Purchases shows "Before the system" as its stage; the journey shows "Before the system" on tasks 1–3.
+- **Mark report presentation done** (super admins; side panel, task 4 of an old paid purchase with a completed
+  assessment and no booking; `AdminPresentationDoneButton`, `presentation_mark_done_admin()`): the counsellor (the
+  only active one pre-selected) and the date it happened (today by default, earlier allowed), no slot. Stored as a
+  `presentation_bookings` row with `marked_by_admin`, `start_time / end_time` empty and `done_at` set, so everything
+  after it is the normal flow with no special code: journey "Done · Marked by admin", the package offer in the client
+  app (₹35,000 − ₹3,500 = ₹31,500), the Package call for the client's coordinator (due 2 working hours later),
+  Razorpay and manual package payment, and the client assigned to that counsellor. **A presentation row may have no
+  slot**: `start_time` is nullable everywhere (`presentationLabel` shows only the date).
+- The package offer exists only once a report presentation is marked done (`package_offer()`, unchanged).
+- **Go-live, once** (`supabase/go-live/assign-old-clients.sql`, pasted after every migration; it calls
+  `go_live_assign_old_clients()`): every existing client (phone) and purchase gets the only active coordinator; every
+  existing client with a paid assessment is assigned to the only active counsellor (`client_counsellors.at_go_live`),
+  so the counsellor keeps seeing old reports. It stops and changes nothing unless there is exactly one active
+  coordinator and one active counsellor. Not a migration: staging (two of each) never runs it.
 
 ### Counsellor flow (admin)
 

@@ -7,6 +7,10 @@
 // Status of a task: done ✓ · open ● · upcoming ○ · not interested ✕ · not needed (strikethrough). "Not needed" = the
 // client did it before anyone called (the call closed by itself with no call attempt), or the call was never made
 // because it was not needed (e.g. paid directly: no Payment call).
+//
+// A purchase from before the system (paid more than 7 days before go-live; owner, 2026-11-21): tasks 1–3 show
+// "Before the system" (no automatic calls, never late). Task 4 is done only when a super admin marks the report
+// presentation done ("Marked by admin", no slot); from then on task 5 works as for any purchase.
 
 import { formatAmount } from '../components/payments/amount';
 import { twelveHourText } from './availability';
@@ -14,7 +18,7 @@ import { paymentMethodLabel } from '../components/payments/format';
 import { CALL_EVENT_LABELS, CALL_REASON_LABELS, choiceLabel, type CallChoice, type CallEvent, type CallKind, type CallOutcome, type CallReason } from './calls';
 
 export type JourneyTaskKey = 'payment' | 'assessment' | 'booking' | 'presentation' | 'package';
-export type JourneyStatus = 'done' | 'open' | 'upcoming' | 'not_interested' | 'not_needed';
+export type JourneyStatus = 'done' | 'open' | 'upcoming' | 'not_interested' | 'not_needed' | 'before_system';
 
 export const JOURNEY_TASK_TITLES: Record<JourneyTaskKey, string> = {
   payment: 'Payment call',
@@ -30,6 +34,7 @@ export const JOURNEY_STATUS_LABELS: Record<JourneyStatus, string> = {
   upcoming: 'Upcoming',
   not_interested: 'Not interested',
   not_needed: 'Not needed',
+  before_system: 'Before the system',
 };
 
 /** One nested line: a call attempt, a client step, or a system note. */
@@ -56,6 +61,8 @@ export interface JourneyTask {
   planned: string | null;
   /** How the planned time is shown when it is a slot: "Sun, 22 Nov 2026, 9:00–9:30 pm". */
   plannedLabel?: string;
+  /** A short label after the status, e.g. "Marked by admin". */
+  statusNote?: string;
   /** When it was completed. */
   actual: string | null;
   /** Open and the due time has passed. */
@@ -84,6 +91,8 @@ interface LogIn {
 
 export interface JourneyInput {
   status: 'not_paid' | 'paid' | 'refunded' | 'cancelled';
+  /** Paid (or last tried) more than 7 days before go-live: no automatic Payment, Assessment or Booking call. */
+  beforeSystem?: boolean;
   coordinatorName: string | null;
   calls: {
     id: string;
@@ -111,8 +120,10 @@ export interface JourneyInput {
   presentation: {
     counsellor_name: string | null;
     on_date: string;
-    start_time: string;
+    /** Empty when a super admin marked the presentation of an old purchase done (no slot). */
+    start_time: string | null;
     end_time: string | null;
+    marked_by_admin?: boolean;
     booked_at: string;
     booked_by_name: string | null;
     done_at: string | null;
@@ -120,7 +131,7 @@ export interface JourneyInput {
   } | null;
   packagePaid: { amount_paise: number; paid_at: string; provider: 'razorpay' | 'offline'; method: string | null; recorded_by_name: string | null } | null;
   /** "Mon, 23 Nov 2026, 10:00–10:30 am" for a slot (the screens' own formatter). */
-  slotLabel: (date: string, start: string, end: string | null) => string;
+  slotLabel: (date: string, start: string | null, end: string | null) => string;
 }
 
 /** The slot start as an instant (India time). */
@@ -194,6 +205,11 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
   const pres = input.presentation;
   const pkg = input.packagePaid;
   const nowIso = now.toISOString();
+  const byAdmin = !!pres?.marked_by_admin;
+  /** Tasks 1–3 of a purchase from before the system: no call, nothing planned, never late. */
+  type State = Pick<JourneyTask, 'status' | 'actual' | 'notNeeded'>;
+  const beforeSystem = (state: State): State =>
+    input.beforeSystem ? { status: 'before_system', actual: null, notNeeded: null } : state;
 
   const task = (
     key: JourneyTaskKey,
@@ -209,7 +225,7 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
     whoRole,
     who,
     ...state,
-    planned: state.status === 'not_needed' ? null : planned,
+    planned: state.status === 'not_needed' || state.status === 'before_system' ? null : planned,
     late: state.status === 'open' && !!planned && later(nowIso, planned),
     actualLate: state.status === 'done' && later(state.actual, planned),
     callId: c?.status === 'open' ? c.id : null,
@@ -250,7 +266,7 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
     : paid
       ? { status: 'not_needed', actual: null, notNeeded: paidWhat }
       : { status: 'upcoming', actual: null, notNeeded: null };
-  const payment = task('payment', 'Coordinator', input.coordinatorName, payCall, payState, [
+  const payment = task('payment', 'Coordinator', input.coordinatorName, payCall, beforeSystem(payState), [
     ...payItems,
     ...(payCall ? [...callItems('payment', payCall.logs), ...systemItems(payCall.logs)] : []),
   ]);
@@ -267,14 +283,14 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
     : completedWhat
       ? { status: 'not_needed', actual: null, notNeeded: completedWhat }
       : { status: 'upcoming', actual: null, notNeeded: null };
-  const assessment = task('assessment', 'Coordinator', input.coordinatorName, asCall, asState, [
+  const assessment = task('assessment', 'Coordinator', input.coordinatorName, asCall, beforeSystem(asState), [
     ...asItems,
     ...(asCall ? [...callItems('assessment', asCall.logs), ...systemItems(asCall.logs)] : []),
   ]);
 
   // 3. Booking call. Steps: presentation booked (and any cancelled booking, from the history).
   const bkCall = call('booking');
-  const bookedItem: JourneyItem[] = pres
+  const bookedItem: JourneyItem[] = pres && !byAdmin
     ? [{
         at: pres.booked_at,
         kind: 'client',
@@ -292,13 +308,13 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
       : completedAt && paid
         ? { status: 'open', actual: null, notNeeded: null } // no automatic call (go-live rule), still to book
         : { status: 'upcoming', actual: null, notNeeded: null };
-  const booking = task('booking', 'Coordinator', input.coordinatorName, bkCall, bkState, [
+  const booking = task('booking', 'Coordinator', input.coordinatorName, bkCall, beforeSystem(bkState), [
     ...bookedItem,
     ...(bkCall ? [...callItems('booking', bkCall.logs), ...systemItems(bkCall.logs)] : []),
   ]);
 
   // 4. Report presentation (the counsellor's task). Planned = the slot.
-  const slot = pres ? slotAt(pres.on_date, pres.start_time) : null;
+  const slot = pres?.start_time ? slotAt(pres.on_date, pres.start_time) : null;
   const presState: Pick<JourneyTask, 'status' | 'actual' | 'notNeeded'> = !pres
     ? { status: 'upcoming', actual: null, notNeeded: null }
     : pres.done_at
@@ -310,12 +326,23 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
     pres?.counsellor_name ?? null,
     null,
     presState,
-    pres?.done_at ? [{ at: pres.done_at, kind: 'client', title: 'Marked done', detail: null, note: null, by: pres.done_by_name, followUp: null }] : [],
+    pres?.done_at
+      ? [{
+          at: pres.done_at,
+          kind: 'client',
+          title: byAdmin ? 'Marked done by admin' : 'Marked done',
+          detail: byAdmin ? `Happened on ${input.slotLabel(pres.on_date, null, null)} · ${pres.counsellor_name ?? 'Counsellor'}` : null,
+          note: null,
+          by: pres.done_by_name,
+          followUp: null,
+        }]
+      : [],
     slot
   );
+  if (byAdmin) presentation.statusNote = 'Marked by admin';
   // Done at the slot or later is on time; only an open one past its slot is late.
   presentation.actualLate = false;
-  if (pres) presentation.plannedLabel = input.slotLabel(pres.on_date, pres.start_time, pres.end_time);
+  if (pres?.start_time) presentation.plannedLabel = input.slotLabel(pres.on_date, pres.start_time, pres.end_time);
 
   // 5. Package call. Steps: package paid (app or manual), failed tries (from the history).
   const pkCall = call('package');

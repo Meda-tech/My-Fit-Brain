@@ -4,7 +4,8 @@ import { formatDateTime } from '../payments/format';
 import { JOURNEY_STATUS_LABELS, type JourneyItem, type JourneyStatus, type JourneyTask, type JourneyTaskKey } from '../../lib/journey';
 
 // The purchase journey as our team's five tasks, with call attempts and the client's steps nested under each
-// (lib/journey.ts builds it). Status: done ✓ · open ● · upcoming ○ · not interested ✕ · not needed (strikethrough).
+// (lib/journey.ts builds it). Status: done ✓ · open ● · upcoming ○ · not interested ✕ · not needed (strikethrough) ·
+// before the system (quiet dash: an old purchase, no automatic call).
 // Calm colours: teal for done and open, quiet for the rest; coral-deep only for "late".
 
 function StatusIcon({ status }: { status: JourneyStatus }) {
@@ -29,6 +30,7 @@ function StatusIcon({ status }: { status: JourneyStatus }) {
         </span>
       );
     case 'not_needed':
+    case 'before_system':
       return (
         <span className={cn(base, 'border border-sand bg-cream text-ink-muted')}>
           <Minus size={14} strokeWidth={2.5} aria-hidden />
@@ -100,13 +102,14 @@ export function JourneyView({ tasks, actions }: { tasks: JourneyTask[]; actions:
               {/* The line joining the steps. */}
               {i < tasks.length - 1 && <span aria-hidden className="absolute top-7 bottom-0 left-3.5 w-px bg-sand" />}
               <StatusIcon status={t.status} />
-              <div className={cn('min-w-0 flex-1', upcoming && 'opacity-55')}>
+              <div className={cn('min-w-0 flex-1', (upcoming || t.status === 'before_system') && !action && 'opacity-55')}>
                 <div className="flex flex-wrap items-baseline gap-x-2">
                   <p className={cn('m-0 font-semibold text-ink', t.status === 'not_needed' && 'text-ink-muted line-through')}>
                     {i + 1}. {t.title}
                   </p>
                   <span className={cn('text-[12px] font-semibold', t.status === 'open' ? 'text-teal' : 'text-ink-muted')}>
                     {JOURNEY_STATUS_LABELS[t.status]}
+                    {t.statusNote ? ` · ${t.statusNote}` : ''}
                   </span>
                 </div>
                 <p className="m-0 text-[13px] text-ink-muted">

@@ -38,9 +38,12 @@ export function groupFreeSlots(rows: FreeSlotRow[], preferredDays = PREFERRED_DA
   return [...days.entries()].map(([date, counsellors], i) => ({ date, preferred: i < preferredDays, counsellors: [...counsellors.values()] }));
 }
 
-/** "Mon, 23 Nov 2026, 10:00–10:30 am": the whole slot, start to end. */
-export function presentationLabel(date: string, start: string, end: string | null): string {
-  return `${dayLabel(date)}, ${slotRange(start, end)}`;
+/**
+ * "Mon, 23 Nov 2026, 10:00–10:30 am": the whole slot, start to end. Only the date when there is no slot (an old
+ * purchase whose presentation a super admin marked done).
+ */
+export function presentationLabel(date: string, start: string | null, end: string | null): string {
+  return start ? `${dayLabel(date)}, ${slotRange(start, end)}` : dayLabel(date);
 }
 
 /** Booked presentation of a purchase, as the screens show it. */
@@ -49,8 +52,11 @@ export interface Presentation {
   counsellor_id: string;
   counsellor_name: string | null;
   on_date: string;
-  start_time: string;
-  end_time: string;
+  /** Empty when marked_by_admin (no slot). */
+  start_time: string | null;
+  end_time: string | null;
+  /** An old purchase (before the system): a super admin marked the presentation done; on_date = when it happened. */
+  marked_by_admin: boolean;
   booked_at: string;
   booked_by_name: string | null;
   /** Report presentation done (step 5): when and by whom. */

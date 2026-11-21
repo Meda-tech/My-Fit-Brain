@@ -102,7 +102,7 @@ function PresentationItem({ r, superAdmin, now }: { r: PresentationRow; superAdm
         </p>
         {r.done_at ? (
           <p className="m-0 text-[13px] font-medium text-teal">
-            Presentation done {formatDateTime(r.done_at)}
+            {r.marked_by_admin ? 'Marked done by admin' : 'Presentation done'} {formatDateTime(r.done_at)}
             {r.done_by_name ? ` by ${r.done_by_name}` : ''}
           </p>
         ) : (
