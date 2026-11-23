@@ -64,6 +64,7 @@ token table).
 | 42 | **One-time go-live step** `supabase/go-live/assign-old-clients.sql` (not a migration; never run it again) | 2026-11-21, 5:55:43 pm IST — result: coordinator Reetu, counsellor Preeti, 1 phone added, 0 purchases changed, 18 clients assigned to the counsellor |
 | 43 | `20261123000000_repeat_payments.sql` (repeat tries and payments: one open purchase per phone and assessment, blocked tries as history, safety net "Refund needed"; one-time fix of extra unpaid rows) | 2026-11-23, 3:37 pm IST (run by Claude with the owner's permission for this go-live only). Check 34: 8 true, 0 false. The one-time fix closed 3 extra unpaid rows as "Not needed" (Tarnjit Singh's 22 Nov try, "already paid on 17 Nov"; one try of 14 Nov and one of 22 Nov by two other clients who had paid the same day) |
 | 44 | `20261123300000_purchase_finished.sql` (a purchase is also finished when its Assessment, Booking or Package call is closed as Not interested) | 2026-11-23, 3:38 pm IST (same go-live). Check 35: 4 true, 0 false |
+| 45 | `20261123400000_call_choices.sql` ("Mark as call done" on every call: Talked to client · Not picked / Call later · Not interested after at least 2 calls; no Done) | 2026-11-23, 4:58:49 pm IST (run by Claude with the owner's permission for this go-live only). Check 36: 4 true, 0 false. Branch `step-assessment-payment-button` (with `step-call-choices`) merged and pushed right after (`6b1ce4d`) |
 
 ## One-time data fixes (not migrations)
 
@@ -74,9 +75,7 @@ token table).
 
 ## To paste later, in order
 
-| # | File | On staging since | Checks |
-|---|---|---|---|
-| 1 | `supabase/migrations/20261123400000_call_choices.sql` — "Mark as call done" on every call: Talked to client · Not picked / Call later (follow-up within 2 working days) · Not interested (after at least 2 calls). No Done, no Client agreed. Removes nothing; widens the call-history choice list (+ `talked`) and its follow-up rule; new body for `call_mark()`. **Paste it before deploying the branch `step-call-choices`** (the new screen sends `talked`, which the old database refuses; the old screen sends Done, which the new database refuses). | 2026-11-23 | `docs/tasks/36-call-choices-verify.sql` (all true) |
+Nothing waiting. (Row 45 went live on 2026-11-23, 4:58 pm IST.)
 
 Earlier: (Rows 43–44 went live on 2026-11-23; the two staging-only files `20261123100000_close_purchase.sql` and
 `20261123200000_package_after_close.sql` were removed before production and never ran there.)
@@ -127,6 +126,7 @@ the flow), 19 clients, 25 payments; open calls: 9 Booking and 1 Payment, all due
 
 | Date | What | Result |
 |---|---|---|
+| 2026-11-23, 4:58 pm IST | Full production backup before row 45 (`supabase/prod-readonly.ps1 -Backup`) into `D:TechMedaackupsprod-2026-11-23-1658` | full.dump (pg_dump -Fc) 894,967 bytes; schema.sql 570,168; data.sql 1,106,849 (restored from the dump without error) |
 | 2026-11-23, 3:37 pm IST | Full production backup before rows 43–44 (`supabase/prod-readonly.ps1 -Backup`) into `D:TechMedaackupsprod-2026-11-23-1537` | full.dump (pg_dump -Fc) 877,673 bytes; schema.sql 555,938; data.sql 1,104,705 (restored from the dump without error) |
 | 2026-11-21, 5:22 pm IST | **Full backup of production** (read-only, `pg_dump` 17.11 = production's Postgres 17.11), asked for by the owner. Outside the project, never in git: `D:\Tech\Meda\backups\prod-2026-11-21\` → `full.dump` (custom format, all schemas incl. auth and storage), `schema.sql`, `data.sql` (both written from `full.dump`, so the same moment). Storage: no buckets, no files. | Restored into a temporary local database (Docker, no ports open): no errors; 58 tables, row counts equal on 57. The one difference, `net._http_response` (1 vs 0), is an extension's temporary log that `pg_dump` never includes. |
 | 2026-11-21 | **Dress rehearsal** in that temporary local database (never production, never staging): rows 1–17 of "To paste later, in order", every check file, then the go-live step (row 18). The temporary database was deleted afterwards. | All 17 files ran with no error or warning. Checks: all true (107), the last one after the go-live step. Go-live step: exactly one active coordinator and one active counsellor found; 18 clients assigned to the counsellor, 1 phone added to the coordinator, 0 purchases changed (they already had the coordinator). At go-live: 24 rows in Purchases (18 purchases, 6 unpaid tries), 14 before the system, 10 in the flow; open calls: 8 Booking, 1 Assessment (all due 2 working hours after go-live), 1 Payment call that is **late at once** (an unpaid try from 7 days before go-live keeps its own due time). |

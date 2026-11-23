@@ -920,4 +920,8 @@ existing migrations, `.env*` files.
   `20261123000000_repeat_payments.sql` and `20261123300000_purchase_finished.sql` on production, checks 34 and 35 all
   true; Claude ran them with the owner's permission for that go-live only, after a backup
   (`D:\Tech\Meda\backups\prod-2026-11-23-1537\`). From then on the owner runs production SQL again.
+- **Done: new call choices and Add assessment payment, 2026-11-23, 4:58 pm IST** (branches `step-call-choices` +
+  `step-assessment-payment-button`, merged into `main`): `20261123400000_call_choices.sql` on production, check 36 all
+  true; run by Claude with the owner's permission for that go-live only, after a backup
+  (`D:TechMedaackupsprod-2026-11-23-1658`). From then on the owner runs production SQL again.
 - Next: Task 07 — polish.
