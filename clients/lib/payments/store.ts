@@ -98,7 +98,7 @@ export function supabasePaymentStore(db: SupabaseClient): PaymentStore {
       const [byPhone, byIp, blockedPhone, blockedIp] = await Promise.all([
         db.from('payments').select('id', { count: 'exact', head: true }).eq('phone', phone).gte('created_at', since),
         ipHash ? db.from('payments').select('id', { count: 'exact', head: true }).eq('ip_hash', ipHash).gte('created_at', since) : none,
-        // Blocked tries count too, so the "already paid" answer cannot be asked for number after number.
+        // Blocked tries count too, so the "log in" answer cannot be asked for number after number.
         db.from('purchase_blocked_tries').select('id', { count: 'exact', head: true }).eq('phone', phone).gte('at', since),
         ipHash ? db.from('purchase_blocked_tries').select('id', { count: 'exact', head: true }).eq('ip_hash', ipHash).gte('at', since) : none,
       ]);

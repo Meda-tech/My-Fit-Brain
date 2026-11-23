@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       ipHash: ipHash(request.headers),
     });
     // Already holding it (signed in → Home), or this number has an open purchase (public link → log in). No order.
-    if (checkout.kind === 'owned' || checkout.kind === 'paid_already') return NextResponse.json({ ok: true, kind: checkout.kind });
+    if (checkout.kind === 'owned' || checkout.kind === 'login') return NextResponse.json({ ok: true, kind: checkout.kind });
     // The full number stays with the server and the checkout prefill.
     const { kind, keyId, orderId, amount, currency, phone } = checkout;
     return NextResponse.json({ ok: true, kind, keyId, orderId, amount, currency, contact: phone });

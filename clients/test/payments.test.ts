@@ -117,10 +117,10 @@ describe('checkout (public pay page)', () => {
     await expectPaymentError(order(byIp.deps, '+919999999999', 'same-ip'), 'RATE_LIMITED');
   });
 
-  it('a number with an open purchase gets no order: public link → "already paid", signed in → Home; the try is logged', async () => {
+  it('a number with an open purchase gets no order: public link → neutral "log in", signed in → Home; the try is logged', async () => {
     const { deps, payments, rzp } = setup();
     payments.openPurchases.add(`${PHONE}|IA`);
-    expect(await createCheckout(deps, { code: 'IA', phone: '98765 43210', client: null, ipHash: 'ip-1' })).toEqual({ kind: 'paid_already' });
+    expect(await createCheckout(deps, { code: 'IA', phone: '98765 43210', client: null, ipHash: 'ip-1' })).toEqual({ kind: 'login' });
     expect(await createCheckout(deps, { code: 'IA', phone: PHONE, client, ipHash: null })).toEqual({ kind: 'owned' });
     expect(rzp.orders.size).toBe(0);
     expect(payments.rows.size).toBe(0);
@@ -138,7 +138,7 @@ describe('checkout (public pay page)', () => {
     for (let i = 0; i < ORDER_LIMIT_PER_IP; i++) {
       const phone = `+9198765${String(i).padStart(5, '0')}`;
       payments.openPurchases.add(`${phone}|IA`);
-      expect(await createCheckout(deps, { code: 'IA', phone, client: null, ipHash: 'same-ip' })).toEqual({ kind: 'paid_already' });
+      expect(await createCheckout(deps, { code: 'IA', phone, client: null, ipHash: 'same-ip' })).toEqual({ kind: 'login' });
     }
     await expectPaymentError(order(deps, '+919999999999', 'same-ip'), 'RATE_LIMITED');
   });

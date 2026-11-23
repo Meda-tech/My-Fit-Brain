@@ -129,7 +129,7 @@ export function PayView({
       const order = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         code?: string;
-        kind?: 'owned' | 'order' | 'paid_already';
+        kind?: 'owned' | 'order' | 'login';
         keyId?: string;
         orderId?: string;
         amount?: number;
@@ -148,7 +148,7 @@ export function PayView({
         return;
       }
       // This number already has an open purchase of this assessment: no checkout, log in instead.
-      if (order.kind === 'paid_already') {
+      if (order.kind === 'login') {
         setStatus('already');
         return;
       }
@@ -229,7 +229,7 @@ export function PayView({
               : status === 'closed'
               ? { variant: 'info' as const, text: t.assess.paymentsClosed }
               : status === 'already'
-                ? { variant: 'info' as const, text: t.pay.alreadyPaid }
+                ? { variant: 'info' as const, text: t.pay.loginToContinue }
                 : null;
 
   return (
