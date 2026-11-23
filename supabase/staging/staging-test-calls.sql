@@ -57,12 +57,13 @@ SELECT 'not completed, 45 minutes old: Payment call started 30 minutes after the
 -- 3. Mark as call done.
 CREATE TEMP TABLE t_c1 ON COMMIT DROP AS
 SELECT id FROM public.calls WHERE purchase_id = (SELECT id FROM t_a1) AND kind = 'payment';
-SELECT 'Not interested on the first call: "At least one follow-up call is needed first."',
+-- (Since 20261123400000: choices Talked to client · Not picked / Call later · Not interested after at least 2 calls.)
+SELECT 'Not interested on the first call: "At least 2 calls are needed first."',
   pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''not_interested'', ''too_costly'', null, null)',
                             (SELECT id FROM t_c1), (SELECT admin FROM t_ids)),
-                     'At least one follow-up call is needed first.');
-SELECT 'Call later beyond 2 working days is refused',
-  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''call_later'', null, null, %L)',
+                     'At least 2 calls are needed first.');
+SELECT 'Talked to client beyond 2 working days is refused',
+  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''talked'', null, null, %L)',
                             (SELECT id FROM t_c1), (SELECT admin FROM t_ids), now() + interval '10 days'),
                      'Pick a follow-up date and time within 2 working days.');
 SELECT 'Call later without a time is refused',
@@ -74,6 +75,11 @@ SELECT 'Not picked: the call stays open with the follow-up as its new due time; 
   (SELECT status = 'open' AND due_at = now() + interval '1 hour' FROM public.calls WHERE id = (SELECT id FROM t_c1))
   AND EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT id FROM t_c1) AND choice = 'not_picked'
               AND note = 'Rang twice' AND by_name = 'Test Super Admin' AND follow_up_at = now() + interval '1 hour');
+SELECT 'after one call, Not interested is still refused',
+  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''not_interested'', ''too_costly'', null, null)',
+                            (SELECT id FROM t_c1), (SELECT admin FROM t_ids)),
+                     'At least 2 calls are needed first.');
+SELECT public.call_mark((SELECT id FROM t_c1), (SELECT admin FROM t_ids), 'talked', null, 'Explained the price', now() + interval '2 hours')::text = '' AS talked;
 SELECT 'Not interested needs a reason',
   pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''not_interested'', null, null, null)',
                             (SELECT id FROM t_c1), (SELECT admin FROM t_ids)),
@@ -83,7 +89,7 @@ SELECT 'Not interested on a Payment call: call closed, attempt closed as Not int
   (SELECT status = 'closed' AND outcome = 'not_interested' FROM public.calls WHERE id = (SELECT id FROM t_c1))
   AND (SELECT closed_reason = 'not_interested' AND closed_at IS NOT NULL AND status = 'not_paid' FROM public.purchases WHERE id = (SELECT id FROM t_a1));
 SELECT 'a closed call cannot be marked again',
-  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''done'', null, null, null)', (SELECT id FROM t_c1), (SELECT admin FROM t_ids)),
+  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''talked'', null, null, %L)', (SELECT id FROM t_c1), (SELECT admin FROM t_ids), now() + interval '1 hour'),
                      'This call is already closed.');
 SELECT 'call history cannot be removed',
   pg_temp.fails_with(format('DELETE FROM public.call_logs WHERE call_id = %L', (SELECT id FROM t_c1)),
@@ -125,18 +131,25 @@ SELECT 'assessment completed: the Assessment call closed at the completed time, 
    WHERE c.purchase_id = (SELECT id FROM t_a4) AND c.kind = 'assessment' AND a.payment_ref = 'pay_STAGINGFAKE_C4'
      AND s.purchase_id = c.purchase_id AND s.stage = 'assessment');
 
--- 6. Done closes the call.
+-- 6. Done is gone: a call closes only when the client does the step, or Not interested.
 INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id, provider_payment_id, paid_at, method, reference, recorded_by, proof_file_id, proof_url)
 SELECT '5eed0000-0000-4000-8000-0000000c0005', '+919999900084', 'IA', 'offline', 350000, 'paid',
        'offline_5eed0000-0000-4000-8000-0000000c0005', 'offline_5eed0000-0000-4000-8000-0000000c0005', now(), 'upi', 'UPI-CALLS-1', admin, 'fake-proof-c1', 'https://drive.example/fake-proof-c1'
 FROM t_ids;
-SELECT public.call_mark((SELECT c.id FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id
-                         WHERE pu.phone = '+919999900084' AND c.kind = 'assessment'),
-                        (SELECT admin FROM t_ids), 'done', null, 'Explained the steps', null)::text = '' AS marked;
-SELECT 'manual payment with no try: no Payment call; Done closes the Assessment call',
+CREATE TEMP TABLE t_c5 ON COMMIT DROP AS
+SELECT c.id FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id WHERE pu.phone = '+919999900084' AND c.kind = 'assessment';
+SELECT 'Done, Call later and Client agreed are no longer choices',
+  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''done'', null, null, null)', (SELECT id FROM t_c5), (SELECT admin FROM t_ids)),
+                     'Choose what happened on the call.')
+  AND pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''call_later'', null, null, %L)', (SELECT id FROM t_c5), (SELECT admin FROM t_ids), now() + interval '1 hour'),
+                         'Choose what happened on the call.')
+  AND pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''agreed'', null, null, %L)', (SELECT id FROM t_c5), (SELECT admin FROM t_ids), now() + interval '1 hour'),
+                         'Choose what happened on the call.');
+SELECT public.call_mark((SELECT id FROM t_c5), (SELECT admin FROM t_ids), 'talked', null, 'Explained the steps', now() + interval '2 hours')::text = '' AS marked;
+SELECT 'manual payment with no try: no Payment call; Talked to client keeps the Assessment call open with the follow-up',
   NOT EXISTS (SELECT 1 FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id WHERE pu.phone = '+919999900084' AND c.kind = 'payment')
-  AND (SELECT c.status = 'closed' AND c.outcome = 'done' FROM public.calls c JOIN public.purchases pu ON pu.id = c.purchase_id
-       WHERE pu.phone = '+919999900084' AND c.kind = 'assessment');
+  AND (SELECT status = 'open' AND due_at = now() + interval '2 hours' FROM public.calls WHERE id = (SELECT id FROM t_c5))
+  AND EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT id FROM t_c5) AND choice = 'talked' AND note = 'Explained the steps');
 
 -- 6b. Reopen (owner, 2026-11-20): a new failed try reopens a Payment call closed as Not interested.
 -- (In one transaction now() never moves, so the closing time is set an hour back to put the new try after it.)
@@ -151,17 +164,19 @@ SELECT 'Not interested, then a new failed try: same attempt, reopened; same Paym
 SELECT 'the history has a "Tried again – failed" line (try_failed) after the closing',
   EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT id FROM t_c1) AND event = 'try_failed' AND at > now() - interval '1 hour');
 
--- 6c. Reopen after Done: a try still unpaid 30 minutes later.
+-- 6c. Reopen after Not interested: a try still unpaid 30 minutes later.
 INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id)
 VALUES ('5eed0000-0000-4000-8000-0000000c0007', '+919999900085', 'MA', 'razorpay', 350000, 'failed', 'order_STAGINGFAKE_C7');
 CREATE TEMP TABLE t_c7 ON COMMIT DROP AS
 SELECT c.id FROM public.calls c JOIN public.purchase_payments pp ON pp.purchase_id = c.purchase_id
 WHERE pp.payment_id = '5eed0000-0000-4000-8000-0000000c0007' AND c.kind = 'payment';
-SELECT public.call_mark((SELECT id FROM t_c7), (SELECT admin FROM t_ids), 'done', null, 'Will pay tonight', null)::text = '' AS marked;
+SELECT public.call_mark((SELECT id FROM t_c7), (SELECT admin FROM t_ids), 'not_picked', null, null, now() + interval '1 hour')::text = '' AS call1;
+SELECT public.call_mark((SELECT id FROM t_c7), (SELECT admin FROM t_ids), 'talked', null, 'Will pay tonight', now() + interval '2 hours')::text = '' AS call2;
+SELECT public.call_mark((SELECT id FROM t_c7), (SELECT admin FROM t_ids), 'not_interested', 'not_now', null, null)::text = '' AS marked;
 UPDATE public.calls SET closed_at = now() - interval '2 hours' WHERE id = (SELECT id FROM t_c7);
 INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id, created_at)
 VALUES ('5eed0000-0000-4000-8000-0000000c0008', '+919999900085', 'MA', 'razorpay', 350000, 'created', 'order_STAGINGFAKE_C8', now() - interval '45 minutes');
-SELECT 'Done, then a try still unpaid after 30 minutes: the same Payment call reopens, due 2 working hours after those 30 minutes',
+SELECT 'Not interested, then a try still unpaid after 30 minutes: the same Payment call reopens, due 2 working hours after those 30 minutes',
   (SELECT status = 'open' AND due_at = public.add_working_hours(now() - interval '15 minutes', 2) FROM public.calls WHERE id = (SELECT id FROM t_c7))
   AND EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT id FROM t_c7) AND event = 'try_failed');
 

@@ -65,13 +65,15 @@ SELECT 'after it is done: 8 sessions, ₹35,000 − ₹3,500 already paid = ₹3
 CREATE TEMP TABLE c ON COMMIT DROP AS
 SELECT (SELECT id FROM public.calls WHERE purchase_id = (SELECT p1 FROM p) AND kind = 'package') AS c1,
        (SELECT id FROM public.calls WHERE purchase_id = (SELECT p2 FROM p) AND kind = 'package') AS c2;
-SELECT '"Done" is no longer a choice on a Package call; "agreed" is only for Package calls and needs a follow-up',
+SELECT 'Done and Client agreed are no longer choices; Talked to client needs a follow-up',
   pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''done'', null, null, null)', (SELECT c1 FROM c), (SELECT admin FROM t)),
                      'Choose what happened on the call.')
-  AND pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''agreed'', null, null, null)', (SELECT c1 FROM c), (SELECT admin FROM t)),
+  AND pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''agreed'', null, null, %L)', (SELECT c1 FROM c), (SELECT admin FROM t), now() + interval '1 hour'),
+                         'Choose what happened on the call.')
+  AND pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''talked'', null, null, null)', (SELECT c1 FROM c), (SELECT admin FROM t)),
                          'Pick a follow-up date and time within 2 working days.');
-SELECT public.call_mark((SELECT c1 FROM c), (SELECT admin FROM t), 'agreed', null, 'Will pay tonight', now() + interval '1 hour')::text = '' AS marked;
-SELECT 'Client agreed – will pay: the call stays open with the follow-up as its due time; journey not done yet',
+SELECT public.call_mark((SELECT c1 FROM c), (SELECT admin FROM t), 'talked', null, 'Will pay tonight', now() + interval '1 hour')::text = '' AS marked;
+SELECT 'Talked to client: the call stays open with the follow-up as its due time; journey not done yet',
   (SELECT status = 'open' AND due_at = now() + interval '1 hour' FROM public.calls WHERE id = (SELECT c1 FROM c))
   AND (SELECT done_at IS NULL FROM public.purchase_stages WHERE purchase_id = (SELECT p1 FROM p) AND stage = 'package_call');
 
@@ -90,6 +92,7 @@ SELECT 'failed package payment: a history line on the Package call; an open call
   AND (SELECT status = 'open' AND due_at = now() + interval '1 hour' FROM public.calls WHERE id = (SELECT c1 FROM c));
 
 -- 3b. Not interested, then a try left not completed for 30 minutes: the call reopens.
+SELECT public.call_mark((SELECT c1 FROM c), (SELECT admin FROM t), 'not_picked', null, null, now() + interval '1 hour')::text = '' AS second_call;
 SELECT public.call_mark((SELECT c1 FROM c), (SELECT admin FROM t), 'not_interested', 'too_costly', 'Too expensive for now', null)::text = '' AS marked;
 INSERT INTO public.package_payments (id, purchase_id, package_id, package_name, sessions, frequency, price_paise, advance_paise, amount_paise, phone, client_id, provider_order_id, created_at)
 SELECT '5eed0000-0000-4000-8000-0000000f0a02', (SELECT p1 FROM p), o.package_id, o.name, o.sessions, o.frequency, o.price_paise, o.advance_paise, o.amount_paise,

@@ -78,19 +78,19 @@ SELECT 'marking twice, or cancelling after done, is refused',
   AND pg_temp.fails_with(format('SELECT public.presentation_cancel(%L, ''Mistake'', %L)', (SELECT id FROM t_b), (SELECT admin FROM t)),
                          'This presentation was already marked done. It cannot be cancelled.');
 
--- Package call: same Mark as call done rules. From step 6: "Client agreed – will pay" (agreed) keeps the call open
--- with a follow-up; the journey's Package call actual comes from the package payment (staging-test-packages.sql).
+-- Package call: same Mark as call done rules (since 20261123400000: Talked to client · Not picked / Call later ·
+-- Not interested after at least 2 calls); a follow-up keeps the call open; the journey's Package call actual comes from the package payment (staging-test-packages.sql).
 CREATE TEMP TABLE t_c ON COMMIT DROP AS
 SELECT id FROM public.calls WHERE purchase_id = (SELECT id FROM t_p) AND kind = 'package';
 SELECT 'Not interested on the first Package call is refused',
   pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''not_interested'', ''too_costly'', null, null)', (SELECT id FROM t_c), (SELECT admin FROM t)),
-                     'At least one follow-up call is needed first.');
-SELECT public.call_mark((SELECT id FROM t_c), (SELECT admin FROM t), 'call_later', null, 'Thinking about it', now() + interval '1 hour')::text = '' AS marked;
-SELECT 'Call later: still open, journey Package call not done yet',
+                     'At least 2 calls are needed first.');
+SELECT public.call_mark((SELECT id FROM t_c), (SELECT admin FROM t), 'not_picked', null, 'Thinking about it', now() + interval '1 hour')::text = '' AS marked;
+SELECT 'Not picked / Call later: still open, journey Package call not done yet',
   (SELECT status = 'open' FROM public.calls WHERE id = (SELECT id FROM t_c))
   AND (SELECT done_at IS NULL FROM public.purchase_stages WHERE purchase_id = (SELECT id FROM t_p) AND stage = 'package_call');
-SELECT public.call_mark((SELECT id FROM t_c), (SELECT admin FROM t), 'agreed', null, 'Agreed, will pay tomorrow', now() + interval '2 hours')::text = '' AS marked;
-SELECT 'Client agreed – will pay: the call stays open with the follow-up; journey Package call still open (waits for the payment)',
+SELECT public.call_mark((SELECT id FROM t_c), (SELECT admin FROM t), 'talked', null, 'Agreed, will pay tomorrow', now() + interval '2 hours')::text = '' AS marked;
+SELECT 'Talked to client: the call stays open with the follow-up; journey Package call still open (waits for the payment)',
   (SELECT c.status = 'open' AND c.due_at = now() + interval '2 hours' AND s.done_at IS NULL AND s.status = 'open'
    FROM public.calls c JOIN public.purchase_stages s ON s.purchase_id = c.purchase_id AND s.stage = 'package_call'
    WHERE c.id = (SELECT id FROM t_c));

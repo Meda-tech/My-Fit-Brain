@@ -1,5 +1,5 @@
 -- STAGING ONLY. One full end-to-end journey (owner request, step 5):
--- failed try → paid → assessment completed → booked → presentation done → Package call (Client agreed – will pay) → package paid.
+-- failed try → paid → assessment completed → booked → presentation done → Package call (Talked to client) → package paid.
 -- Real functions and triggers, one transaction, ROLLED BACK at the end: nothing is kept.
 -- (Inside one transaction the clock does not move: every "actual" time is the same moment; the planned times show
 -- the working-hours rules from that moment.)
@@ -57,9 +57,9 @@ ORDER BY f.on_date, f.start_time LIMIT 1;
 SELECT public.presentation_mark_done((SELECT id FROM public.presentation_bookings WHERE purchase_id = (SELECT purchase FROM e2e) AND status = 'booked'),
                                      (SELECT admin FROM e2e))::text = '' AS step6;
 
--- 7. Package call: "Client agreed – will pay" (step 6: the call stays open with a follow-up).
+-- 7. Package call: "Talked to client" (the call stays open with a follow-up).
 SELECT public.call_mark((SELECT id FROM public.calls WHERE purchase_id = (SELECT purchase FROM e2e) AND kind = 'package'),
-                        (SELECT coordinator FROM e2e), 'agreed', null, 'E2E: agreed, will pay', now() + interval '1 hour')::text = '' AS step7;
+                        (SELECT coordinator FROM e2e), 'talked', null, 'E2E: agreed, will pay', now() + interval '1 hour')::text = '' AS step7;
 
 -- 8. The client pays the package in the app (Razorpay): the order, then the confirmed payment.
 SELECT public.package_payment_start('5eed0000-0000-4000-8000-00000e2e0a01', (SELECT purchase FROM e2e), '5eed0000-0000-4000-8000-00000e2e00c1',
