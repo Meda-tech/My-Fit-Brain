@@ -8,6 +8,7 @@ import {
   choiceLabel,
   choicesFor,
   packageContext,
+  packageInformContext,
   assessmentContext,
   fromIstInput,
   needsFollowUp,
@@ -42,7 +43,16 @@ describe('working hours (same cases as the database check)', () => {
 
 describe('calls', () => {
   it('uses the team words', () => {
-    expect(CALL_KIND_LABELS).toEqual({ payment: 'Payment call', assessment: 'Assessment call', booking: 'Booking call', package: 'Package call' });
+    expect(CALL_KIND_LABELS).toEqual({
+      payment: 'Payment call',
+      assessment: 'Assessment call',
+      booking: 'Booking call',
+      package: 'Package call',
+      package_inform: 'Package paid – inform the team',
+    });
+    // A package paid after the purchase was closed: a short task, Done only (owner, 2026-11-23).
+    expect(choicesFor('package_inform').map((c) => choiceLabel('package_inform', c))).toEqual(['Done']);
+    expect(packageInformContext('2026-11-24T06:00:00Z')).toBe('Package paid 24 Nov, after the purchase was closed');
     expect(choiceLabel('package', 'done')).toBe('Client agreed');
     expect(choicesFor('package').map((c) => choiceLabel('package', c))).toEqual(['Client agreed – will pay', 'Call later', 'Not picked', 'Not interested']);
     expect(choicesFor('booking')).toEqual(CALL_CHOICES);

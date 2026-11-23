@@ -1,7 +1,8 @@
 // Calls (step 2): the words and the small rules the screens show. No database access; the database makes,
 // closes and checks calls (migration 20261120120000_calls.sql, call_mark()).
 
-export type CallKind = 'payment' | 'assessment' | 'booking' | 'package';
+/** package_inform: "Package paid – inform the team", a package paid after the purchase was closed (Done only). */
+export type CallKind = 'payment' | 'assessment' | 'booking' | 'package' | 'package_inform';
 /** agreed = "Client agreed – will pay" (Package calls only, step 6): the call stays open with a follow-up. */
 export type CallChoice = 'done' | 'call_later' | 'not_picked' | 'not_interested' | 'agreed';
 export type CallReason = 'too_costly' | 'not_now' | 'wrong_number' | 'other';
@@ -38,13 +39,16 @@ export const CALL_KIND_LABELS: Record<CallKind, string> = {
   assessment: 'Assessment call',
   booking: 'Booking call',
   package: 'Package call',
+  package_inform: 'Package paid – inform the team',
 };
 
 /** The choices of "Mark as call done". A Package call has no Done: "Client agreed – will pay" keeps it open. */
 export const CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested'];
 export const PACKAGE_CALL_CHOICES: readonly CallChoice[] = ['agreed', 'call_later', 'not_picked', 'not_interested'];
+/** "Package paid – inform the team" is a short task: Done only. */
+export const INFORM_CHOICES: readonly CallChoice[] = ['done'];
 export function choicesFor(kind: CallKind): readonly CallChoice[] {
-  return kind === 'package' ? PACKAGE_CALL_CHOICES : CALL_CHOICES;
+  return kind === 'package' ? PACKAGE_CALL_CHOICES : kind === 'package_inform' ? INFORM_CHOICES : CALL_CHOICES;
 }
 export const ALL_CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested', 'agreed'];
 
@@ -227,6 +231,11 @@ export function choiceLabel(kind: CallKind, choice: CallChoice): string {
 /** A closed call's result in words: on a Package call, done is "Client agreed". */
 export function outcomeLabel(kind: CallKind, outcome: CallOutcome): string {
   return kind === 'package' && outcome === 'done' ? 'Client agreed' : CALL_OUTCOME_LABELS[outcome];
+}
+
+/** "Package paid 24 Nov, after the purchase was closed" (the context line of "Package paid – inform the team"). */
+export function packageInformContext(paidAt: string): string {
+  return `Package paid ${day(paidAt)}, after the purchase was closed`;
 }
 
 /** "Presentation done 21 Nov by Test Counsellor" (the Package call's context line). */

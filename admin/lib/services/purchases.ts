@@ -71,6 +71,8 @@ export interface PurchaseRow {
   closed: { at: string; by_name: string | null; reason: string } | null;
   /** Paid and not closed: Close purchase is possible (super admins; coordinators for their own clients). */
   can_close: boolean;
+  /** A package paid after the purchase was closed (owner, 2026-11-23). */
+  package_paid_after_close: boolean;
   /** Paid (or last tried) more than 7 days before go-live: no automatic calls (booked by hand); "Before the system". */
   before_system: boolean;
   /** An old paid purchase, assessment completed, no presentation yet: a super admin may mark the presentation done. */
@@ -266,6 +268,7 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
         : null,
       closed,
       can_close: r.status === 'paid' && !closed,
+      package_paid_after_close: !!closed && !!packagePaid?.paid_at && packagePaid.paid_at > closed.at,
       can_book: r.status === 'paid' && !closed && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       can_mark_presentation_admin:
         r.status === 'paid' && !closed && r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),

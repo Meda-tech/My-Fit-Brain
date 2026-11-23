@@ -8,6 +8,7 @@ import {
   assessmentContext,
   bookingContext,
   packageContext,
+  packageInformContext,
   fromIstInput,
   needsFollowUp,
   paymentContext,
@@ -57,6 +58,7 @@ interface RawTask {
   id: string;
   kind: CallKind;
   due_at: string;
+  created_at: string;
   purchase_id: string;
   call_logs: { entry: string }[] | null;
   purchases: One<TaskPurchase>;
@@ -71,7 +73,7 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
   let q = db
     .from('calls')
     .select(
-      'id, kind, due_at, purchase_id, call_logs(entry), ' +
+      'id, kind, due_at, created_at, purchase_id, call_logs(entry), ' +
         'purchases!inner(test_code, phone, client_id, coordinator_id, paid_at, status, purchase_payments(payments(created_at, status, attempt_id)), ' +
         'purchase_stages(stage, done_at), presentation_bookings(status, done_at, counsellor_id))'
     )
@@ -111,6 +113,9 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
       context = paymentContext(tries.length, last?.created_at ?? t.due_at, last?.status === 'failed', now);
     } else if (t.kind === 'booking') {
       context = bookingContext((p.purchase_stages ?? []).find((s) => s.stage === 'assessment')?.done_at ?? null);
+    } else if (t.kind === 'package_inform') {
+      // Made when the package was paid (its start time).
+      context = packageInformContext(t.created_at);
     } else if (t.kind === 'package') {
       const done = (p.purchase_stages ?? []).find((s) => s.stage === 'report_presentation')?.done_at ?? null;
       const booked = (p.presentation_bookings ?? []).find((b) => b.status === 'booked');
