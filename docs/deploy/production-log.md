@@ -72,8 +72,11 @@ token table).
 
 ## To paste later, in order
 
-Nothing waiting. (Production stayed untouched until the whole flow worked, owner decision 2026-11-20; the 18 files
-and the go-live step below went live on 2026-11-21 and are listed above as rows 24–42.)
+| # | File | On staging since | Checks |
+|---|---|---|---|
+| 1 | `supabase/migrations/20261123000000_repeat_payments.sql` — repeat tries and payments (one open purchase per phone and assessment; blocked tries as history; safety net "Refund needed"; one-time fix of extra unpaid rows such as Tarnjit Singh's 22 Nov try). Removes no rows; widens three allowed-values lists. **Paste it before deploying the branch `step-repeat-payments`.** | 2026-11-23 | `docs/tasks/34-repeat-payments-verify.sql` (all true) |
+
+(The 18 files and the go-live step of 2026-11-21 are listed above as rows 24–42.)
 
 ### Go-live of 2026-11-21: what each file did, and its checks
 
