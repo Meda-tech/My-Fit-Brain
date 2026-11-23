@@ -4,14 +4,18 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { FileText, Plus, Upload, X } from 'lucide-react';
 import { recordOfflinePaymentAction, referenceUsedAction } from '../../app/clients/[id]/actions';
+import { recordAssessmentPaymentAction } from '../../app/purchases/payment-actions';
+import { formatAmount } from './amount';
 import { Button, Notice, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import {
+  ASSESSMENT_PRICE_PAISE,
   NOTE_MAX_LENGTH,
   OFFLINE_METHODS,
   OFFLINE_METHOD_LABELS,
   PROOF_ACCEPT,
   PROOF_MAX_BYTES,
   REFERENCE_MAX_LENGTH,
+  indiaToday,
   type OfflineMethod,
 } from '../../lib/offline-payments';
 
@@ -19,15 +23,20 @@ import {
 // 'offline'; staff only ever see "manual". The proof is uploaded first; if that fails nothing is saved.
 // A reference used before only shows a warning. The form fits on one screen on a laptop: two columns,
 // header and footer fixed; only on small screens does the middle part scroll.
+// The same form opens as "Add assessment payment" on an unpaid row (My tasks Payment call, purchase side panel;
+// owner, 2026-11-23): `purchase` fixes the assessment and the number to that row's.
 
 interface Props {
-  clientId: string;
-  questionnaires: { code: string; name: string }[];
-  /** Formatted fixed price, e.g. ₹3,500 (read-only, no discounts). */
-  price: string;
-  today: string;
-  /** Recorded by: the signed-in staff member. */
-  staffName: string;
+  clientId?: string;
+  questionnaires?: { code: string; name: string }[];
+  /** An unpaid row: the payment is for its number and assessment ("Add assessment payment"). */
+  purchase?: { id: string; testCode: string; testName: string };
+  /** Formatted fixed price, e.g. ₹3,500 (read-only, no discounts). Default: the assessment price. */
+  price?: string;
+  /** Default: today in India. */
+  today?: string;
+  /** Recorded by: the signed-in staff member. Default: "you". */
+  staffName?: string;
 }
 
 const PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -36,7 +45,10 @@ function fileSize(bytes: number): string {
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function OfflinePaymentDialog({ clientId, questionnaires, price, today, staffName }: Props) {
+export function OfflinePaymentDialog({ clientId, questionnaires = [], purchase, price = formatAmount(ASSESSMENT_PRICE_PAISE), today: todayProp, staffName }: Props) {
+  const title = purchase ? 'Add assessment payment' : 'Add manual payment';
+  const choices = purchase ? [{ code: purchase.testCode, name: purchase.testName }] : questionnaires;
+  const [today, setToday] = useState(todayProp ?? '');
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<OfflineMethod>('upi');
@@ -45,7 +57,7 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
   const [usedCount, setUsedCount] = useState(0);
   const [saved, setSaved] = useState<{ paymentId: string; duplicate: boolean } | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
-  const first = useRef<HTMLSelectElement>(null);
+  const first = useRef<HTMLSelectElement | HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +102,7 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
     setError(null);
     startTransition(async () => {
       try {
-        const result = await recordOfflinePaymentAction(clientId, form);
+        const result = purchase ? await recordAssessmentPaymentAction(purchase.id, form) : await recordOfflinePaymentAction(clientId ?? '', form);
         if (!result.ok) return setError(result.error);
         setSaved({ paymentId: result.paymentId, duplicate: result.duplicateReference });
         setOpen(false);
@@ -107,21 +119,26 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
       <Button
         type="button"
         variant="secondary"
+        size={purchase ? 'sm' : undefined}
+        className={purchase ? 'whitespace-nowrap' : undefined}
         onClick={(e) => {
           opener.current = e.currentTarget;
+          if (!todayProp) setToday(indiaToday());
           setSaved(null);
           setOpen(true);
         }}
-        disabled={questionnaires.length === 0}
-        title={questionnaires.length === 0 ? 'No assessment can be bought right now.' : undefined}
+        disabled={choices.length === 0}
+        title={choices.length === 0 ? 'No assessment can be bought right now.' : undefined}
       >
-        <Plus size={18} strokeWidth={2} aria-hidden />
-        <span>Add manual payment</span>
+        <Plus size={purchase ? 16 : 18} strokeWidth={2} aria-hidden />
+        <span>{title}</span>
       </Button>
 
       {saved && (
         <Notice title="Payment recorded." className="order-last basis-full sm:max-w-120" role="status">
-          The client can start the assessment from Home now.{' '}
+          {purchase
+            ? 'The purchase is Paid now. The client starts the assessment from Home (after logging in with this number).'
+            : 'The client can start the assessment from Home now.'}{' '}
           {saved.duplicate && <span className="font-semibold text-coral-deep">The same reference ID is on another payment; please check. </span>}
           <Link href={`/payments?payment=${saved.paymentId}`} className="font-semibold text-teal hover:underline">
             View in Payments
@@ -142,7 +159,7 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <h2 id="manual-payment-title" className="font-heading text-[22px] font-semibold text-teal">
-                    Add manual payment
+                    {title}
                   </h2>
                   <span className="rounded-full bg-mist px-3 py-1 text-[14px] font-semibold text-teal">{price}</span>
                 </div>
@@ -164,20 +181,48 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
                   <label htmlFor="mp-code" className={labelClasses}>
                     Assessment
                   </label>
-                  <select id="mp-code" name="code" ref={first} required className={inputClasses} defaultValue={questionnaires[0]?.code}>
-                    {questionnaires.map((q) => (
-                      <option key={q.code} value={q.code}>
-                        {q.name}
-                      </option>
-                    ))}
-                  </select>
+                  {purchase ? (
+                    <>
+                      {/* Fixed by the row; the server uses the row's assessment anyway. */}
+                      <input id="mp-code" readOnly value={purchase.testName} className={`${inputClasses} bg-cream`} />
+                      <input type="hidden" name="code" value={purchase.testCode} />
+                    </>
+                  ) : (
+                    <select
+                      id="mp-code"
+                      name="code"
+                      ref={(el) => {
+                        first.current = el;
+                      }}
+                      required
+                      className={inputClasses}
+                      defaultValue={choices[0]?.code}
+                    >
+                      {choices.map((q) => (
+                        <option key={q.code} value={q.code}>
+                          {q.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
                   <label htmlFor="mp-date" className={labelClasses}>
                     Date paid
                   </label>
-                  <input id="mp-date" name="paidOn" type="date" required defaultValue={today} max={today} className={inputClasses} />
+                  <input
+                    id="mp-date"
+                    name="paidOn"
+                    type="date"
+                    required
+                    defaultValue={today}
+                    max={today}
+                    ref={(el) => {
+                      if (purchase) first.current = el;
+                    }}
+                    className={inputClasses}
+                  />
                 </div>
 
                 <fieldset className="sm:col-span-2">
@@ -277,7 +322,7 @@ export function OfflinePaymentDialog({ clientId, questionnaires, price, today, s
               </div>
 
               <div className="flex flex-col-reverse gap-3 border-t border-sand px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                <p className="text-[13px] text-ink-muted">Recorded by {staffName}</p>
+                <p className="text-[13px] text-ink-muted">Recorded by {staffName ?? 'you'}</p>
                 <div className="flex gap-2">
                   <Button type="button" variant="ghost" onClick={close} disabled={pending}>
                     Cancel

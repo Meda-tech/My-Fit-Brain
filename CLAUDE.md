@@ -416,6 +416,13 @@ results with you"). The client never sees a report in the app.
   Paid as "Assessment not started" for Admin to decide; calls already worked before go-live keep their times.
 - The Unpaid side panel has **Copy pay link** (`<clients URL>/pay/<code>`) for Payment calls; Paid rows show
   "Assessment not started" / "Assessment started" while at the Assessment stage.
+- **Add assessment payment** (owner, 2026-11-23): on every Payment call row in My tasks and in the side panel of an
+  unpaid row (next to Copy pay link), like Add package payment. The same form and rules as "Add manual payment"
+  (`OfflinePaymentDialog` with `purchase`; method, date, reference, proof to Google Drive FIRST, fixed price), but the
+  assessment and the number are the row's (`recordAssessmentPayment()` in `lib/services/offline-payments.ts`; the row is
+  read under RLS, so coordinators only for their own clients). The number need not be registered: the payment is then
+  claimed at the first login, like a pay-link payment. The database joins it to that unpaid row, which turns Paid (its
+  Payment call closes as paid). No SQL.
 - Calls are made and closed by the payment and assessment triggers (`calls_sync_purchase`) and by `calls_sync()`,
   which the admin runs when My tasks or Purchases opens (the 30-minute rule; no scheduler). Start and due times
   always come from the events, never from when the sync ran.

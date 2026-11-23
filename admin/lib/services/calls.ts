@@ -29,6 +29,7 @@ export interface TaskRow {
   purchase_id: string;
   client_name: string | null;
   phone: string;
+  test_code: string;
   test_name: string;
   context: string;
   coordinator_name: string | null;
@@ -131,6 +132,7 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
       purchase_id: t.purchase_id,
       client_name: names.client(p),
       phone: p.phone,
+      test_code: p.test_code,
       test_name: names.test(p.test_code),
       context,
       coordinator_name: names.coordinator(p.coordinator_id),
