@@ -14,6 +14,10 @@
 --     'package_inform' (the lists go back to what 20261123000000_repeat_payments.sql left)
 -- Restored: call_mark() to its body from 20261121300000_packages.sql; the comments on purchases.closed_reason and
 -- calls.kind; purchase_is_open() to its body from 20261123000000 (the next migration replaces it anyway).
+-- First, with the owner's yes (2026-11-23), the one manual staging test of Close purchase is undone: test number
+-- +91 99999 00007 (IA, closed 2026-11-23 3:25 pm IST, note "ai e hi"): its closed fields are emptied, its Assessment
+-- call is reopened (it was open before), and its one "Purchase closed" call history line is DELETED (the call history
+-- guard is lifted for that one statement only).
 --
 -- Run: powershell -File supabase/staging-migrate.ps1 -Run supabase/staging/staging-remove-close-purchase.sql
 
@@ -25,6 +29,21 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE email = 'superadmin@example.com') THEN
     RAISE EXCEPTION 'Not the staging database. Stopping.';
   END IF;
+END $$;
+
+-- Undo the one staging test (only rows of the test number +919999900007).
+UPDATE public.calls c SET status = 'open', outcome = NULL, closed_at = NULL, closed_note = NULL
+FROM public.purchases pu
+WHERE pu.id = c.purchase_id AND pu.phone = '+919999900007' AND c.outcome = 'purchase_closed';
+ALTER TABLE public.call_logs DISABLE TRIGGER call_logs_keep;
+DELETE FROM public.call_logs l USING public.calls c, public.purchases pu
+WHERE l.call_id = c.id AND pu.id = c.purchase_id AND pu.phone = '+919999900007' AND l.event = 'purchase_closed';
+ALTER TABLE public.call_logs ENABLE TRIGGER call_logs_keep;
+UPDATE public.purchases SET closed_at = NULL, closed_reason = NULL, closed_by = NULL, closed_by_name = NULL, close_note = NULL
+WHERE phone = '+919999900007' AND closed_reason = 'closed_by_staff';
+
+DO $$
+BEGIN
   IF EXISTS (SELECT 1 FROM public.purchases WHERE closed_reason = 'closed_by_staff' OR closed_by IS NOT NULL OR close_note IS NOT NULL)
      OR EXISTS (SELECT 1 FROM public.calls WHERE outcome = 'purchase_closed' OR kind = 'package_inform')
      OR EXISTS (SELECT 1 FROM public.call_logs WHERE event = 'purchase_closed') THEN
