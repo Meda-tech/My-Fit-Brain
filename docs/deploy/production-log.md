@@ -75,6 +75,7 @@ token table).
 | # | File | On staging since | Checks |
 |---|---|---|---|
 | 1 | `supabase/migrations/20261123000000_repeat_payments.sql` — repeat tries and payments (one open purchase per phone and assessment; blocked tries as history; safety net "Refund needed"; one-time fix of extra unpaid rows such as Tarnjit Singh's 22 Nov try). Removes no rows; widens three allowed-values lists. **Paste it before deploying the branch `step-repeat-payments`.** | 2026-11-23 | `docs/tasks/34-repeat-payments-verify.sql` (all true) |
+| 2 | `supabase/migrations/20261123100000_close_purchase.sql` — a purchase is also finished when its Assessment, Booking or Package call is closed as Not interested; "Close purchase" (reason, who, when); no new call or booking for a closed purchase. Removes no rows; widens three allowed-values lists. Paste right after row 1, before deploying the branch. | 2026-11-23 | `docs/tasks/35-close-purchase-verify.sql` (all true) |
 
 (The 18 files and the go-live step of 2026-11-21 are listed above as rows 24–42.)
 

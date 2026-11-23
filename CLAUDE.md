@@ -349,11 +349,13 @@ results with you"). The client never sees a report in the app.
   `purchases.closed_reason`, `calls.outcome`, `call_logs.event` + `not_needed`.
 - Same phone + same assessment, decided by the **latest row** (`purchase_latest()`; rows closed as replaced / not needed
   are left out). **Open purchase** (`purchase_is_open()`, `purchase_open_for()`) = the latest row is Paid and its journey
-  still runs: no package paid for it, Package call not closed as Not interested, not refunded or cancelled.
+  still runs: no package paid for it, no Assessment / Booking / Package call closed as Not interested, not closed by
+  staff, not refunded or cancelled (owner, 2026-11-23; `20261123100000_close_purchase.sql`).
   1. Latest row unpaid → a new try or payment joins that row (as before).
   2. Latest row OPEN → no second payment. The pay page (signed in or public link) asks the database on the server before
-     any Razorpay order (`pay_page_try_blocked()`): public link → "You've already paid for this assessment. Log in to
-     continue." with Log in; signed in → Home. The try is only a history line on the open purchase
+     any Razorpay order (`pay_page_try_blocked()`): public link → the neutral "Please log in with this number to
+     continue." with Log in, the same for every blocked number (privacy: the public link never confirms that a number
+     bought anything; the API answer is `kind: 'login'`); signed in → Home, which shows the real status. The try is only a history line on the open purchase
      (`purchase_blocked_tries`; journey "Tried again – blocked, already paid <date>"); no row, no Payment call. Blocked
      tries count towards the order rate limit. The manual payment form refuses ("This client already has an open
      purchase for this assessment.", before the proof upload); Move to another number refuses a number with an open
@@ -365,6 +367,16 @@ results with you"). The client never sees a report in the app.
      (retakes).
 - Unpaid rows made before this rule while the phone already had an open purchase were fixed once: tries moved onto the
   open purchase as history, the extra row and its open Payment call closed "Not needed – client already paid on <date>".
+- **Close purchase** (`purchase_close()`, `20261123100000_close_purchase.sql`, checks
+  `docs/tasks/35-close-purchase-verify.sql`, behaviour test `supabase/staging/staging-test-close-purchase.sql`): button in
+  the purchase side panel, on a Paid purchase not closed yet; super admins, coordinators only for their own clients;
+  reason required (3–300). Stored on the row (`closed_reason = 'closed_by_staff'`, `closed_at`, `closed_by`,
+  `closed_by_name`, `close_note`); its open calls close (outcome `purchase_closed`, history line with the reason); refused
+  while a presentation is booked and not done ("Cancel the booking first."). A closed purchase is finished: no new call
+  or booking (guard triggers), the journey shows the rest as "Not needed – the purchase was closed", the list shows
+  "Paid · Closed". The client may still finish a running assessment; payments are not touched.
+- Manual payments have no refund feature: a manual "Refund needed" (safety net) is handled outside the system
+  (owner, 2026-11-23).
 - Packages: unchanged.
 - Admin → **Purchases** (`/purchases`, super admins all, coordinators only their own clients' rows; RLS
   `purchases_select`). Tabs **Unpaid** (open attempts and those closed as Not interested: tried, client,
