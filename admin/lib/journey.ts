@@ -122,6 +122,8 @@ export interface JourneyInput {
   }[];
   /** Pay page tries refused because this purchase was open (no order made). */
   blockedTries?: { at: string; signed_in: boolean }[];
+  /** "Close purchase" by staff (owner, 2026-11-23): tasks not done by then are not needed any more. */
+  closed?: { at: string; by_name: string | null; reason: string } | null;
   presentation: {
     counsellor_name: string | null;
     on_date: string;
@@ -166,7 +168,9 @@ function callItems(kind: CallKind, logs: LogIn[]): JourneyItem[] {
 }
 
 /** System lines worth showing under a task (reopened, cancelled booking, package tries, refund needed). */
-const SYSTEM_EVENTS: CallEvent[] = ['reopened', 'booking_cancelled', 'package_payment_failed', 'package_payment_not_completed', 'package_refund_needed'];
+const SYSTEM_EVENTS: CallEvent[] = [
+  'reopened', 'booking_cancelled', 'package_payment_failed', 'package_payment_not_completed', 'package_refund_needed', 'purchase_closed',
+];
 function systemItems(logs: LogIn[]): JourneyItem[] {
   return logs
     .filter((l) => l.entry === 'event' && l.event && SYSTEM_EVENTS.includes(l.event))
@@ -196,6 +200,8 @@ function fromCall(
       return { status: 'not_needed', actual: null, notNeeded: { what: 'no automatic call (paid more than 7 days before go-live)', at: null } };
     case 'not_needed':
       return { status: 'not_needed', actual: null, notNeeded: { what: 'had already paid for this assessment', at: call.closed_at } };
+    case 'purchase_closed':
+      return { status: 'not_needed', actual: null, notNeeded: { what: 'the purchase was closed', at: call.closed_at } };
     case 'paid':
     case 'assessment_completed':
     case 'package_paid':
@@ -413,5 +419,20 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
     ...(pkCall ? [...callItems('package', pkCall.logs), ...systemItems(pkCall.logs)] : []),
   ]);
 
-  return [payment, assessment, booking, presentation, pack];
+  const tasks = [payment, assessment, booking, presentation, pack];
+  // Closed by staff: what was still open or to come is not needed any more (nothing late, nothing to press).
+  const closed = input.closed;
+  if (closed) {
+    for (const t of tasks) {
+      if (t.status !== 'open' && t.status !== 'upcoming') continue;
+      Object.assign(t, {
+        status: 'not_needed',
+        notNeeded: { what: 'the purchase was closed', at: closed.at },
+        planned: null,
+        late: false,
+        callId: null,
+      } satisfies Partial<JourneyTask>);
+    }
+  }
+  return tasks;
 }

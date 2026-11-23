@@ -37,6 +37,23 @@ export const PURCHASE_STATUS_LABELS: Record<PurchaseRowStatus, string> = {
 
 export const PURCHASE_KIND_LABELS: Record<string, string> = { assessment: 'Assessment' };
 
+/**
+ * "Close purchase" (owner, 2026-11-23): a Paid purchase is closed by a super admin or the client's coordinator, with a
+ * reason. It is then finished: its open calls close, and a new try or payment of the number starts a new purchase.
+ */
+export const CLOSE_REASON_MIN = 3;
+export const CLOSE_REASON_MAX = 300;
+/** The database's own refusals, shown as they are. */
+export const CLOSE_MESSAGES = [
+  'Only coordinators and super admins can close a purchase.',
+  'Write the reason (3 to 300 characters).',
+  'This purchase was not found.',
+  'Only this client\'s coordinator can close their purchase.',
+  'This purchase is already closed.',
+  'Only a paid purchase can be closed.',
+  'A presentation is booked. Cancel the booking first.',
+] as const;
+
 export const JOURNEY_STAGES = ['payment', 'assessment', 'presentation_booking', 'report_presentation', 'package_call'] as const;
 export type JourneyStage = (typeof JOURNEY_STAGES)[number];
 

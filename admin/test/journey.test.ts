@@ -249,3 +249,31 @@ describe('journey: tries after paying (owner, 2026-11-23)', () => {
     expect(extra[0]).toMatchObject({ status: 'not_needed', notNeeded: { what: 'had already paid for this assessment', at: '2026-11-23T06:00:00Z' } });
   });
 });
+
+describe('journey: closed by staff (owner, 2026-11-23)', () => {
+  const j = buildJourney(
+    {
+      ...base,
+      status: 'paid',
+      payments: [
+        { status: 'paid', provider: 'razorpay', method: 'upi', amount_paise: 350000, currency: 'INR', paid_at: '2026-11-23T05:00:00Z', created_at: '2026-11-23T04:59:00Z',
+          refund_status: null, recorded_by_name: null, attempt: null },
+      ],
+      calls: [
+        { id: 'a', kind: 'assessment', status: 'closed', outcome: 'purchase_closed', due_at: '2026-11-23T07:00:00Z', closed_at: '2026-11-23T06:00:00Z',
+          closed_note: 'Purchase closed: Client asked to stop', prior_calls: 0,
+          logs: [log({ at: '2026-11-23T06:00:00Z', entry: 'event', event: 'purchase_closed', note: 'Client asked to stop', by_name: 'Reetu' })] },
+      ],
+      presentation: null,
+      packagePaid: null,
+      closed: { at: '2026-11-23T06:00:00Z', by_name: 'Reetu', reason: 'Client asked to stop' },
+    },
+    NOW
+  );
+
+  it('the closed call and every task still to come are "not needed – the purchase was closed"; nothing open or late', () => {
+    expect(j.map((t) => t.status)).toEqual(['not_needed', 'not_needed', 'not_needed', 'not_needed', 'not_needed']);
+    expect(j.slice(1).every((t) => t.notNeeded?.what === 'the purchase was closed' && !t.late && !t.callId)).toBe(true);
+    expect(j[1].items.at(-1)).toMatchObject({ title: 'Purchase closed', detail: 'Client asked to stop', by: 'Reetu' });
+  });
+});
