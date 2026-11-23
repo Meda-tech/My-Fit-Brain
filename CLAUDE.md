@@ -901,4 +901,8 @@ existing migrations, `.env*` files.
   (coordinator Reetu, counsellor Preeti, 18 clients assigned), all 110 checks true. Claude ran it with the owner's
   permission for that go-live only; from then on the owner runs production SQL again (Database rules). Backup
   taken just before: `D:\Tech\Meda\backups\prod-2026-11-21-1751\`. Details: `docs/deploy/production-log.md`.
+- **Done: repeat tries and payments, 2026-11-23, 3:37 pm IST** (branch `step-repeat-payments`, merged into `main`):
+  `20261123000000_repeat_payments.sql` and `20261123300000_purchase_finished.sql` on production, checks 34 and 35 all
+  true; Claude ran them with the owner's permission for that go-live only, after a backup
+  (`D:\Tech\Meda\backups\prod-2026-11-23-1537\`). From then on the owner runs production SQL again.
 - Next: Task 07 — polish.

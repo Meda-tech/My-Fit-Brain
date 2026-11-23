@@ -62,6 +62,8 @@ token table).
 | 40 | `20261121900000_old_purchases_bookable.sql` | 2026-11-21, 5:55:36 pm IST (go-live, run by Claude with the owner's permission) |
 | 41 | `20261122000000_payment_calls_go_live.sql` | 2026-11-21, 5:55:39 pm IST (go-live, run by Claude with the owner's permission) |
 | 42 | **One-time go-live step** `supabase/go-live/assign-old-clients.sql` (not a migration; never run it again) | 2026-11-21, 5:55:43 pm IST — result: coordinator Reetu, counsellor Preeti, 1 phone added, 0 purchases changed, 18 clients assigned to the counsellor |
+| 43 | `20261123000000_repeat_payments.sql` (repeat tries and payments: one open purchase per phone and assessment, blocked tries as history, safety net "Refund needed"; one-time fix of extra unpaid rows) | 2026-11-23, 3:37 pm IST (run by Claude with the owner's permission for this go-live only). Check 34: 8 true, 0 false. The one-time fix closed 3 extra unpaid rows as "Not needed" (Tarnjit Singh's 22 Nov try, "already paid on 17 Nov"; one try of 14 Nov and one of 22 Nov by two other clients who had paid the same day) |
+| 44 | `20261123300000_purchase_finished.sql` (a purchase is also finished when its Assessment, Booking or Package call is closed as Not interested) | 2026-11-23, 3:38 pm IST (same go-live). Check 35: 4 true, 0 false |
 
 ## One-time data fixes (not migrations)
 
@@ -72,10 +74,8 @@ token table).
 
 ## To paste later, in order
 
-| # | File | On staging since | Checks |
-|---|---|---|---|
-| 1 | `supabase/migrations/20261123000000_repeat_payments.sql` — repeat tries and payments (one open purchase per phone and assessment; blocked tries as history; safety net "Refund needed"; one-time fix of extra unpaid rows such as Tarnjit Singh's 22 Nov try). Removes no rows; widens three allowed-values lists. **Paste it before deploying the branch `step-repeat-payments`.** | 2026-11-23 | `docs/tasks/34-repeat-payments-verify.sql` (all true) |
-| 2 | `supabase/migrations/20261123300000_purchase_finished.sql` — a purchase is also finished when its Assessment, Booking or Package call is closed as Not interested (before: only the Package call); a new try or payment from that number then starts a new purchase. Removes nothing, changes one function only. Paste right after row 1, before deploying the branch. (It replaces two files that were only ever on staging and were removed: `20261123100000_close_purchase.sql`, `20261123200000_package_after_close.sql`.) | 2026-11-23 | `docs/tasks/35-purchase-finished-verify.sql` (all true) |
+Nothing waiting. (Rows 43–44 went live on 2026-11-23; the two staging-only files `20261123100000_close_purchase.sql` and
+`20261123200000_package_after_close.sql` were removed before production and never ran there.)
 
 (The 18 files and the go-live step of 2026-11-21 are listed above as rows 24–42.)
 
@@ -123,6 +123,7 @@ the flow), 19 clients, 25 payments; open calls: 9 Booking and 1 Payment, all due
 
 | Date | What | Result |
 |---|---|---|
+| 2026-11-23, 3:37 pm IST | Full production backup before rows 43–44 (`supabase/prod-readonly.ps1 -Backup`) into `D:TechMedaackupsprod-2026-11-23-1537` | full.dump (pg_dump -Fc) 877,673 bytes; schema.sql 555,938; data.sql 1,104,705 (restored from the dump without error) |
 | 2026-11-21, 5:22 pm IST | **Full backup of production** (read-only, `pg_dump` 17.11 = production's Postgres 17.11), asked for by the owner. Outside the project, never in git: `D:\Tech\Meda\backups\prod-2026-11-21\` → `full.dump` (custom format, all schemas incl. auth and storage), `schema.sql`, `data.sql` (both written from `full.dump`, so the same moment). Storage: no buckets, no files. | Restored into a temporary local database (Docker, no ports open): no errors; 58 tables, row counts equal on 57. The one difference, `net._http_response` (1 vs 0), is an extension's temporary log that `pg_dump` never includes. |
 | 2026-11-21 | **Dress rehearsal** in that temporary local database (never production, never staging): rows 1–17 of "To paste later, in order", every check file, then the go-live step (row 18). The temporary database was deleted afterwards. | All 17 files ran with no error or warning. Checks: all true (107), the last one after the go-live step. Go-live step: exactly one active coordinator and one active counsellor found; 18 clients assigned to the counsellor, 1 phone added to the coordinator, 0 purchases changed (they already had the coordinator). At go-live: 24 rows in Purchases (18 purchases, 6 unpaid tries), 14 before the system, 10 in the flow; open calls: 8 Booking, 1 Assessment (all due 2 working hours after go-live), 1 Payment call that is **late at once** (an unpaid try from 7 days before go-live keeps its own due time). |
 | 2026-11-21, 5:37 pm IST | **Second dress rehearsal** on a fresh temporary local copy of the same backup: rows 1–18 (now including `20261122000000_payment_calls_go_live.sql`), every check file, the go-live step (row 19). Temporary database deleted afterwards. | All 18 files OK, no error or warning. Checks: 110 true, 0 false after the go-live step (one false before it, as designed). Go-live step: 18 clients to the counsellor, 1 phone, 0 purchases. Open calls at go-live: 8 Booking, 1 Assessment, 1 Payment, all due 2 working hours after go-live, **none late** (the Payment call that was late in the first rehearsal now starts at go-live). |
