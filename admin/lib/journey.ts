@@ -117,7 +117,11 @@ export interface JourneyInput {
     refund_status: string | null;
     recorded_by_name: string | null;
     attempt: { started_at: string | null; completed_at: string | null } | null;
+    /** Safety net: paid a second time while this purchase was open (refund needed; no journey of its own). */
+    extra_paid?: boolean;
   }[];
+  /** Pay page tries refused because this purchase was open (no order made). */
+  blockedTries?: { at: string; signed_in: boolean }[];
   presentation: {
     counsellor_name: string | null;
     on_date: string;
@@ -141,6 +145,10 @@ function slotAt(date: string, start: string): string {
 }
 
 const later = (a: string | null, b: string | null) => !!a && !!b && new Date(a).getTime() > new Date(b).getTime();
+
+/** "17 Nov 2026" (India time). */
+const dayFormat = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+export const journeyDay = (iso: string) => dayFormat.format(new Date(iso));
 
 /** Call attempts of a call (Mark as call done entries) as nested lines. */
 function callItems(kind: CallKind, logs: LogIn[]): JourneyItem[] {
@@ -186,6 +194,8 @@ function fromCall(
       return { status: 'not_needed', actual: null, notNeeded: { what: 'the purchase was refunded or cancelled', at: call.closed_at } };
     case 'before_go_live':
       return { status: 'not_needed', actual: null, notNeeded: { what: 'no automatic call (paid more than 7 days before go-live)', at: null } };
+    case 'not_needed':
+      return { status: 'not_needed', actual: null, notNeeded: { what: 'had already paid for this assessment', at: call.closed_at } };
     case 'paid':
     case 'assessment_completed':
     case 'package_paid':
@@ -200,7 +210,8 @@ function fromCall(
 export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
   const call = (kind: CallKind) => input.calls.find((c) => c.kind === kind) ?? null;
   const paid = input.status !== 'not_paid';
-  const paidPayment = input.payments.find((p) => p.status === 'paid' && p.paid_at) ?? null;
+  // The payment of this purchase: never an extra (safety net) payment.
+  const paidPayment = input.payments.find((p) => p.status === 'paid' && p.paid_at && !p.extra_paid) ?? null;
   const attempt = paidPayment?.attempt ?? null;
   const completedAt = attempt?.completed_at ?? null;
   const pres = input.presentation;
@@ -234,10 +245,44 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
     items: [...items].sort(byTime),
   });
 
-  // 1. Payment call. Client steps: every try on the pay page, and the payment.
+  // 1. Payment call. Client steps: every try on the pay page, and the payment. Once paid, later tries are history only
+  // (owner, 2026-11-23): "Tried again – blocked, already paid <date>" (no order made), a try or a second payment that
+  // still came through (refund needed).
   const payCall = call('payment');
+  const alreadyPaid = paidPayment?.paid_at ? `already paid ${journeyDay(paidPayment.paid_at)}` : null;
+  const blockedItems: JourneyItem[] = (input.blockedTries ?? []).map((b) => ({
+    at: b.at,
+    kind: 'client' as const,
+    title: `Tried again – blocked${alreadyPaid ? `, ${alreadyPaid}` : ''}`,
+    detail: `Pay page${b.signed_in ? ' · signed in' : ''} · no payment made`,
+    note: null,
+    by: null,
+    followUp: null,
+  }));
   const payItems: JourneyItem[] = input.payments.map((p) => {
     const manual = p.provider === 'offline';
+    if (p.status === 'paid' && p.extra_paid) {
+      return {
+        at: p.paid_at ?? p.created_at,
+        kind: 'client' as const,
+        title: `Paid a second time – ${p.refund_status === 'refunded' ? 'refunded' : 'refund needed'}`,
+        detail: `${paymentMethodLabel(p)} · ${formatAmount(p.amount_paise, p.currency)}${alreadyPaid ? ` · ${alreadyPaid}` : ''}`,
+        note: null,
+        by: manual ? p.recorded_by_name : null,
+        followUp: null,
+      };
+    }
+    if (p.status !== 'paid' && alreadyPaid && later(p.created_at, paidPayment!.paid_at)) {
+      return {
+        at: p.created_at,
+        kind: 'client' as const,
+        title: `Tried again – ${p.status === 'failed' ? 'failed' : 'not completed'}, ${alreadyPaid}`,
+        detail: manual ? paymentMethodLabel(p) : 'Pay page',
+        note: null,
+        by: null,
+        followUp: null,
+      };
+    }
     if (p.status === 'paid') {
       return {
         at: p.paid_at ?? p.created_at,
@@ -269,6 +314,7 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
       : { status: 'upcoming', actual: null, notNeeded: null };
   const payment = task('payment', 'Coordinator', input.coordinatorName, payCall, beforeSystem(payState), [
     ...payItems,
+    ...blockedItems,
     ...(payCall ? [...callItems('payment', payCall.logs), ...systemItems(payCall.logs)] : []),
   ]);
 

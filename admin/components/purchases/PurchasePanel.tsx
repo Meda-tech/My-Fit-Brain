@@ -119,6 +119,7 @@ export function PurchasePanel({
       coordinatorName: p.coordinator_name,
       calls: p.calls,
       payments: p.payments,
+      blockedTries: p.blocked_tries,
       presentation: p.presentation,
       packagePaid: p.package_paid,
       slotLabel: presentationLabel,

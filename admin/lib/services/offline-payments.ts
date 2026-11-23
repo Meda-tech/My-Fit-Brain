@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
 import { normalizePhoneNumber } from '../phone';
-import { canViewPayments } from './payments';
+import { OPEN_PURCHASE_REFUSED, canViewPayments, hasOpenPurchase } from './payments';
 import { ProofStorageNotConfiguredError, isProofStorageConfigured, uploadProof } from '../google/drive';
 import { ASSESSMENT_PRICE_PAISE, cleanReference, parseOfflinePayment, proofProblem } from '../offline-payments';
 
@@ -84,8 +84,10 @@ export async function recordOfflinePayment(clientId: string, form: FormData): Pr
   const phone = normalizePhoneNumber((client as { phone: string }).phone);
   if (!phone.valid) return { ok: false, error: 'The client’s mobile number is not valid. Fix it before recording a payment.' };
 
-  const payable = await payableQuestionnaires();
+  const [payable, open] = await Promise.all([payableQuestionnaires(), hasOpenPurchase(phone.normalized, input.code)]);
   if (!payable.some((q) => q.code === input.code)) return { ok: false, error: 'This assessment cannot be bought right now.' };
+  // One open purchase per phone and assessment (owner, 2026-11-23): refused before the proof is uploaded.
+  if (open) return { ok: false, error: OPEN_PURCHASE_REFUSED };
 
   if (!isProofStorageConfigured()) {
     console.error('Offline payment blocked: proof storage env (GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_DRIVE_FOLDER_ID) missing or invalid.');

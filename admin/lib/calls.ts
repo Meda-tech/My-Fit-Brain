@@ -18,7 +18,8 @@ export type CallEvent =
   | 'package_paid'
   | 'package_payment_failed'
   | 'package_payment_not_completed'
-  | 'package_refund_needed';
+  | 'package_refund_needed'
+  | 'not_needed';
 export type CallOutcome =
   | 'done'
   | 'not_interested'
@@ -27,7 +28,8 @@ export type CallOutcome =
   | 'ended'
   | 'before_go_live'
   | 'booked'
-  | 'package_paid';
+  | 'package_paid'
+  | 'not_needed';
 
 export const CALL_KIND_LABELS: Record<CallKind, string> = {
   payment: 'Payment call',
@@ -74,6 +76,7 @@ export const CALL_EVENT_LABELS: Record<CallEvent, string> = {
   package_payment_failed: 'Package payment failed',
   package_payment_not_completed: 'Package payment started, not completed',
   package_refund_needed: 'Paid a second time: refund needed',
+  not_needed: 'Not needed: client already paid',
 };
 
 export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
@@ -85,6 +88,7 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   before_go_live: 'Closed: paid more than 7 days before go-live',
   booked: 'Closed: presentation booked',
   package_paid: 'Package paid',
+  not_needed: 'Not needed: client already paid',
 };
 
 export const CALL_NOTE_MAX = 2000;

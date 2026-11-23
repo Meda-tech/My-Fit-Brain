@@ -97,6 +97,8 @@ export interface PurchasePayment {
   accounts_check: 'pending' | 'checked' | null;
   /** The assessment this payment started (paid payments only): when it was started and completed. */
   attempt: { started_at: string | null; completed_at: string | null } | null;
+  /** Safety net: paid a second time while this purchase was open. Refund needed; it starts no journey. */
+  extra_paid: boolean;
 }
 
 export interface CallLogRow {
@@ -129,6 +131,8 @@ export interface CallRow {
 export interface PurchaseDetail extends PurchaseRow {
   payments: PurchasePayment[];
   calls: CallRow[];
+  /** Pay page tries refused because this purchase was open ("Tried again – blocked"; no order made). */
+  blocked_tries: { at: string; signed_in: boolean }[];
 }
 
 type Db = Awaited<ReturnType<typeof createClient>>;
@@ -157,7 +161,7 @@ interface RawPurchase {
   client_id: string | null;
   amount_paise: number;
   status: PurchaseRowStatus;
-  closed_reason: 'replaced' | 'not_interested' | null;
+  closed_reason: 'replaced' | 'not_interested' | 'not_needed' | null;
   source: 'pay_page' | 'manual';
   coordinator_id: string | null;
   paid_at: string | null;
@@ -335,28 +339,31 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
   const db = await createClient();
   // The row, its payments and its calls are read at the same time (all by id; RLS decides what this staff member
   // sees, so a row they may not see returns nothing and its payments / calls are not used).
-  const [{ data }, { data: links }, { data: callData }] = await Promise.all([
+  const [{ data }, { data: links }, { data: callData }, { data: blocked }] = await Promise.all([
     db.from('purchases').select(COLUMNS).eq('id', id).eq('kind', 'assessment').or(SHOWN).maybeSingle(),
     db
       .from('purchase_payments')
       .select(
-        'accounts_check, payments(id, provider, status, refund_status, method, amount_paise, currency, paid_at, created_at, reference, provider_order_id, provider_payment_id, proof_url, recorded_by, attempts(started_at, completed_at))'
+        'accounts_check, extra_paid_at, payments(id, provider, status, refund_status, method, amount_paise, currency, paid_at, created_at, reference, provider_order_id, provider_payment_id, proof_url, recorded_by, attempts(started_at, completed_at))'
       )
       .eq('purchase_id', id),
     db
       .from('calls')
       .select('id, kind, status, outcome, created_at, due_at, closed_at, closed_note, call_logs(id, at, entry, choice, reason, note, follow_up_at, event, by_name)')
       .eq('purchase_id', id),
+    // Empty (an error, not thrown) before the migration 20261123000000.
+    db.from('purchase_blocked_tries').select('at, signed_in').eq('purchase_id', id),
   ]);
   if (!data) return null;
-  type RawPayment = Omit<PurchasePayment, 'recorded_by_name' | 'accounts_check' | 'attempt'> & {
+  type RawPayment = Omit<PurchasePayment, 'recorded_by_name' | 'accounts_check' | 'attempt' | 'extra_paid'> & {
     recorded_by: string | null;
     attempts: One<{ started_at: string | null; completed_at: string | null }>;
   };
-  type RawLink = { accounts_check: PurchasePayment['accounts_check']; payments: One<RawPayment> };
+  type RawLink = { accounts_check: PurchasePayment['accounts_check']; extra_paid_at: string | null; payments: One<RawPayment> };
+  type Link = { check: PurchasePayment['accounts_check']; extra: boolean; p: RawPayment };
   const raw = ((links ?? []) as unknown as RawLink[])
-    .map((l) => ({ check: l.accounts_check, p: one(l.payments) }))
-    .filter((l): l is { check: PurchasePayment['accounts_check']; p: RawPayment } => !!l.p);
+    .map((l) => ({ check: l.accounts_check, extra: !!l.extra_paid_at, p: one(l.payments) }))
+    .filter((l): l is Link => !!l.p);
 
   // The row's names and the staff names of its payments, at the same time.
   const staffIds = [...new Set(raw.map((l) => l.p.recorded_by).filter((v): v is string => !!v))];
@@ -367,11 +374,12 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
   const staffName = new Map(((staff ?? []) as { id: string; full_name: string }[]).map((s) => [s.id, s.full_name]));
 
   const payments = raw
-    .map(({ check, p: { recorded_by, attempts, ...p } }) => ({
+    .map(({ check, extra, p: { recorded_by, attempts, ...p } }) => ({
       ...p,
       recorded_by_name: recorded_by ? staffName.get(recorded_by) ?? null : null,
       accounts_check: check,
       attempt: one(attempts),
+      extra_paid: extra,
     }))
     .sort((a, b) => (b.paid_at ?? b.created_at).localeCompare(a.paid_at ?? a.created_at));
 
@@ -383,5 +391,6 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
     })
     // Open first, then the newest.
     .sort((a, b) => (a.status === b.status ? b.created_at.localeCompare(a.created_at) : a.status === 'open' ? -1 : 1));
-  return { ...row, payments, calls };
+  const blocked_tries = ((blocked ?? []) as { at: string; signed_in: boolean }[]).sort((a, b) => a.at.localeCompare(b.at));
+  return { ...row, payments, calls, blocked_tries };
 }
