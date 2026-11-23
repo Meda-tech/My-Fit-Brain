@@ -19,6 +19,8 @@ interface ClientHomeViewProps {
   /** Paid, not started: Start creates the assessment. */
   purchases: PurchaseCard[];
   attempts: AttemptSummary[];
+  /** Tests this number holds an open purchase of (paid, journey running): never sold again. */
+  openCodes: string[];
   /** The package (step 6): open offers after the report presentation, and paid packages. */
   pkg: { offers: PackageOffer[]; paid: PackagePaid[]; enabled: boolean };
   /** The client's full name (checkout prefill). */
@@ -29,7 +31,7 @@ function formatDate(iso: string, lang: 'en' | 'hi'): string {
   return new Date(iso).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export function ClientHomeView({ firstName, tests, purchases, attempts, pkg, fullName }: ClientHomeViewProps) {
+export function ClientHomeView({ firstName, tests, purchases, attempts, openCodes, pkg, fullName }: ClientHomeViewProps) {
   const { lang } = useLanguage();
   const t = translations[lang];
   const local = (p: Text | null) => (p ? pick(p, lang) : null);
@@ -144,8 +146,10 @@ export function ClientHomeView({ firstName, tests, purchases, attempts, pkg, ful
         </h2>
         <div className="space-y-4">
           {tests.map((test) => {
-            // Paid but not started: send them to Start instead of selling it again.
+            // Paid but not started: send them to Start instead of selling it again. An open purchase (started,
+            // completed, journey still running) is never sold again either.
             const owned = purchases.some((p) => p.code === test.code);
+            const open = !owned && openCodes.includes(test.code);
             return (
               <Card key={test.code} className="flex flex-col p-5">
                 <h3 className="text-[19px] font-semibold leading-snug text-ink">{local(test.name)}</h3>
@@ -154,10 +158,10 @@ export function ClientHomeView({ firstName, tests, purchases, attempts, pkg, ful
                 </p>
                 {test.subtitle && <p className="mt-3 text-[15px] leading-6 text-ink-soft">{local(test.subtitle)}</p>}
                 <FeatureList className="mt-4" title={t.pay.featuresTitle} items={t.pay.features} />
-                {owned ? (
+                {owned || open ? (
                   <p className="mt-4 flex items-start gap-2 rounded-input bg-mist px-3 py-2.5 text-[14px] leading-5.5 text-teal">
                     <CheckCircle2 size={16} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
-                    <span>{t.assess.alreadyPaid}</span>
+                    <span>{owned ? t.assess.alreadyPaid : t.assess.alreadyPaidOpen}</span>
                   </p>
                 ) : (
                   <ButtonLink href={`/pay/${test.code}`} variant="secondary" className="mt-5 self-start">

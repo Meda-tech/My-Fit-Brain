@@ -3,6 +3,7 @@ import { homeData } from '../lib/assessment/server';
 import { packageHome, recoverPackagePayments } from '../lib/package/server';
 import { paymentDeps } from '../lib/payments/server';
 import { claimPurchases, recoverOpenPayments } from '../lib/payments/service';
+import { normalizePhoneNumber } from '../lib/phone';
 import { ClientHomeView } from './ClientHomeView';
 
 export const dynamic = 'force-dynamic';
@@ -24,8 +25,13 @@ export default async function ClientHomePage() {
   } else {
     await recoverPackagePayments(profile);
   }
-  const [{ tests, purchases, attempts }, pkg] = await Promise.all([homeData(profile), packageHome(profile)]);
+  // The verified number (Supabase Auth keeps it without +): tests it holds an open purchase of are not sold again.
+  const phone = user.phone ? normalizePhoneNumber(user.phone.startsWith('+') ? user.phone : `+${user.phone}`) : null;
+  const [{ tests, purchases, attempts, openCodes }, pkg] = await Promise.all([
+    homeData(profile, phone?.valid ? phone.normalized : null),
+    packageHome(profile),
+  ]);
   const firstName = client.full_name.trim().split(/\s+/)[0] || client.full_name;
 
-  return <ClientHomeView firstName={firstName} fullName={client.full_name} tests={tests} purchases={purchases} attempts={attempts} pkg={pkg} />;
+  return <ClientHomeView firstName={firstName} fullName={client.full_name} tests={tests} purchases={purchases} attempts={attempts} openCodes={openCodes} pkg={pkg} />;
 }

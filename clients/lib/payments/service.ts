@@ -71,7 +71,10 @@ function gatewayOf(deps: PaymentDeps): RazorpayGateway {
 }
 
 export type Checkout =
+  /** Signed in and already holding this assessment: Home. */
   | { kind: 'owned' }
+  /** Public pay link: this number already has an open purchase of this assessment. No order; log in instead. */
+  | { kind: 'paid_already' }
   | { kind: 'order'; keyId: string; orderId: string; amount: number; currency: string; paymentId: string; phone: string };
 
 export interface CheckoutInput {
@@ -84,7 +87,11 @@ export interface CheckoutInput {
   ipHash: string | null;
 }
 
-/** Step 1. A signed-in client who already holds this test (paid or unfinished) is sent Home instead. */
+/**
+ * Step 1. A signed-in client who already holds this test (paid or unfinished) is sent Home instead. Any number whose
+ * latest purchase of this test is still open (paid, journey running; owner rule 2026-11-23) gets no order either:
+ * signed in → Home, public link → "already paid, log in". Checked on the server before Razorpay is asked.
+ */
 export async function createCheckout(deps: PaymentDeps, input: CheckoutInput): Promise<Checkout> {
   const gateway = gatewayOf(deps);
   const phone = normalizePhoneNumber(input.phone);
@@ -104,6 +111,12 @@ export async function createCheckout(deps: PaymentDeps, input: CheckoutInput): P
   const recent = await deps.payments.countRecent(phone.normalized, input.ipHash, new Date(now.getTime() - LIMIT_WINDOW_MS).toISOString());
   if (recent.phone >= ORDER_LIMIT_PER_PHONE || recent.ip >= ORDER_LIMIT_PER_IP) {
     throw new PaymentError('RATE_LIMITED', 'Too many attempts. Please try again later.');
+  }
+
+  // One open purchase per phone and assessment: no second payment. The database writes the blocked try as a history
+  // line on the open purchase (no new row, no Payment call).
+  if (await deps.payments.tryBlocked({ phone: phone.normalized, code: input.code, signedIn: !!input.client, ipHash: input.ipHash })) {
+    return input.client ? { kind: 'owned' } : { kind: 'paid_already' };
   }
 
   // The number already belongs to a registered client: the purchase is theirs at once (the admin shows

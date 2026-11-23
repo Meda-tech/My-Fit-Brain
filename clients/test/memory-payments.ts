@@ -37,9 +37,23 @@ export class MemoryPayments implements PaymentStore {
     const p = [...this.rows.values()].find((r) => r.provider_order_id === orderId);
     return p ? { ...p } : null;
   }
+  /** Phone|code pairs that hold an open purchase (the database decides this; tests set it). */
+  openPurchases = new Set<string>();
+  /** Blocked tries written by tryBlocked (purchase_blocked_tries). */
+  blocked: { phone: string; code: string; signedIn: boolean; ipHash: string | null; at: string }[] = [];
+
   async countRecent(phone: string, ipHash: string | null, since: string) {
     const recent = [...this.rows.values()].filter((r) => r.created_at >= since);
-    return { phone: recent.filter((r) => r.phone === phone).length, ip: ipHash ? recent.filter((r) => r.ip_hash === ipHash).length : 0 };
+    const blocked = this.blocked.filter((b) => b.at >= since);
+    return {
+      phone: recent.filter((r) => r.phone === phone).length + blocked.filter((b) => b.phone === phone).length,
+      ip: ipHash ? recent.filter((r) => r.ip_hash === ipHash).length + blocked.filter((b) => b.ipHash === ipHash).length : 0,
+    };
+  }
+  async tryBlocked(input: { phone: string; code: string; signedIn: boolean; ipHash: string | null }) {
+    if (!this.openPurchases.has(`${input.phone}|${input.code}`)) return false;
+    this.blocked.push({ ...input, at: this.createdAt });
+    return true;
   }
   async markPaid(id: string, paid: { provider_payment_id: string; method: string | null; paid_at: string }) {
     const p = this.rows.get(id)!;

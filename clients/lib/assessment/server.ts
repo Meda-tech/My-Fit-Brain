@@ -60,10 +60,24 @@ async function questionnaires(): Promise<Map<string, { name: Text; sort: number;
   return new Map(((data ?? []) as QuestionnaireRow[]).map((q) => [q.code, { name: { en: q.name_en, hi: q.name_hi }, sort: q.sort, active: q.is_active !== false }]));
 }
 
-/** Live questionnaires (as cards), the client's purchases not started yet, and their own assessments. */
+/**
+ * Tests whose latest purchase for this verified number is still open (paid, journey running; database rule
+ * purchase_open_for): Home never offers to buy them again. Empty before the migration 20261123000000.
+ */
+async function openPurchaseCodes(phone: string, codes: string[]): Promise<Set<string>> {
+  const db = createAdminClient();
+  const results = await Promise.all(codes.map((code) => db.rpc('purchase_open_for', { p_phone: phone, p_test: code })));
+  return new Set(codes.filter((_, i) => !results[i].error && ((results[i].data as unknown[] | null) ?? []).length > 0));
+}
+
+/**
+ * Live questionnaires (as cards), the client's purchases not started yet, their own assessments, and the tests their
+ * verified number holds an open purchase of (`phone`, E.164; null = none checked).
+ */
 export async function homeData(
-  client: ClientProfile
-): Promise<{ tests: TestCard[]; purchases: PurchaseCard[]; attempts: AttemptSummary[] }> {
+  client: ClientProfile,
+  phone: string | null = null
+): Promise<{ tests: TestCard[]; purchases: PurchaseCard[]; attempts: AttemptSummary[]; openCodes: string[] }> {
   const db = createAdminClient();
   // Independent reads: run them together instead of one after another.
   const [names, { data: live, error }, { data: ready, error: readyError }, attempts] = await Promise.all([
@@ -98,8 +112,12 @@ export async function homeData(
     .sort((a, b) => a.sort - b.sort)
     .map(({ code, name, subtitle }): TestCard => ({ code, name, subtitle }));
 
+  const readyCodes = new Set(((ready ?? []) as { test_code: string }[]).map((p) => p.test_code));
+  const open = phone ? await openPurchaseCodes(phone, tests.map((t) => t.code).filter((c) => !readyCodes.has(c))) : new Set<string>();
+
   return {
     tests,
+    openCodes: [...open],
     purchases: ((ready ?? []) as { id: string; test_code: string; paid_at: string }[]).map((p) => ({
       id: p.id,
       code: p.test_code,

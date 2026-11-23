@@ -44,8 +44,14 @@ export interface PaymentStore {
   createPayment(row: NewPayment): Promise<PaymentRow>;
   getById(id: string): Promise<PaymentRow | null>;
   getByOrderId(orderId: string): Promise<PaymentRow | null>;
-  /** Orders created since `since` for this phone and for this IP hash (rate limit). */
+  /** Orders and blocked tries since `since` for this phone and for this IP hash (rate limit). */
   countRecent(phone: string, ipHash: string | null, since: string): Promise<{ phone: number; ip: number }>;
+  /**
+   * Before any order: true when the phone already has an OPEN purchase of this assessment (database rule
+   * purchase_open_for: its latest purchase is Paid and the journey still runs). The try is then written as a history
+   * line on that purchase ("Tried again – blocked") and no order may be made.
+   */
+  tryBlocked(input: { phone: string; code: string; signedIn: boolean; ipHash: string | null }): Promise<boolean>;
   /** Marks the payment paid unless it already is; returns the row as stored. */
   markPaid(id: string, paid: { provider_payment_id: string; method: string | null; paid_at: string }): Promise<PaymentRow>;
   /** Marks a still-open payment failed (a paid one is never touched). */
@@ -88,15 +94,31 @@ export function supabasePaymentStore(db: SupabaseClient): PaymentStore {
       return check(r, 'payment') as PaymentRow | null;
     },
     async countRecent(phone, ipHash, since) {
-      const [byPhone, byIp] = await Promise.all([
+      const none = Promise.resolve({ count: 0, error: null });
+      const [byPhone, byIp, blockedPhone, blockedIp] = await Promise.all([
         db.from('payments').select('id', { count: 'exact', head: true }).eq('phone', phone).gte('created_at', since),
-        ipHash
-          ? db.from('payments').select('id', { count: 'exact', head: true }).eq('ip_hash', ipHash).gte('created_at', since)
-          : Promise.resolve({ count: 0, error: null }),
+        ipHash ? db.from('payments').select('id', { count: 'exact', head: true }).eq('ip_hash', ipHash).gte('created_at', since) : none,
+        // Blocked tries count too, so the "already paid" answer cannot be asked for number after number.
+        db.from('purchase_blocked_tries').select('id', { count: 'exact', head: true }).eq('phone', phone).gte('at', since),
+        ipHash ? db.from('purchase_blocked_tries').select('id', { count: 'exact', head: true }).eq('ip_hash', ipHash).gte('at', since) : none,
       ]);
       if (byPhone.error) throw new Error(`count payments: ${byPhone.error.message}`);
       if (byIp.error) throw new Error(`count payments: ${byIp.error.message}`);
-      return { phone: byPhone.count ?? 0, ip: byIp.count ?? 0 };
+      // Before the migration 20261123000000 the table does not exist yet (42P01): no blocked tries.
+      const blocked = (r: { count: number | null; error: { code?: string; message: string } | null }) => {
+        if (r.error && r.error.code !== '42P01') throw new Error(`count blocked tries: ${r.error.message}`);
+        return r.error ? 0 : (r.count ?? 0);
+      };
+      return { phone: (byPhone.count ?? 0) + blocked(blockedPhone), ip: (byIp.count ?? 0) + blocked(blockedIp) };
+    },
+    async tryBlocked({ phone, code, signedIn, ipHash }) {
+      const r = await db.rpc('pay_page_try_blocked', { p_phone: phone, p_test: code, p_signed_in: signedIn, p_ip_hash: ipHash });
+      if (r.error) {
+        // Before the migration 20261123000000 the function does not exist yet: nothing is blocked (as before).
+        if (r.error.code === '42883' || r.error.code === 'PGRST202') return false;
+        throw new Error(`open purchase check: ${r.error.message}`);
+      }
+      return r.data === true;
     },
     async markPaid(id, paid) {
       // Conditional update: only an unpaid row changes, so verify and webhook can race safely.
