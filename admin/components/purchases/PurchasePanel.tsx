@@ -9,7 +9,6 @@ import { CLIENTS_URL } from '../../lib/site';
 import { CallDoneButton } from '../calls/CallDoneButton';
 import { BookPresentationButton } from '../booking/BookPresentationButton';
 import { CancelBookingButton } from '../booking/CancelBookingButton';
-import { ClosePurchaseButton } from './ClosePurchaseButton';
 import { PresentationDoneButton } from '../presentations/PresentationDoneButton';
 import { AdminPresentationDoneButton } from '../presentations/AdminPresentationDoneButton';
 import { presentationLabel } from '../../lib/booking';
@@ -113,8 +112,6 @@ export function PurchasePanel({
   canCancelBooking?: boolean;
 }) {
   const clientLabel = p.client_name ?? p.phone;
-  // "Package paid – inform the team": the coordinator's short task when a package is paid after Close purchase.
-  const informCall = p.calls.find((c) => c.kind === 'package_inform') ?? null;
   const tasks = buildJourney(
     {
       status: p.status,
@@ -123,7 +120,6 @@ export function PurchasePanel({
       calls: p.calls,
       payments: p.payments,
       blockedTries: p.blocked_tries,
-      closed: p.closed,
       presentation: p.presentation,
       packagePaid: p.package_paid,
       slotLabel: presentationLabel,
@@ -195,24 +191,11 @@ export function PurchasePanel({
           </span>
           <span className="text-ink-muted">·</span>
           <span>{formatAmount(p.amount_paise)}</span>
-          <PurchaseStatusPill status={p.status} notInterested={p.not_interested} closed={!!p.closed} />
+          <PurchaseStatusPill status={p.status} notInterested={p.not_interested} />
         </div>
         <p className="m-0 text-[14px] text-ink-soft">
           Coordinator: <span className="font-medium text-ink">{p.coordinator_name ?? 'None yet'}</span>
         </p>
-        {p.closed && (
-          <p className="m-0 mt-1 rounded-input bg-mist px-3 py-2 text-[14px] leading-5.5 text-ink-soft">
-            <span className="font-semibold text-teal">Closed</span> by {p.closed.by_name ?? 'staff'} on {formatDateTime(p.closed.at)}:{' '}
-            <span className="text-ink">{p.closed.reason}</span>
-          </p>
-        )}
-        {p.package_paid_after_close && (
-          <div className="mt-1 grid gap-2 rounded-input border border-sand bg-white px-3 py-2">
-            <p className="m-0 text-[14px] font-semibold text-teal">Package paid after the purchase was closed</p>
-            {informCall?.status === 'open' && <CallDoneButton callId={informCall.id} kind="package_inform" priorCalls={0} variant="primary" />}
-          </div>
-        )}
-        {p.can_close && <ClosePurchaseButton purchaseId={p.id} />}
       </div>
 
       <JourneyView tasks={tasks} actions={actions} />

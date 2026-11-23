@@ -202,7 +202,7 @@ export default async function PurchasesPage({
                         <p className="m-0 font-semibold text-ink">{r.client_name ?? r.phone}</p>
                         {r.client_name && <p className="m-0 font-mono text-[12px] text-ink-muted">{r.phone}</p>}
                       </div>
-                      <PurchaseStatusPill status={r.status} notInterested={r.not_interested} closed={!!r.closed} />
+                      <PurchaseStatusPill status={r.status} notInterested={r.not_interested} />
                     </div>
                     <p className="m-0 text-[14px] text-ink-soft">
                       {r.test_name} ·{' '}
@@ -269,7 +269,7 @@ export default async function PurchasesPage({
                         <td className={cn(TD, 'whitespace-nowrap')}>{formatAmount(r.amount_paise)}</td>
                       )}
                       <td className={TD}>
-                        <PurchaseStatusPill status={r.status} notInterested={r.not_interested} closed={!!r.closed} />
+                        <PurchaseStatusPill status={r.status} notInterested={r.not_interested} />
                       </td>
                       {!unpaidTab && (
                         <td className={TD}>

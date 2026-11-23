@@ -349,8 +349,10 @@ results with you"). The client never sees a report in the app.
   `purchases.closed_reason`, `calls.outcome`, `call_logs.event` + `not_needed`.
 - Same phone + same assessment, decided by the **latest row** (`purchase_latest()`; rows closed as replaced / not needed
   are left out). **Open purchase** (`purchase_is_open()`, `purchase_open_for()`) = the latest row is Paid and its journey
-  still runs: no package paid for it, no Assessment / Booking / Package call closed as Not interested, not closed by
-  staff, not refunded or cancelled (owner, 2026-11-23; `20261123100000_close_purchase.sql`).
+  still runs: no package paid for it, no Assessment / Booking / Package call closed as Not interested, not refunded or
+  cancelled (owner, 2026-11-23; `20261123300000_purchase_finished.sql`, checks `docs/tasks/35-purchase-finished-verify.sql`,
+  behaviour test `supabase/staging/staging-test-purchase-finished.sql`). A finished purchase stays as it is (its other
+  calls and the package offer are untouched); a new try or payment from that number starts a new purchase.
   1. Latest row unpaid → a new try or payment joins that row (as before).
   2. Latest row OPEN → no second payment. The pay page (signed in or public link) asks the database on the server before
      any Razorpay order (`pay_page_try_blocked()`): public link → the neutral "Please log in with this number to
@@ -367,21 +369,7 @@ results with you"). The client never sees a report in the app.
      (retakes).
 - Unpaid rows made before this rule while the phone already had an open purchase were fixed once: tries moved onto the
   open purchase as history, the extra row and its open Payment call closed "Not needed – client already paid on <date>".
-- **Close purchase** (`purchase_close()`, `20261123100000_close_purchase.sql`, checks
-  `docs/tasks/35-close-purchase-verify.sql`, behaviour test `supabase/staging/staging-test-close-purchase.sql`): button in
-  the purchase side panel, on a Paid purchase not closed yet; super admins, coordinators only for their own clients;
-  reason required (3–300). Stored on the row (`closed_reason = 'closed_by_staff'`, `closed_at`, `closed_by`,
-  `closed_by_name`, `close_note`); its open calls close (outcome `purchase_closed`, history line with the reason); refused
-  while a presentation is booked and not done ("Cancel the booking first."). A closed purchase is finished: no new call
-  or booking (guard triggers), the journey shows the rest as "Not needed – the purchase was closed", the list shows
-  "Paid · Closed". The client may still finish a running assessment; payments are not touched.
-- **Package paid after Close purchase** (owner, 2026-11-23; `20261123200000_package_after_close.sql`, checks
-  `docs/tasks/36-package-after-close-verify.sql`, behaviour test `supabase/staging/staging-test-package-after-close.sql`):
-  the package offer stays visible after closing and a late package payment is processed as usual (`package_settle()`
-  unchanged). Trigger `purchases_package_after_close` then gives the client's coordinator one short task on the closed
-  purchase, call kind `package_inform` "Package paid – inform the team" (due 2 working hours after payment; Mark as call
-  done offers Done only, `call_mark()` refuses anything else). The side panel shows "Package paid after the purchase was
-  closed" with that Done button.
+- No "Close purchase" and no nurture features (owner, 2026-11-23: built on staging, then removed before production).
 - Manual payments have no refund feature: a manual "Refund needed" (safety net) is handled outside the system
   (owner, 2026-11-23).
 - Packages: unchanged.

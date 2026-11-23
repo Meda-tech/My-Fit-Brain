@@ -2,9 +2,6 @@ import { createClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
 import {
-  CLOSE_MESSAGES,
-  CLOSE_REASON_MAX,
-  CLOSE_REASON_MIN,
   PURCHASE_STATUSES,
   currentStage,
   type JourneyStage,
@@ -67,12 +64,6 @@ export interface PurchaseRow {
   presentation: Presentation | null;
   /** Paid, assessment completed, nothing booked yet: Book presentation is possible. */
   can_book: boolean;
-  /** "Close purchase" (owner, 2026-11-23): who closed it, when and why; null when not closed. */
-  closed: { at: string; by_name: string | null; reason: string } | null;
-  /** Paid and not closed: Close purchase is possible (super admins; coordinators for their own clients). */
-  can_close: boolean;
-  /** A package paid after the purchase was closed (owner, 2026-11-23). */
-  package_paid_after_close: boolean;
   /** Paid (or last tried) more than 7 days before go-live: no automatic calls (booked by hand); "Before the system". */
   before_system: boolean;
   /** An old paid purchase, assessment completed, no presentation yet: a super admin may mark the presentation done. */
@@ -147,7 +138,7 @@ export interface PurchaseDetail extends PurchaseRow {
 type Db = Awaited<ReturnType<typeof createClient>>;
 
 const COLUMNS =
-  'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, closed_at, closed_by_name, close_note, source, coordinator_id, paid_at, created_at, before_system, ' +
+  'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, source, coordinator_id, paid_at, created_at, before_system, ' +
   'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status, attempt_id)), ' +
   'calls(id, kind, status, outcome, due_at), ' +
   'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, marked_by_admin, status, booked_at, booked_by_name, done_at, done_by_name), ' +
@@ -170,10 +161,7 @@ interface RawPurchase {
   client_id: string | null;
   amount_paise: number;
   status: PurchaseRowStatus;
-  closed_reason: 'replaced' | 'not_interested' | 'not_needed' | 'closed_by_staff' | null;
-  closed_at: string | null;
-  closed_by_name: string | null;
-  close_note: string | null;
+  closed_reason: 'replaced' | 'not_interested' | 'not_needed' | null;
   source: 'pay_page' | 'manual';
   coordinator_id: string | null;
   paid_at: string | null;
@@ -241,8 +229,7 @@ async function assessmentProgress(raw: RawPurchase[]): Promise<Map<string, Asses
 async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
   const counsellorIds = raw.flatMap((r) => (r.presentation_bookings ?? []).filter((b) => b.status === 'booked').map((b) => b.counsellor_id));
   const [names, progress] = await Promise.all([nameLookup(db, raw, counsellorIds), assessmentProgress(raw)]);
-  return raw.map(({ purchase_stages, purchase_payments, calls, presentation_bookings, package_payments, client_id, coordinator_id, closed_reason, closed_at, closed_by_name, close_note, ...r }) => {
-    const closed = closed_reason === 'closed_by_staff' ? { at: closed_at ?? r.created_at, by_name: closed_by_name, reason: close_note ?? '' } : null;
+  return raw.map(({ purchase_stages, purchase_payments, calls, presentation_bookings, package_payments, client_id, coordinator_id, closed_reason, ...r }) => {
     const packagePaid = (package_payments ?? []).find((p) => p.status === 'paid' && p.package_purchase_id);
     const booked = (presentation_bookings ?? []).find((b) => b.status === 'booked');
     const stages = [...(purchase_stages ?? [])].sort((a, b) => a.position - b.position);
@@ -266,12 +253,9 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
       presentation: booked
         ? { id: booked.id, counsellor_id: booked.counsellor_id, counsellor_name: names.coordinator(booked.counsellor_id), on_date: booked.on_date, start_time: booked.start_time, end_time: booked.end_time, marked_by_admin: booked.marked_by_admin, booked_at: booked.booked_at, booked_by_name: booked.booked_by_name, done_at: booked.done_at, done_by_name: booked.done_by_name }
         : null,
-      closed,
-      can_close: r.status === 'paid' && !closed,
-      package_paid_after_close: !!closed && !!packagePaid?.paid_at && packagePaid.paid_at > closed.at,
-      can_book: r.status === 'paid' && !closed && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
+      can_book: r.status === 'paid' && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       can_mark_presentation_admin:
-        r.status === 'paid' && !closed && r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
+        r.status === 'paid' && r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       package_call: (() => {
         const pc = (calls ?? []).find((c) => c.kind === 'package');
         return pc ? { status: pc.status as 'open' | 'closed', outcome: pc.outcome, due_at: pc.due_at } : null;
@@ -409,27 +393,4 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
     .sort((a, b) => (a.status === b.status ? b.created_at.localeCompare(a.created_at) : a.status === 'open' ? -1 : 1));
   const blocked_tries = ((blocked ?? []) as { at: string; signed_in: boolean }[]).sort((a, b) => a.at.localeCompare(b.at));
   return { ...row, payments, calls, blocked_tries };
-}
-
-export type ClosePurchaseResult = { success: true } | { success: false; error: string };
-
-/**
- * "Close purchase": super admins, and coordinators for their own clients (the row is read under RLS first, and the
- * database checks the role and the coordinator again). Reason 3–300 characters.
- */
-export async function closePurchase(id: string, reason: string): Promise<ClosePurchaseResult> {
-  const { profile } = await requireStaff();
-  if (!canViewPurchases(profile.role)) return { success: false, error: CLOSE_MESSAGES[0] };
-  const r = typeof reason === 'string' ? reason.trim().replace(/s+/g, ' ') : '';
-  if (r.length < CLOSE_REASON_MIN || r.length > CLOSE_REASON_MAX) return { success: false, error: CLOSE_MESSAGES[1] };
-  const db = await createClient();
-  const { data } = await db.from('purchases').select('id').eq('id', id).maybeSingle();
-  if (!data) return { success: false, error: CLOSE_MESSAGES[2] };
-  const { error } = await createAdminClient().rpc('purchase_close', { p_purchase: id, p_reason: r, p_by: profile.id });
-  if (error) {
-    const known = CLOSE_MESSAGES.find((m) => error.message.includes(m));
-    if (!known) console.error('purchase_close failed:', error.message);
-    return { success: false, error: known ?? 'The purchase could not be closed. Please try again.' };
-  }
-  return { success: true };
 }
