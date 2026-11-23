@@ -45,12 +45,13 @@ BEGIN
   RETURN v_purchase;
 END;
 $$;
--- Not picked (follow-up), then Not interested on the purchase's call of this kind.
+-- Not picked, Talked to client (follow-ups), then Not interested on the purchase's call of this kind.
 CREATE FUNCTION pg_temp.not_interested(p_purchase uuid, p_kind text) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
   v_call uuid := (SELECT id FROM public.calls WHERE purchase_id = p_purchase AND kind = p_kind);
 BEGIN
   PERFORM public.call_mark(v_call, (SELECT admin FROM t), 'not_picked', null, null, public.add_working_hours(now(), 1));
+  PERFORM public.call_mark(v_call, (SELECT admin FROM t), 'talked', null, null, public.add_working_hours(now(), 2));
   PERFORM public.call_mark(v_call, (SELECT admin FROM t), 'not_interested', 'not_now', null, null);
 END;
 $$;

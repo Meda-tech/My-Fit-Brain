@@ -416,16 +416,31 @@ results with you"). The client never sees a report in the app.
   Paid as "Assessment not started" for Admin to decide; calls already worked before go-live keep their times.
 - The Unpaid side panel has **Copy pay link** (`<clients URL>/pay/<code>`) for Payment calls; Paid rows show
   "Assessment not started" / "Assessment started" while at the Assessment stage.
+- **Add assessment payment** (owner, 2026-11-23): on every Payment call row in My tasks and in the side panel of an
+  unpaid row (next to Copy pay link), like Add package payment. The same form and rules as "Add manual payment"
+  (`OfflinePaymentDialog` with `purchase`; method, date, reference, proof to Google Drive FIRST, fixed price), but the
+  assessment and the number are the row's (`recordAssessmentPayment()` in `lib/services/offline-payments.ts`; the row is
+  read under RLS, so coordinators only for their own clients). The number need not be registered: the payment is then
+  claimed at the first login, like a pay-link payment. The database joins it to that unpaid row, which turns Paid (its
+  Payment call closes as paid). No SQL.
 - Calls are made and closed by the payment and assessment triggers (`calls_sync_purchase`) and by `calls_sync()`,
   which the admin runs when My tasks or Purchases opens (the 30-minute rule; no scheduler). Start and due times
   always come from the events, never from when the sync ran.
 - **Mark as call done** (`call_mark()`, service role; `lib/services/calls.ts` checks the role and reads the call
-  under RLS first): Done (closes) · Call later / Not picked (follow-up date and time within 2 working days = 18
-  working hours; the call stays open with that due time) · Not interested (only after at least one earlier call,
-  else "At least one follow-up call is needed first."; reason Too costly / Not now / Wrong number / Other). A note
-  (up to 2,000 characters) on every choice. Not interested on a Payment call closes the attempt
-  (`purchases.closed_reason = 'not_interested'`); it stays under Unpaid with that status. Not interested on an
-  Assessment call only closes the call.
+  under RLS first). The SAME choices on every call, Payment, Assessment, Booking and Package (owner, 2026-11-23;
+  `20261123400000_call_choices.sql`, checks `docs/tasks/36-call-choices-verify.sql`, behaviour test
+  `supabase/staging/staging-test-call-choices.sql`): **Talked to client** (`talked`) · **Not picked / Call later**
+  (`not_picked`), both with a follow-up date and time within 2 working days (18 working hours; the call stays open
+  with that due time; quick buttons **In 2 hours** (working hours, the default) · **Tomorrow** (next working day,
+  same time; Monday after a Saturday) · **Pick date & time**; `followUpIn2Hours` / `followUpTomorrow` in
+  `admin/lib/calls.ts`, rounded up to the quarter hour) · **Not interested** (only after at least 2 calls, else "At
+  least 2 calls are needed first."; reason Too costly / Not now / Wrong number / Other). A note (up to 2,000
+  characters) on every choice. **No Done**: a call closes only by itself when the client does the step (paid ·
+  assessment completed · presentation booked · package paid) or with Not interested (refunded / cancelled and the
+  go-live rules close calls as before). Older history keeps Done / Call later / Client agreed – will pay with their old
+  words. Not interested on a Payment call closes the attempt (`purchases.closed_reason = 'not_interested'`); it
+  stays under Unpaid with that status. Not interested on an Assessment, Booking or Package call finishes the purchase
+  (see "Repeat tries and payments").
 - Admin → **My tasks** (`/tasks`, coordinators their own clients, super admins all): ONE list in due-time order,
   late ones first; no sections (owner, 2026-11-20). Filters at the top: **All · Late only · Upcoming** (with
   counts; `?show=late|upcoming`), plus a coordinator filter for super admins. Row = call name, client name or
@@ -498,7 +513,7 @@ results with you"). The client never sees a report in the app.
   start onwards (not before), super admins at any time; once. Saves when and who on the booking; journey Report
   presentation actual = marked time; creates the **Package call** for the client's coordinator, due 2 working hours
   later; journey Package call planned = that due time. A presentation marked done can no longer be cancelled.
-- **Package call**: same Mark as call done rules, with its own choices since step 6 (below). Context line
+- **Package call**: same Mark as call done rules as every call (since 2026-11-23). Context line
   "Presentation done <date> by <counsellor>". (Step 5 closed it with Done = "Client agreed"; older rows may still
   hold outcome `done`, shown as "Client agreed".)
 - My tasks (super admins): extra filter **Presentations not marked done** (slot time passed, not marked), each with
@@ -538,9 +553,9 @@ results with you"). The client never sees a report in the app.
   (`admin/lib/services/packages.ts`, `PackagePaymentDialog`): amount fixed and read-only, method, date, reference,
   proof to the SAME Google Drive folder first, then `package_payment_manual()`; "Verified by coordinator", "Accounts
   check: Pending". No cancel for package payments yet.
-- **Package call choices** (`choicesFor('package')`): **Client agreed – will pay** (`agreed`: the call stays open, a
-  follow-up within 2 working days is required), Call later / Not picked (follow-up), Not interested (after an
-  earlier call, with a reason). Done is refused on Package calls.
+- **Package call choices**: the same as every call since 2026-11-23 (Talked to client · Not picked / Call later ·
+  Not interested). Until then: Client agreed – will pay (`agreed`), Call later / Not picked, Not interested; those
+  older lines stay in the history.
 - **Where it shows**: Package purchases are NOT in the coordinators' Purchases tabs (assessment rows only, `kind =
   'assessment'` in every list); super admins have the type **Package** in Purchases. Payments has a switch
   Assessment payments · **Package payments** (`/payments/packages`; super admins all, a coordinator their own

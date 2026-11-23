@@ -62,7 +62,7 @@ describe('journey: a finished journey', () => {
   });
 
   it('nested lines in time order: tries, call attempts with note and follow-up, client steps', () => {
-    expect(j[0].items.map((i) => i.title)).toEqual(['Tried to pay · failed', 'Not picked', 'Client paid']);
+    expect(j[0].items.map((i) => i.title)).toEqual(['Tried to pay · failed', 'Not picked / Call later', 'Client paid']);
     expect(j[0].items[1]).toMatchObject({ note: 'Rang twice', by: 'Test Coordinator', followUp: '2026-11-20T08:00:00Z' });
     expect(j[0].items[2].detail).toBe('Razorpay · UPI · ₹3,500');
     expect(j[1].items.map((i) => i.title)).toEqual(['Assessment started', 'Assessment completed']);
@@ -105,7 +105,7 @@ describe('journey: in progress', () => {
       NOW
     );
     expect(j[0].status).toBe('not_interested');
-    expect(j[0].items.map((i) => i.title)).toEqual(['Tried to pay · failed', 'Not picked', 'Not interested · Too costly']);
+    expect(j[0].items.map((i) => i.title)).toEqual(['Tried to pay · failed', 'Not picked / Call later', 'Not interested · Too costly']);
     expect(j.slice(1).every((t) => t.status === 'upcoming')).toBe(true);
   });
 

@@ -74,7 +74,11 @@ token table).
 
 ## To paste later, in order
 
-Nothing waiting. (Rows 43–44 went live on 2026-11-23; the two staging-only files `20261123100000_close_purchase.sql` and
+| # | File | On staging since | Checks |
+|---|---|---|---|
+| 1 | `supabase/migrations/20261123400000_call_choices.sql` — "Mark as call done" on every call: Talked to client · Not picked / Call later (follow-up within 2 working days) · Not interested (after at least 2 calls). No Done, no Client agreed. Removes nothing; widens the call-history choice list (+ `talked`) and its follow-up rule; new body for `call_mark()`. **Paste it before deploying the branch `step-call-choices`** (the new screen sends `talked`, which the old database refuses; the old screen sends Done, which the new database refuses). | 2026-11-23 | `docs/tasks/36-call-choices-verify.sql` (all true) |
+
+Earlier: (Rows 43–44 went live on 2026-11-23; the two staging-only files `20261123100000_close_purchase.sql` and
 `20261123200000_package_after_close.sql` were removed before production and never ran there.)
 
 (The 18 files and the go-live step of 2026-11-21 are listed above as rows 24–42.)

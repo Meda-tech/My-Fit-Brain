@@ -68,10 +68,10 @@ SELECT 'assessment completed: Booking call open, due 2 working hours after compl
   (SELECT c.status = 'open' AND c.created_at = now() AND c.due_at = public.add_working_hours(now(), 2) AND s.planned_at = c.due_at
    FROM public.calls c JOIN public.purchase_stages s ON s.purchase_id = c.purchase_id AND s.stage = 'presentation_booking'
    WHERE c.purchase_id = (SELECT p1 FROM t_p) AND c.kind = 'booking');
-SELECT 'Mark as call done works on the Booking call (Not interested still needs an earlier call)',
+SELECT 'Mark as call done works on the Booking call (Not interested still needs at least 2 calls)',
   pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''not_interested'', ''not_now'', null, null)',
                             (SELECT id FROM public.calls WHERE purchase_id = (SELECT p1 FROM t_p) AND kind = 'booking'), (SELECT admin FROM t)),
-                     'At least one follow-up call is needed first.');
+                     'At least 2 calls are needed first.');
 
 -- Book: only this client's coordinator or a super admin.
 SELECT 'a coordinator who is not this client''s coordinator cannot book',

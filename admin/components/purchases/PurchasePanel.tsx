@@ -4,6 +4,7 @@ import { PurchaseStatusPill } from './PurchasePills';
 import { JourneyView } from './JourneyView';
 import { formatAmount, formatDateTime, paymentMethodLabel } from '../payments/format';
 import { PackagePaymentDialog } from '../packages/PackagePaymentDialog';
+import { OfflinePaymentDialog } from '../payments/OfflinePaymentDialog';
 import { CopyButton } from '../CopyButton';
 import { CLIENTS_URL } from '../../lib/site';
 import { CallDoneButton } from '../calls/CallDoneButton';
@@ -140,6 +141,7 @@ export function PurchasePanel({
       p.status === 'not_paid' ? (
         <>
           {markDone('payment')}
+          <OfflinePaymentDialog purchase={{ id: p.id, testCode: p.test_code, testName: p.test_name }} />
           <CopyButton text={`${CLIENTS_URL}/pay/${p.test_code}`} label="Copy pay link" variant="secondary" />
         </>
       ) : null,

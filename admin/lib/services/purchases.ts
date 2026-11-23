@@ -124,7 +124,7 @@ export interface CallRow {
   /** Why a rule closed the call, in words (e.g. paid more than 7 days before go-live). */
   closed_note: string | null;
   logs: CallLogRow[];
-  /** Earlier "Mark as call done" entries (Not interested needs at least one). */
+  /** Earlier "Mark as call done" entries (Not interested needs at least 2). */
   prior_calls: number;
 }
 
