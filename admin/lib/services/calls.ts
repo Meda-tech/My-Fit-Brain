@@ -2,7 +2,7 @@ import { createClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
 import {
-  ALL_CALL_CHOICES,
+  CALL_CHOICES,
   CALL_NOTE_MAX,
   CALL_REASONS,
   assessmentContext,
@@ -32,7 +32,7 @@ export interface TaskRow {
   test_name: string;
   context: string;
   coordinator_name: string | null;
-  /** Earlier "Mark as call done" entries on this call (Not interested needs at least one). */
+  /** Earlier "Mark as call done" entries on this call (Not interested needs at least 2). */
   prior_calls: number;
   /** A Booking call whose presentation can be booked now. */
   can_book: boolean;
@@ -172,7 +172,7 @@ const DB_MESSAGES = [
   'Choose what happened on the call.',
   'The note is too long (2,000 characters at most).',
   'Pick a follow-up date and time within 2 working days.',
-  'At least one follow-up call is needed first.',
+  'At least 2 calls are needed first.',
   'Choose a reason.',
 ];
 
@@ -186,7 +186,7 @@ export async function markCall(input: MarkCallInput): Promise<{ success: boolean
   if (!call) return { success: false, error: 'This call was not found.' };
   if (call.status !== 'open') return { success: false, error: 'This call is already closed.' };
 
-  if (!(ALL_CALL_CHOICES as readonly string[]).includes(input.choice)) return { success: false, error: 'Choose what happened on the call.' };
+  if (!(CALL_CHOICES as readonly string[]).includes(input.choice)) return { success: false, error: 'Choose what happened on the call.' };
   const choice = input.choice as CallChoice;
   const note = (input.note ?? '').trim();
   if (note.length > CALL_NOTE_MAX) return { success: false, error: 'The note is too long (2,000 characters at most).' };

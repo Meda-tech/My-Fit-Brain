@@ -4,15 +4,19 @@ import { useState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { Button, Card, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import {
-  choicesFor,
-  choiceLabel,
+  CALL_CHOICES,
+  CALL_CHOICE_LABELS,
   CALL_KIND_LABELS,
   CALL_NOTE_MAX,
   CALL_REASONS,
   CALL_REASON_LABELS,
+  CALLS_BEFORE_NOT_INTERESTED,
   FOLLOW_UP_WORKING_HOURS,
   NEEDS_EARLIER_CALL,
   addWorkingHours,
+  dueLabel,
+  followUpIn2Hours,
+  followUpTomorrow,
   needsFollowUp,
   toIstInput,
   type CallChoice,
@@ -27,9 +31,21 @@ const latest = (d: Date) =>
 
 const OPTION =
   'flex min-h-11 cursor-pointer items-center gap-3 rounded-input border px-3.5 text-[15px] text-ink has-[:checked]:border-teal has-[:checked]:bg-mist';
+const QUICK =
+  'min-h-11 rounded-full border px-4 text-[14px] font-medium transition-colors border-sand text-ink-soft hover:border-teal hover:text-teal';
+const QUICK_ON = 'border-teal bg-mist text-teal';
 
-// "Mark as call done": one dialog for both calls. Done · Call later / Not picked (follow-up within 2 working days)
-// · Not interested (after at least one earlier call; a reason). A note on every choice. The database checks again.
+type FollowMode = 'in2h' | 'tomorrow' | 'pick';
+const FOLLOW_MODES: { mode: FollowMode; label: string }[] = [
+  { mode: 'in2h', label: 'In 2 hours' },
+  { mode: 'tomorrow', label: 'Tomorrow' },
+  { mode: 'pick', label: 'Pick date & time' },
+];
+
+// "Mark as call done", the same on every call (owner, 2026-11-23): Talked to client · Not picked / Call later (both
+// with a follow-up within 2 working days; quick buttons In 2 hours (working hours) · Tomorrow (next working day, same
+// time) · Pick date & time) · Not interested (after at least 2 calls; a reason). No Done: a call closes by itself when
+// the client does the step. A note on every choice. The database checks again.
 export function CallDoneButton({
   callId,
   kind,
@@ -46,21 +62,28 @@ export function CallDoneButton({
   const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<CallChoice | ''>('');
   const [reason, setReason] = useState<CallReason | ''>('');
+  const [mode, setMode] = useState<FollowMode>('in2h');
+  const [quick, setQuick] = useState<{ in2h: string; tomorrow: string }>({ in2h: '', tomorrow: '' });
   const [followDate, setFollowDate] = useState('');
   const [followTime, setFollowTime] = useState('');
-  // The same value the server reads: "YYYY-MM-DDTHH:MM", India time.
-  const followUp = followDate && followTime ? `${followDate}T${followTime}` : '';
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [limits, setLimits] = useState({ min: '', max: '', maxText: '' });
+  const [now, setNow] = useState(() => new Date());
+
+  // The same value the server reads: "YYYY-MM-DDTHH:MM", India time.
+  const followUp = mode === 'pick' ? (followDate && followTime ? `${followDate}T${followTime}` : '') : quick[mode];
 
   const start = () => {
-    const now = new Date();
-    const max = addWorkingHours(now, FOLLOW_UP_WORKING_HOURS);
-    setLimits({ min: toIstInput(now), max: toIstInput(max), maxText: latest(max) });
+    const at = new Date();
+    const max = addWorkingHours(at, FOLLOW_UP_WORKING_HOURS);
+    setNow(at);
+    setLimits({ min: toIstInput(at), max: toIstInput(max), maxText: latest(max) });
+    setQuick({ in2h: toIstInput(followUpIn2Hours(at)), tomorrow: toIstInput(followUpTomorrow(at)) });
     setChoice('');
     setReason('');
+    setMode('in2h');
     setFollowDate('');
     setFollowTime('');
     setNote('');
@@ -68,7 +91,13 @@ export function CallDoneButton({
     setOpen(true);
   };
 
-  const blocked = choice === 'not_interested' && priorCalls < 1;
+  const pickChoice = (c: CallChoice) => {
+    setChoice(c);
+    // Default follow-up: In 2 hours (owner, 2026-11-23).
+    if (needsFollowUp(c) && choice !== c) setMode('in2h');
+  };
+
+  const blocked = choice === 'not_interested' && priorCalls < CALLS_BEFORE_NOT_INTERESTED;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,7 +109,13 @@ export function CallDoneButton({
     }
     setSaving(true);
     setError(null);
-    const res = await markCallAction({ callId, choice, reason: reason || null, note, followUp: followUp || null });
+    const res = await markCallAction({
+      callId,
+      choice,
+      reason: reason || null,
+      note,
+      followUp: needsFollowUp(choice) ? followUp : null,
+    });
     setSaving(false);
     if (!res.success) {
       setError(res.error ?? 'The call could not be saved.');
@@ -88,6 +123,9 @@ export function CallDoneButton({
     }
     setOpen(false);
   };
+
+  // "Today, 5:30 pm" for the chosen follow-up.
+  const followText = followUp ? dueLabel(new Date(`${followUp}:00+05:30`).toISOString(), now) : null;
 
   return (
     <>
@@ -129,19 +167,19 @@ export function CallDoneButton({
             <form onSubmit={save} className="space-y-4">
               <fieldset>
                 <legend className={labelClasses}>What happened?</legend>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {choicesFor(kind).map((c) => (
+                <div className="grid gap-2">
+                  {CALL_CHOICES.map((c) => (
                     <label key={c} className={cn(OPTION, 'border-sand')}>
                       <input
                         type="radio"
                         name="choice"
                         value={c}
                         checked={choice === c}
-                        onChange={() => setChoice(c)}
+                        onChange={() => pickChoice(c)}
                         className="h-4 w-4 accent-teal"
                         required
                       />
-                      {choiceLabel(kind, c)}
+                      {CALL_CHOICE_LABELS[c]}
                     </label>
                   ))}
                 </div>
@@ -149,33 +187,52 @@ export function CallDoneButton({
 
               {choice && needsFollowUp(choice) && (
                 <div>
-                  <span className={labelClasses}>Follow-up date and time</span>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor={`follow-up-date-${callId}`} className="sr-only">
-                        Follow-up date
-                      </label>
-                      <input
-                        id={`follow-up-date-${callId}`}
-                        type="date"
-                        required
-                        min={limits.min.slice(0, 10)}
-                        max={limits.max.slice(0, 10)}
-                        value={followDate}
-                        onChange={(e) => setFollowDate(e.target.value)}
-                        className={inputClasses}
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor={`follow-up-time-${callId}`} className="sr-only">
-                        Follow-up time
-                      </label>
-                      <TimeSelect id={`follow-up-time-${callId}`} required step={15} value={followTime} onChange={setFollowTime} />
-                    </div>
+                  <span className={labelClasses}>Follow-up</span>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Follow-up">
+                    {FOLLOW_MODES.map((m) => (
+                      <button
+                        key={m.mode}
+                        type="button"
+                        aria-pressed={mode === m.mode}
+                        onClick={() => setMode(m.mode)}
+                        className={cn(QUICK, mode === m.mode && QUICK_ON)}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
                   </div>
+                  {mode === 'pick' && (
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor={`follow-up-date-${callId}`} className="sr-only">
+                          Follow-up date
+                        </label>
+                        <input
+                          id={`follow-up-date-${callId}`}
+                          type="date"
+                          required
+                          min={limits.min.slice(0, 10)}
+                          max={limits.max.slice(0, 10)}
+                          value={followDate}
+                          onChange={(e) => setFollowDate(e.target.value)}
+                          className={inputClasses}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor={`follow-up-time-${callId}`} className="sr-only">
+                          Follow-up time
+                        </label>
+                        <TimeSelect id={`follow-up-time-${callId}`} required step={15} value={followTime} onChange={setFollowTime} />
+                      </div>
+                    </div>
+                  )}
                   <p className={helpTextClasses}>
-                    Within 2 working days: by {limits.maxText}.{" "}
-                    {choice === "agreed" ? "The call stays open until the package payment arrives." : "The call stays open until then."}
+                    {followText ? (
+                      <>
+                        Next call: <span className="font-semibold text-ink">{followText}</span>.{' '}
+                      </>
+                    ) : null}
+                    Within 2 working days (by {limits.maxText}). The call stays open until the client does the step.
                   </p>
                 </div>
               )}

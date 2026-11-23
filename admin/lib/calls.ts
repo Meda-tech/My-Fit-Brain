@@ -2,8 +2,12 @@
 // closes and checks calls (migration 20261120120000_calls.sql, call_mark()).
 
 export type CallKind = 'payment' | 'assessment' | 'booking' | 'package';
-/** agreed = "Client agreed – will pay" (Package calls only, step 6): the call stays open with a follow-up. */
-export type CallChoice = 'done' | 'call_later' | 'not_picked' | 'not_interested' | 'agreed';
+/**
+ * Mark as call done (owner, 2026-11-23, migration 20261123400000_call_choices.sql): talked · not_picked ·
+ * not_interested. done, call_later and agreed ("Client agreed – will pay") are no longer choices; they stay in older
+ * call history and are shown with their old words.
+ */
+export type CallChoice = 'talked' | 'not_picked' | 'not_interested' | 'done' | 'call_later' | 'agreed';
 export type CallReason = 'too_costly' | 'not_now' | 'wrong_number' | 'other';
 export type CallEvent =
   | 'created'
@@ -38,21 +42,24 @@ export const CALL_KIND_LABELS: Record<CallKind, string> = {
   package: 'Package call',
 };
 
-/** The choices of "Mark as call done". A Package call has no Done: "Client agreed – will pay" keeps it open. */
-export const CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested'];
-export const PACKAGE_CALL_CHOICES: readonly CallChoice[] = ['agreed', 'call_later', 'not_picked', 'not_interested'];
-export function choicesFor(kind: CallKind): readonly CallChoice[] {
-  return kind === 'package' ? PACKAGE_CALL_CHOICES : CALL_CHOICES;
-}
-export const ALL_CALL_CHOICES: readonly CallChoice[] = ['done', 'call_later', 'not_picked', 'not_interested', 'agreed'];
+/**
+ * The choices of "Mark as call done", the same on every call (Payment, Assessment, Booking, Package). There is no
+ * Done: a call closes only by itself when the client does the step, or with Not interested.
+ */
+export const CALL_CHOICES: readonly CallChoice[] = ['talked', 'not_picked', 'not_interested'];
 
 export const CALL_CHOICE_LABELS: Record<CallChoice, string> = {
+  talked: 'Talked to client',
+  not_picked: 'Not picked / Call later',
+  not_interested: 'Not interested',
+  // Older call history only:
   done: 'Done',
   call_later: 'Call later',
-  not_picked: 'Not picked',
-  not_interested: 'Not interested',
   agreed: 'Client agreed – will pay',
 };
+
+/** Not interested is possible only after this many earlier calls on the same call. */
+export const CALLS_BEFORE_NOT_INTERESTED = 2;
 
 export const CALL_REASONS: readonly CallReason[] = ['too_costly', 'not_now', 'wrong_number', 'other'];
 export const CALL_REASON_LABELS: Record<CallReason, string> = {
@@ -94,11 +101,11 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
 export const CALL_NOTE_MAX = 2000;
 /** "Within 2 working days" = 18 working hours (9:00–18:00). */
 export const FOLLOW_UP_WORKING_HOURS = 18;
-export const NEEDS_EARLIER_CALL = 'At least one follow-up call is needed first.';
+export const NEEDS_EARLIER_CALL = 'At least 2 calls are needed first.';
 
-/** These choices keep the call open and need a follow-up date and time. */
+/** These choices keep the call open and need a follow-up date and time (older ones included, for the history). */
 export function needsFollowUp(choice: CallChoice): boolean {
-  return choice === 'call_later' || choice === 'not_picked' || choice === 'agreed';
+  return choice === 'talked' || choice === 'not_picked' || choice === 'call_later' || choice === 'agreed';
 }
 
 // --- India time (UTC+5:30, no daylight saving) and working hours ------------------------------------------
@@ -127,6 +134,24 @@ export function addWorkingHours(at: Date, hours: number): Date {
     left -= close - local;
     local = day0 + 24 * HOUR_MS + 9 * HOUR_MS;
   }
+}
+
+/** Up to the next quarter hour (the time list has 15-minute steps). */
+function nextQuarter(at: Date): Date {
+  const q = 15 * 60 * 1000;
+  return new Date(Math.ceil(at.getTime() / q) * q);
+}
+
+/** Quick follow-up "In 2 hours": 2 working hours from now, up to the next quarter hour. */
+export function followUpIn2Hours(now: Date): Date {
+  return nextQuarter(addWorkingHours(now, 2));
+}
+
+/** Quick follow-up "Tomorrow": the next working day (Monday after a Saturday) at the same time, next quarter hour. */
+export function followUpTomorrow(now: Date): Date {
+  let next = new Date(now.getTime() + 24 * HOUR_MS);
+  if (new Date(next.getTime() + IST_MS).getUTCDay() === 0) next = new Date(next.getTime() + 24 * HOUR_MS);
+  return nextQuarter(next);
 }
 
 /** "2026-11-21T10:30" (India time) for a datetime-local field. */
