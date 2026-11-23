@@ -321,7 +321,8 @@ results with you"). The client never sees a report in the app.
   on the pay page, not paid; never called a purchase). One open attempt per phone and assessment: every new payment
   of that phone and assessment, paid or not, Razorpay or manual, joins it; when one is paid the attempt becomes the
   purchase (same row, same coordinator). Without an open attempt a payment starts its own row. One paid payment per
-  purchase: a second paid payment becomes its own purchase. An older attempt replaced by a later row is closed
+  purchase: a second paid payment is kept as "Refund needed" while the purchase is open, else becomes its own purchase
+  (see "Repeat tries and payments"). An older attempt replaced by a later row is closed
   (`closed_at`) and never shown. `payment_attempts` (view, caller's rights) lists attempts with first / last try and
   `last_try_status` (failed / not_completed) for the Payment call of step 2 (30 min after a try still unpaid, at once
   when failed). `purchase_payments` links payments and keeps "Accounts check: pending" for manual payments; the
@@ -340,6 +341,38 @@ results with you"). The client never sees a report in the app.
   a coordinator still has clients: "Move their clients first." (service and trigger `profiles_keep_clients`). The
   round robin for a phone whose coordinator is inactive stays only as a safety fallback.
 - `add_working_hours(at, hours)`: Mon–Sat 9:00–18:00 India time, Sunday off (Fri 17:30 + 2 h = Sat 10:30).
+
+### Repeat tries and payments (owner, 2026-11-23)
+
+- Migration `20261123000000_repeat_payments.sql`, checks `docs/tasks/34-repeat-payments-verify.sql`, behaviour test
+  `supabase/staging/staging-test-repeat-payments.sql` (rolled back). Wider allowed values (standing permission):
+  `purchases.closed_reason`, `calls.outcome`, `call_logs.event` + `not_needed`.
+- Same phone + same assessment, decided by the **latest row** (`purchase_latest()`; rows closed as replaced / not needed
+  are left out). **Open purchase** (`purchase_is_open()`, `purchase_open_for()`) = the latest row is Paid and its journey
+  still runs: no package paid for it, no Assessment / Booking / Package call closed as Not interested, not refunded or
+  cancelled (owner, 2026-11-23; `20261123300000_purchase_finished.sql`, checks `docs/tasks/35-purchase-finished-verify.sql`,
+  behaviour test `supabase/staging/staging-test-purchase-finished.sql`). A finished purchase stays as it is (its other
+  calls and the package offer are untouched); a new try or payment from that number starts a new purchase.
+  1. Latest row unpaid → a new try or payment joins that row (as before).
+  2. Latest row OPEN → no second payment. The pay page (signed in or public link) asks the database on the server before
+     any Razorpay order (`pay_page_try_blocked()`): public link → the neutral "Please log in with this number to
+     continue." with Log in, the same for every blocked number (privacy: the public link never confirms that a number
+     bought anything; the API answer is `kind: 'login'`); signed in → Home, which shows the real status. The try is only a history line on the open purchase
+     (`purchase_blocked_tries`; journey "Tried again – blocked, already paid <date>"); no row, no Payment call. Blocked
+     tries count towards the order rate limit. The manual payment form refuses ("This client already has an open
+     purchase for this assessment.", before the proof upload); Move to another number refuses a number with an open
+     purchase. Home shows "already paid" instead of Buy now. **Safety net only:** a payment that still arrives paid (two
+     tabs at once) stays on the open purchase (`purchase_payments.extra_paid_at`), `refund_status = 'needed'`, no second
+     journey; the purchase always speaks with its first payment (`purchase_refresh`). Moved to another number, an extra
+     payment gets its own row.
+  3. Latest row FINISHED → a new try starts a new row with a normal Payment call; a payment starts a new journey
+     (retakes).
+- Unpaid rows made before this rule while the phone already had an open purchase were fixed once: tries moved onto the
+  open purchase as history, the extra row and its open Payment call closed "Not needed – client already paid on <date>".
+- No "Close purchase" and no nurture features (owner, 2026-11-23: built on staging, then removed before production).
+- Manual payments have no refund feature: a manual "Refund needed" (safety net) is handled outside the system
+  (owner, 2026-11-23).
+- Packages: unchanged.
 - Admin → **Purchases** (`/purchases`, super admins all, coordinators only their own clients' rows; RLS
   `purchases_select`). Tabs **Unpaid** (open attempts and those closed as Not interested: tried, client,
   assessment, tries, status, call, coordinator) · **Paid** (date, client, assessment, amount, status, stage now,
@@ -868,4 +901,8 @@ existing migrations, `.env*` files.
   (coordinator Reetu, counsellor Preeti, 18 clients assigned), all 110 checks true. Claude ran it with the owner's
   permission for that go-live only; from then on the owner runs production SQL again (Database rules). Backup
   taken just before: `D:\Tech\Meda\backups\prod-2026-11-21-1751\`. Details: `docs/deploy/production-log.md`.
+- **Done: repeat tries and payments, 2026-11-23, 3:37 pm IST** (branch `step-repeat-payments`, merged into `main`):
+  `20261123000000_repeat_payments.sql` and `20261123300000_purchase_finished.sql` on production, checks 34 and 35 all
+  true; Claude ran them with the owner's permission for that go-live only, after a backup
+  (`D:\Tech\Meda\backups\prod-2026-11-23-1537\`). From then on the owner runs production SQL again.
 - Next: Task 07 — polish.

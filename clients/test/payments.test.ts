@@ -117,6 +117,32 @@ describe('checkout (public pay page)', () => {
     await expectPaymentError(order(byIp.deps, '+919999999999', 'same-ip'), 'RATE_LIMITED');
   });
 
+  it('a number with an open purchase gets no order: public link → neutral "log in", signed in → Home; the try is logged', async () => {
+    const { deps, payments, rzp } = setup();
+    payments.openPurchases.add(`${PHONE}|IA`);
+    expect(await createCheckout(deps, { code: 'IA', phone: '98765 43210', client: null, ipHash: 'ip-1' })).toEqual({ kind: 'login' });
+    expect(await createCheckout(deps, { code: 'IA', phone: PHONE, client, ipHash: null })).toEqual({ kind: 'owned' });
+    expect(rzp.orders.size).toBe(0);
+    expect(payments.rows.size).toBe(0);
+    expect(payments.blocked.map((b) => [b.phone, b.code, b.signedIn, b.ipHash])).toEqual([
+      [PHONE, 'IA', false, 'ip-1'],
+      [PHONE, 'IA', true, null],
+    ]);
+    // Another number, or a finished purchase (nothing open): the order is made as usual.
+    await order(deps, '+919999999999');
+    expect(rzp.orders.size).toBe(1);
+  });
+
+  it('blocked tries count towards the rate limit (the answer cannot be asked number after number)', async () => {
+    const { deps, payments } = setup();
+    for (let i = 0; i < ORDER_LIMIT_PER_IP; i++) {
+      const phone = `+9198765${String(i).padStart(5, '0')}`;
+      payments.openPurchases.add(`${phone}|IA`);
+      expect(await createCheckout(deps, { code: 'IA', phone, client: null, ipHash: 'same-ip' })).toEqual({ kind: 'login' });
+    }
+    await expectPaymentError(order(deps, '+919999999999', 'same-ip'), 'RATE_LIMITED');
+  });
+
   it('a signed-in client who already holds the test is sent Home instead of paying again', async () => {
     const { deps, rzp } = setup();
     await paid(deps, rzp);

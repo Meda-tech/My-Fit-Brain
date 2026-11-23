@@ -186,3 +186,66 @@ describe('journey: a purchase from before the system (owner, 2026-11-21)', () =>
     expect(j[4]).toMatchObject({ status: 'open', callId: 'k', planned: '2026-11-25T08:00:00Z' });
   });
 });
+
+describe('journey: tries after paying (owner, 2026-11-23)', () => {
+  const paidOnce = {
+    status: 'paid', provider: 'offline' as const, method: 'upi', amount_paise: 350000, currency: 'INR', paid_at: '2026-11-17T09:19:00Z',
+    created_at: '2026-11-17T09:19:00Z', refund_status: null, recorded_by_name: 'Reetu', attempt: { started_at: '2026-11-17T10:00:00Z', completed_at: '2026-11-17T11:00:00Z' },
+  };
+  const j = buildJourney(
+    {
+      ...base,
+      status: 'paid',
+      payments: [
+        // A second payment that still came through (two tabs): listed first, as the newest.
+        { status: 'paid', provider: 'razorpay', method: 'upi', amount_paise: 350000, currency: 'INR', paid_at: '2026-11-22T16:05:00Z', created_at: '2026-11-22T16:04:00Z',
+          refund_status: 'needed', recorded_by_name: null, attempt: null, extra_paid: true },
+        // A try after paying, moved onto this purchase as history (e.g. 22 Nov, 9:33 pm).
+        { status: 'created', provider: 'razorpay', method: null, amount_paise: 350000, currency: 'INR', paid_at: null, created_at: '2026-11-22T16:03:00Z',
+          refund_status: null, recorded_by_name: null, attempt: null },
+        paidOnce,
+        // The try before paying.
+        { status: 'created', provider: 'razorpay', method: null, amount_paise: 350000, currency: 'INR', paid_at: null, created_at: '2026-11-17T08:11:00Z',
+          refund_status: null, recorded_by_name: null, attempt: null },
+      ],
+      blockedTries: [{ at: '2026-11-23T05:00:00Z', signed_in: false }],
+      calls: [],
+      presentation: null,
+      packagePaid: null,
+    },
+    NOW
+  );
+
+  it('the purchase speaks with its first payment, never the extra one', () => {
+    expect(j[0]).toMatchObject({ status: 'not_needed', notNeeded: { what: 'paid by manual payment', at: '2026-11-17T09:19:00Z' } });
+    expect(j[1].notNeeded).toEqual({ what: 'client completed the assessment', at: '2026-11-17T11:00:00Z' });
+  });
+
+  it('later tries are history: blocked, not completed, paid a second time (refund needed)', () => {
+    expect(j[0].items.map((i) => i.title)).toEqual([
+      'Started to pay · not completed',
+      'Paid · manual payment',
+      'Tried again – not completed, already paid 17 Nov 2026',
+      'Paid a second time – refund needed',
+      'Tried again – blocked, already paid 17 Nov 2026',
+    ]);
+    expect(j[0].items[3].detail).toBe('Razorpay · UPI · ₹3,500 · already paid 17 Nov 2026');
+    expect(j[0].items[4].detail).toBe('Pay page · no payment made');
+  });
+
+  it('a Payment call closed as not needed (an extra row) reads "had already paid"', () => {
+    const extra = buildJourney(
+      {
+        ...base,
+        status: 'not_paid',
+        payments: [],
+        calls: [{ id: 'x', kind: 'payment', status: 'closed', outcome: 'not_needed', due_at: '2026-11-23T05:00:00Z', closed_at: '2026-11-23T06:00:00Z',
+          closed_note: 'Not needed – client already paid on 17 Nov 2026.', prior_calls: 0, logs: [] }],
+        presentation: null,
+        packagePaid: null,
+      },
+      NOW
+    );
+    expect(extra[0]).toMatchObject({ status: 'not_needed', notNeeded: { what: 'had already paid for this assessment', at: '2026-11-23T06:00:00Z' } });
+  });
+});

@@ -583,6 +583,23 @@ interface OwnerRow {
   status: PaymentStatus;
   refund_status: RefundStatus | null;
   attempt_id: string | null;
+  test_code: string;
+}
+
+export const OPEN_PURCHASE_REFUSED = 'This client already has an open purchase for this assessment.';
+
+/**
+ * One open purchase per phone and assessment (owner, 2026-11-23): true when the latest purchase of this number and
+ * assessment is Paid and its journey still runs (database purchase_open_for). False before the migration
+ * 20261123000000 (nothing was refused before it).
+ */
+export async function hasOpenPurchase(phone: string, code: string): Promise<boolean> {
+  const { data, error } = await createAdminClient().rpc('purchase_open_for', { p_phone: phone, p_test: code });
+  if (error) {
+    if (error.code === '42883' || error.code === 'PGRST202') return false;
+    throw new Error(`Could not check open purchases: ${error.message}`);
+  }
+  return ((data as unknown[] | null) ?? []).length > 0;
 }
 
 /**
@@ -597,13 +614,15 @@ export async function movePurchase(paymentId: string, rawPhone: string): Promise
   if (!phone.valid) return phone.error ?? 'Enter a valid mobile number.';
 
   const db = createAdminClient();
-  const { data, error } = await db.from('payments').select('phone, client_id, status, refund_status, attempt_id').eq('id', paymentId).maybeSingle();
+  const { data, error } = await db.from('payments').select('phone, client_id, status, refund_status, attempt_id, test_code').eq('id', paymentId).maybeSingle();
   if (error || !data) return 'Purchase not found.';
   const row = data as OwnerRow;
   if (row.status !== 'paid') return 'Only paid purchases can be moved.';
   if (row.attempt_id) return 'This assessment has started; it cannot be moved.';
   if (row.refund_status === 'refunded') return 'This purchase was refunded.';
   if (row.phone === phone.normalized) return 'The purchase already belongs to this number.';
+  // The new number must not end up with two open purchases of the same assessment.
+  if (await hasOpenPurchase(phone.normalized, row.test_code)) return 'That number already has an open purchase for this assessment.';
 
   const { data: moved, error: moveError } = await db
     .from('payments')

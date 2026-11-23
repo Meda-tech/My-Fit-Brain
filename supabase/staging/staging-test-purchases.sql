@@ -105,10 +105,14 @@ SELECT '5eed0000-0000-4000-8000-0000000a0007', '+919999900093', 'IA', 'offline',
 FROM t_ids;
 UPDATE public.payments SET status = 'paid', provider_payment_id = 'pay_STAGINGFAKE_P6', paid_at = now() + interval '1 minute'
 WHERE id = '5eed0000-0000-4000-8000-0000000a0006';
-SELECT 'paid twice: two Paid purchases, one paid payment each',
-  (SELECT count(*) = 2 AND bool_and(status = 'paid') FROM public.purchases WHERE phone = '+919999900093')
-  AND (SELECT count(DISTINCT purchase_id) = 2 FROM public.purchase_payments
-       WHERE payment_id IN ('5eed0000-0000-4000-8000-0000000a0006', '5eed0000-0000-4000-8000-0000000a0007'));
+-- Since 20261123000000 (owner, 2026-11-23): the purchase is open, so the second payment starts no second journey;
+-- it is kept on the purchase and marked Refund needed (it was two Paid purchases before).
+SELECT 'paid twice: one Paid purchase; the second payment is kept on it, Refund needed',
+  (SELECT count(*) = 1 AND bool_and(status = 'paid') FROM public.purchases WHERE phone = '+919999900093')
+  AND (SELECT count(DISTINCT purchase_id) = 1 FROM public.purchase_payments
+       WHERE payment_id IN ('5eed0000-0000-4000-8000-0000000a0006', '5eed0000-0000-4000-8000-0000000a0007'))
+  AND (SELECT refund_status = 'needed' FROM public.payments WHERE id = '5eed0000-0000-4000-8000-0000000a0006')
+  AND (SELECT refund_status IS NULL FROM public.payments WHERE id = '5eed0000-0000-4000-8000-0000000a0007');
 
 -- 5. Assessment completed: the Assessment stage gets the completed time.
 INSERT INTO public.clients (id, phone, full_name, gender, age, marital_status)

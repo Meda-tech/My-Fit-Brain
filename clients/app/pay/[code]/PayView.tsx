@@ -52,7 +52,7 @@ function brandTeal(): string {
   return getComputedStyle(document.documentElement).getPropertyValue('--color-teal').trim();
 }
 
-type Status = 'idle' | 'busy' | 'failed' | 'pending' | 'error' | 'limited' | 'closed' | 'paused';
+type Status = 'idle' | 'busy' | 'failed' | 'pending' | 'error' | 'limited' | 'closed' | 'paused' | 'already';
 
 export function PayView({
   code,
@@ -129,7 +129,7 @@ export function PayView({
       const order = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         code?: string;
-        kind?: 'owned' | 'order';
+        kind?: 'owned' | 'order' | 'login';
         keyId?: string;
         orderId?: string;
         amount?: number;
@@ -145,6 +145,11 @@ export function PayView({
       // Signed in and already holding this assessment: it is on Home.
       if (order.kind === 'owned') {
         router.push('/');
+        return;
+      }
+      // This number already has an open purchase of this assessment: no checkout, log in instead.
+      if (order.kind === 'login') {
+        setStatus('already');
         return;
       }
 
@@ -223,7 +228,9 @@ export function PayView({
               ? { variant: 'info' as const, text: t.pay.paused }
               : status === 'closed'
               ? { variant: 'info' as const, text: t.assess.paymentsClosed }
-              : null;
+              : status === 'already'
+                ? { variant: 'info' as const, text: t.pay.loginToContinue }
+                : null;
 
   return (
     <Card className="p-6 sm:p-8">
@@ -269,7 +276,23 @@ export function PayView({
         </Button>
       )}
 
-      {status !== 'closed' && status !== 'paused' && status !== 'pending' && (
+      {status === 'already' && (
+        <div className="mt-6">
+          <Button fullWidth onClick={goToLogin}>
+            <span>{t.pay.login}</span>
+            <ArrowRight size={18} strokeWidth={2} aria-hidden />
+          </Button>
+          <button
+            type="button"
+            onClick={() => setStatus('idle')}
+            className="mt-3 min-h-11 w-full text-[15px] font-medium text-teal underline underline-offset-2"
+          >
+            {t.pay.otherNumber}
+          </button>
+        </div>
+      )}
+
+      {status !== 'closed' && status !== 'paused' && status !== 'pending' && status !== 'already' && (
         <form onSubmit={pay} className="mt-6">
           {signedInPhone ? (
             <p className="text-[15px] leading-6 text-ink-soft">
