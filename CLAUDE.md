@@ -375,6 +375,13 @@ results with you"). The client never sees a report in the app.
   while a presentation is booked and not done ("Cancel the booking first."). A closed purchase is finished: no new call
   or booking (guard triggers), the journey shows the rest as "Not needed – the purchase was closed", the list shows
   "Paid · Closed". The client may still finish a running assessment; payments are not touched.
+- **Package paid after Close purchase** (owner, 2026-11-23; `20261123200000_package_after_close.sql`, checks
+  `docs/tasks/36-package-after-close-verify.sql`, behaviour test `supabase/staging/staging-test-package-after-close.sql`):
+  the package offer stays visible after closing and a late package payment is processed as usual (`package_settle()`
+  unchanged). Trigger `purchases_package_after_close` then gives the client's coordinator one short task on the closed
+  purchase, call kind `package_inform` "Package paid – inform the team" (due 2 working hours after payment; Mark as call
+  done offers Done only, `call_mark()` refuses anything else). The side panel shows "Package paid after the purchase was
+  closed" with that Done button.
 - Manual payments have no refund feature: a manual "Refund needed" (safety net) is handled outside the system
   (owner, 2026-11-23).
 - Packages: unchanged.
