@@ -578,13 +578,25 @@ results with you"). The client never sees a report in the app.
   amount ₹10,000 (paid in total to hand over to CRM) · milestones, paid in total before a session: ₹10,000 / 1,
   ₹15,000 / 2, ₹25,000 / 3, ₹31,500 / 4. Milestones are stored and shown only (enforced later, in the CRM phase); one
   already paid past counts as met. They are read from Settings when shown (not copied per package).
-- **Part payments**: "Add package payment" takes an amount in whole rupees: the first payment at least the first
-  minimum, later ones any amount, never more than the remaining balance (the form and `package_payment_add()` both
-  check). The package amount (price − advance) is fixed by the first payment that counts (`counted_at`). The dialog and
+- **Part payments**: "Add package payment" takes an amount in whole rupees, never more than the remaining balance (the
+  form and `package_payment_add()` both check). **The start amount in at most 2 payments** (owner, 2026-11-25): the
+  first at least the first minimum (₹1,000), the second at least the rest of the start amount (₹10,000 − ₹1,000 =
+  ₹9,000: "The second payment must be at least ₹9,000 (₹10,000 in total to start sessions)."); after the start any
+  amount. The package amount (price − advance) is fixed by the first payment that counts (`counted_at`). The dialog and
   the purchase panel show Package ₹31,500 · Paid so far · Remaining · "₹X more needed to start sessions".
-- **Below the start amount** the Package call stays open (follow-ups as usual), context line "Paid ₹X of ₹10,000 to
-  start", a line per payment in the journey; a call closed as Not interested reopens. **Not interested** on a Package
-  call with any package amount paid: super admins only (`call_mark()`; the dialog says so to a coordinator).
+- **Below the start amount: the Pending payment call** (owner, 2026-11-25; migration
+  `20261125000000_package_pending_payment_call.sql`, checks `docs/tasks/38-package-pending-payment-call-verify.sql`, the
+  part-payment behaviour test updated; wider allowed values: `calls.kind` + `pending_payment`, `calls.outcome` +
+  `part_paid`). A first payment that leaves the total below the start amount needs a follow-up in the dialog ("When
+  will the client pay the rest? Next call", default Tomorrow, within **3 working days** = 27 working hours,
+  `pending_follow_up_last()` / `PENDING_FOLLOW_UP_WORKING_HOURS`; stored in `package_payments.follow_up_at`). Then the
+  Package call closes ("Done · Part payment received") and the **Pending payment call** (kind `pending_payment`, the
+  client's coordinator) opens, due at that follow-up, context line "Paid ₹1,000 of ₹10,000 · ₹9,000 pending". Mark as
+  call done on it: the same choices, follow-ups within 3 working days (every other call: 2). Add package payment sits
+  on it (My tasks row and journey task 6). It closes as "Package started" when the start amount is reached (the Package
+  call stays "Part payment received"). The journey shows it as task 6, only when it exists. **Not interested** on a
+  Package or Pending payment call with any package amount paid: super admins only (`call_mark()`; the dialog says so to
+  a coordinator); closed that way it finishes the purchase (`purchase_is_open()`).
 - **At the start amount** (`package_start_if_due()`): the Package purchase is made (kind `package`, status `paid` =
   "Started – with CRM", `amount_paise` = the whole package amount, `paid_at` = when it started), every counted payment
   is linked to it, the Package call closes (outcome `package_started`, "Package started"), the client gets a CRM
@@ -981,4 +993,7 @@ existing migrations, `.env*` files.
   (branch `step-package-part-payments-crm`, not merged): `20261124000000_package_part_payments_crm.sql` is under "To
   paste later, in order" in `docs/deploy/production-log.md`. After it runs on production, add the CRM staff in
   Admin → Team.
+- **On staging, not on production yet (2026-11-25): the Pending payment call and the start amount in 2 payments**
+  (branch `step-package-pending-payment-call`, started from `step-package-part-payments-crm`, not merged):
+  `20261125000000_package_pending_payment_call.sql`, pasted right after 20261124000000.
 - Next: Task 07 — polish.
