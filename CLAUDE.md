@@ -532,8 +532,9 @@ results with you"). The client never sees a report in the app.
   text ("1 session every week"), price (₹35,000). Never hard-coded. Every payment keeps a copy of the package as it
   was offered.
 - **Amount** = package price − the amount paid for that assessment purchase (₹35,000 − ₹3,500 = ₹31,500), always
-  calculated in the database (`package_offer()`); full payment only, no expiry. The offer exists once the report
-  presentation is marked done, until a package is paid for that assessment purchase.
+  calculated in the database (`package_balance()`, `package_offer()`); no expiry. The client app's offer is the full
+  amount only and exists once the report presentation is marked done, until anything is paid for the package (the
+  team can collect it in parts: see "Package part payments, handover to CRM and the CRM role").
 - **Client app**: Home shows the offer card ("Your report presentation is done · A plan made for you · 8 sessions ·
   1 session every week", package price, already paid (advance), you pay now, Pay) and, once paid, "Payment received.
   Our team will contact you to schedule your sessions." EN + HI (`pkg` in `clients/lib/i18n.ts`). This card is a
@@ -541,18 +542,18 @@ results with you"). The client never sees a report in the app.
   server amount, signature check, payment fetched from Razorpay); the one webhook URL serves both payment kinds
   (`PaymentDeps.otherOrder`); Home recovers a payment the browser never confirmed. Checkout name and description:
   "My Fit Brain" only. Up to 5 orders an hour per offer.
-- **Paid** (Razorpay or manual) → `package_settle()`: a new purchase of kind `package` (₹31,500, `parent_purchase_id`
-  = the assessment purchase, same client, phone and coordinator); the Package call closes (outcome `package_paid`);
-  the assessment journey's Package call actual = package paid time. One paid package per assessment purchase (unique
-  index): a second paid payment makes no package and is flagged `refund_status = 'needed'` ("Refund needed").
+- **Paid** (Razorpay or manual) → `package_settle()` counts the payment. Until 2026-11-24: one full payment made the
+  purchase of kind `package` and closed the Package call (outcome `package_paid`; older rows keep it). Now: see
+  "Package part payments, handover to CRM and the CRM role" (the Package purchase is made when paid in total reaches the
+  start amount; the call closes as `package_started`). One Package purchase per assessment purchase (unique index).
 - **Failed or abandoned try**: failed at once, or still not completed after 30 minutes (`calls_sync()` →
   `package_calls_sync()`): a history line on the Package call, and a closed call (Not interested) reopens, due
   2 working hours later.
 - **Add package payment** (button on the Package call's My tasks row and in the purchase's side panel; coordinators
   for their own clients, super admins): the same form and rules as the manual assessment payment
-  (`admin/lib/services/packages.ts`, `PackagePaymentDialog`): amount fixed and read-only, method, date, reference,
-  proof to the SAME Google Drive folder first, then `package_payment_manual()`; "Verified by coordinator", "Accounts
-  check: Pending". No cancel for package payments yet.
+  (`admin/lib/services/packages.ts`, `PackagePaymentDialog`): the amount (a part is allowed since 2026-11-24), method,
+  date, reference, proof to the SAME Google Drive folder first, then `package_payment_add()`; "Verified by
+  coordinator", "Accounts check: Pending". No cancel for package payments yet.
 - **Package call choices**: the same as every call since 2026-11-23 (Talked to client · Not picked / Call later ·
   Not interested). Until then: Client agreed – will pay (`agreed`), Call later / Not picked, Not interested; those
   older lines stay in the history.
@@ -564,6 +565,58 @@ results with you"). The client never sees a report in the app.
 - Staging end-to-end: `supabase/staging/staging-e2e-package-setup.sql` makes two fake clients at the offer stage;
   `admin/test/staging-e2e-package-manual.test.ts` (only with `RUN_STAGING_E2E=1`) records a manual package payment
   with a real proof upload.
+
+### Package part payments, handover to CRM and the CRM role (owner, 2026-11-24)
+
+- Migration `20261124000000_package_part_payments_crm.sql`, checks `docs/tasks/37-package-part-payments-crm-verify.sql`
+  (27 updated), behaviour test `supabase/staging/staging-test-package-part-payments.sql` (rolled back). Wider allowed
+  values (standing permission): `profiles.role` + `crm`, `calls.outcome` + `package_started`, `call_logs.event` +
+  `package_part_paid`, `package_started`, the `package_payments` amount rule (a part amount is allowed). No existing
+  access rule was dropped or changed: new rules were added next to them. **The client app is not changed.**
+- **Package amounts** (Admin → Settings, "Package payments in parts", super admins; `packages.first_min_paise`,
+  `start_paise`, `milestones`; `package_amounts_save()`; never hard-coded): first payment minimum ₹1,000 · start
+  amount ₹10,000 (paid in total to hand over to CRM) · milestones, paid in total before a session: ₹10,000 / 1,
+  ₹15,000 / 2, ₹25,000 / 3, ₹31,500 / 4. Milestones are stored and shown only (enforced later, in the CRM phase); one
+  already paid past counts as met. They are read from Settings when shown (not copied per package).
+- **Part payments**: "Add package payment" takes an amount in whole rupees: the first payment at least the first
+  minimum, later ones any amount, never more than the remaining balance (the form and `package_payment_add()` both
+  check). The package amount (price − advance) is fixed by the first payment that counts (`counted_at`). The dialog and
+  the purchase panel show Package ₹31,500 · Paid so far · Remaining · "₹X more needed to start sessions".
+- **Below the start amount** the Package call stays open (follow-ups as usual), context line "Paid ₹X of ₹10,000 to
+  start", a line per payment in the journey; a call closed as Not interested reopens. **Not interested** on a Package
+  call with any package amount paid: super admins only (`call_mark()`; the dialog says so to a coordinator).
+- **At the start amount** (`package_start_if_due()`): the Package purchase is made (kind `package`, status `paid` =
+  "Started – with CRM", `amount_paise` = the whole package amount, `paid_at` = when it started), every counted payment
+  is linked to it, the Package call closes (outcome `package_started`, "Package started"), the client gets a CRM
+  person. Lowering the start amount in Settings starts the packages already paid up to it.
+- **Overpayment**: more than the remaining balance is refused in the form and the database; a Razorpay payment that
+  still arrives (the client paid the full amount in the app after a part was collected) is kept apart as "Refund
+  needed" and counts for nothing. This replaces "a second payment = Refund needed": payments are allowed until the
+  total reaches the package amount.
+- **Client app (unchanged)**: the offer is the full amount by Razorpay and exists only while nothing is paid for the
+  package; a full payment there is paid in full and handed over the same way. Between a first part payment and the
+  start amount the client's Home shows nothing about the package; once started it shows "Payment received" per payment.
+- **CRM role** (`crm`; Admin → Team: add, reset password, Make inactive): one CRM per client (phone, `client_crms`,
+  `crm_round_robin`): round robin for a new client, the same CRM for a returning one; **Move clients** (`move_crm_clients()`,
+  logged in `crm_client_moves`, never changed) before Make inactive ("Move their clients first.", service and trigger
+  `profiles_keep_crm_clients`). A package that starts while no CRM is active waits (`purchases.crm_id` empty, "Not
+  assigned yet") and is assigned when a CRM is added or made active (trigger `profiles_crm_assign`).
+- **Who adds package payments**: the client's coordinator until the package starts; after that the client's CRM;
+  super admins always (`packageBalanceFor()`, `package_payment_add()`).
+- **CRM sees only** (Admin → **CRM**, `/crm`; a CRM their own clients, super admins all with a CRM filter): client
+  name, phone, package, started on, paid so far, remaining, next milestone ("₹15,000 before session 2" / "Fully paid").
+  A row opens a side panel: the milestones and the package payments with proof links, and Add package payment while
+  something remains. No session features yet. **In the database**: `crm_packages()` (checks the signed-in user) is the
+  only way a CRM login reads a client's name; RESTRICTIVE rules close `clients`, `attempts`, `attempt_answers`,
+  `attempt_details`, `attempt_results`, `attempt_alerts`, `attempt_conclusions` and `questionnaire_versions` for a CRM
+  login; `package_payments`: only those of their own clients' packages. In the app a CRM has one menu item and every
+  other page sends them to `/crm` (`isCrm()`, `CRM_HOME` in `admin/lib/roles.ts`).
+- **Coordinator after the handover**: the assessment purchase is read-only, labelled "Package started – with CRM"; they
+  see the payments they collected ("Collected before the handover"), never the payments made after it
+  (`package_payments.after_handover`, RESTRICTIVE rule) and no Package purchase row (RESTRICTIVE rule on `purchases`:
+  Package rows are for super admins). My tasks no longer lists the call.
+- Staging: fake CRM logins `crm@example.com`, `crm2@example.com` (`supabase/staging/staging-add-crm-logins.sql`); six
+  fake clients at the Package call stage (`supabase/staging/staging-part-payments-setup.sql`).
 
 ### Counsellor access and moving a counsellor's clients (step 8, owner 2026-11-21)
 
@@ -839,8 +892,8 @@ so copy the master file there before using a new combination.
 - Gender, relationship status, staff roles and age limits come only from `lib/options.ts` in each app
   (stored values = English strings; labels via i18n).
 - Every new table gets RLS in the same migration.
-- Roles: `super_admin`, `coordinator`, `counsellor`. Counsellor-only data (answers, results) lives in tables
-  clients and coordinators cannot read (`can_view_reports()`).
+- Roles: `super_admin`, `coordinator`, `counsellor`, `crm` (since 20261124000000). Counsellor-only data (answers,
+  results) lives in tables clients and coordinators cannot read (`can_view_reports()`); a CRM login reads none of it.
 - Never trust client metadata for authorisation; check `profiles` / `clients` by `auth.uid()`.
 
 ## Do not touch without an explicit task
@@ -924,4 +977,8 @@ existing migrations, `.env*` files.
   `step-assessment-payment-button`, merged into `main`): `20261123400000_call_choices.sql` on production, check 36 all
   true; run by Claude with the owner's permission for that go-live only, after a backup
   (`D:TechMedaackupsprod-2026-11-23-1658`). From then on the owner runs production SQL again.
+- **On staging, not on production yet (2026-11-25): package part payments, handover to CRM, CRM role and page**
+  (branch `step-package-part-payments-crm`, not merged): `20261124000000_package_part_payments_crm.sql` is under "To
+  paste later, in order" in `docs/deploy/production-log.md`. After it runs on production, add the CRM staff in
+  Admin → Team.
 - Next: Task 07 — polish.

@@ -47,6 +47,8 @@ The script reads only `STAGING_DB_URL` and refuses to run if it does not point t
 | Login | How |
 |---|---|
 | `superadmin@example.com`, `coordinator@example.com`, `counsellor@example.com` (also `coordinator2@`, `counsellor2@`) | Admin app, password = `STAGING_STAFF_PASSWORD` in `supabase/.env.db` |
+| `crm@example.com`, `crm2@example.com` (role CRM, since 2026-11-25) | Admin app, same password. Added by `supabase/staging/staging-add-crm-logins.sql` |
+| Riya, Sana, Tara, Uma, Veda, Zoya Test `+91 99999 00061` … `00066` | at the Package call stage (paid IA, completed, presentation done), for package part payments and the CRM page. Added by `supabase/staging/staging-part-payments-setup.sql` |
 | Asha Test `+91 99999 00001` | paid IA, not started (Home shows Start) |
 | Rahul Test `+91 99999 00002` | one failed MA payment, one offline UPI MA payment (paid, not started) |
 | Meera Test `+91 99999 00003` | registered, nothing bought |
