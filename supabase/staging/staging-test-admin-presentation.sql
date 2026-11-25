@@ -131,10 +131,10 @@ SELECT '7. manual package payment: paid',
 SELECT '7. saved with the fixed amount ₹31,500, proof and who recorded it; Accounts check: pending',
   (SELECT amount_paise = 3150000 AND status = 'paid' AND proof_url IS NOT NULL AND recorded_by_name IS NOT NULL AND accounts_check = 'pending'
    FROM public.package_payments WHERE id = '5eed0000-0000-4000-8000-000000100b01');
-SELECT '7. a Package purchase of ₹31,500 under the old assessment purchase; the Package call closed as package paid',
+SELECT '7. a Package purchase of ₹31,500 under the old assessment purchase; the Package call closed as Package started',
   (SELECT count(*) = 1 AND bool_and(status = 'paid' AND amount_paise = 3150000)
    FROM public.purchases WHERE parent_purchase_id = (SELECT p_old FROM t_p) AND kind = 'package')
-  AND (SELECT status = 'closed' AND outcome = 'package_paid' FROM public.calls WHERE purchase_id = (SELECT p_old FROM t_p) AND kind = 'package');
+  AND (SELECT status = 'closed' AND outcome = 'package_started' FROM public.calls WHERE purchase_id = (SELECT p_old FROM t_p) AND kind = 'package');
 SELECT '7. the offer is gone from the client app once paid',
   (SELECT count(*) = 0 FROM public.package_offers_for_client('5eed0000-0000-4000-8000-0000001000c1'));
 

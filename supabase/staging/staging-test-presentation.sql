@@ -29,9 +29,9 @@ $$;
 
 -- A paid purchase with a completed assessment and a presentation booked on a future Monday at 11:00.
 INSERT INTO public.clients (id, phone, full_name, gender, age, marital_status)
-VALUES ('5eed0000-0000-4000-8000-0000000e00c1', '+919999900061', 'Presentation Test', 'Female', 30, 'Single');
+VALUES ('5eed0000-0000-4000-8000-0000000e00c1', '+919999900067', 'Presentation Test', 'Female', 30, 'Single');
 INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id, provider_payment_id, paid_at, method, reference, recorded_by, proof_file_id, proof_url, client_id, claimed_at)
-SELECT '5eed0000-0000-4000-8000-0000000e0001', '+919999900061', 'IA', 'offline', 350000, 'paid', 'offline_e1', 'offline_e1', now(), 'upi', 'UPI-PRES-1', admin,
+SELECT '5eed0000-0000-4000-8000-0000000e0001', '+919999900067', 'IA', 'offline', 350000, 'paid', 'offline_e1', 'offline_e1', now(), 'upi', 'UPI-PRES-1', admin,
        'fake-proof-p1', 'https://drive.example/fake-proof-p1', '5eed0000-0000-4000-8000-0000000e00c1', now()
 FROM t;
 CREATE TEMP TABLE t_p ON COMMIT DROP AS
@@ -97,9 +97,9 @@ SELECT 'Talked to client: the call stays open with the follow-up; journey Packag
 
 -- Super admins can mark a future presentation done (to fix a forgotten or early one).
 INSERT INTO public.clients (id, phone, full_name, gender, age, marital_status)
-VALUES ('5eed0000-0000-4000-8000-0000000e00c2', '+919999900062', 'Presentation Two', 'Male', 31, 'Single');
+VALUES ('5eed0000-0000-4000-8000-0000000e00c2', '+919999900068', 'Presentation Two', 'Male', 31, 'Single');
 INSERT INTO public.payments (id, phone, test_code, provider, amount_paise, status, provider_order_id, provider_payment_id, paid_at, method, reference, recorded_by, proof_file_id, proof_url, client_id, claimed_at)
-SELECT '5eed0000-0000-4000-8000-0000000e0002', '+919999900062', 'IA', 'offline', 350000, 'paid', 'offline_e2', 'offline_e2', now(), 'upi', 'UPI-PRES-2', admin,
+SELECT '5eed0000-0000-4000-8000-0000000e0002', '+919999900068', 'IA', 'offline', 350000, 'paid', 'offline_e2', 'offline_e2', now(), 'upi', 'UPI-PRES-2', admin,
        'fake-proof-p2', 'https://drive.example/fake-proof-p2', '5eed0000-0000-4000-8000-0000000e00c2', now()
 FROM t;
 SELECT public.create_paid_attempt('5eed0000-0000-4000-8000-0000000e00c2', 'IA',

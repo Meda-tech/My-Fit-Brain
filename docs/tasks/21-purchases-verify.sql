@@ -5,8 +5,10 @@ select 'new tables exist, each with RLS on (5)' as check, count(*) = 5 as ok fro
   where schemaname = 'public' and rowsecurity
     and tablename in ('coordinator_round_robin', 'client_coordinators', 'purchases', 'purchase_payments', 'purchase_stages')
 union all
+-- (Since 20261124000000 the purchases table also has one RESTRICTIVE rule, which only narrows: Package purchases are
+-- for super admins. It is not counted here; before that file runs the result is the same.)
 select 'each new table has one read rule and no write rule', count(*) = 5 and bool_and(cmd = 'SELECT') from pg_policies
-  where schemaname = 'public'
+  where schemaname = 'public' and permissive = 'PERMISSIVE'
     and tablename in ('coordinator_round_robin', 'client_coordinators', 'purchases', 'purchase_payments', 'purchase_stages')
 union all
 select 'the payments table has no new column',

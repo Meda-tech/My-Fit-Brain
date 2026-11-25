@@ -1,4 +1,6 @@
 -- STAGING ONLY. Behaviour test for step 6 (package offer, package payments, Package call choices).
+-- Updated 2026-11-24 (part payments and CRM, 20261124000000): a paid package closes the Package call as "Package
+-- started"; the wording of two refusals changed; a second payment after the handover leaves no line on the call.
 -- One transaction, ROLLED BACK at the end: nothing is kept. Every row must end with t.
 -- Run: powershell -File supabase/staging-migrate.ps1 -Run supabase/staging/staging-test-packages.sql
 
@@ -111,9 +113,9 @@ SELECT 'a Package purchase: ₹31,500, paid, linked to the assessment purchase, 
   (SELECT x.kind = 'package' AND x.status = 'paid' AND x.amount_paise = 3150000 AND x.source = 'pay_page'
           AND x.client_id = pu.client_id AND x.coordinator_id IS NOT DISTINCT FROM pu.coordinator_id AND x.phone = pu.phone
    FROM public.purchases x JOIN public.purchases pu ON pu.id = x.parent_purchase_id WHERE x.parent_purchase_id = (SELECT p1 FROM p));
-SELECT 'the Package call closed as Package paid; journey Package call actual = paid time; all five stages done',
-  (SELECT status = 'closed' AND outcome = 'package_paid' FROM public.calls WHERE id = (SELECT c1 FROM c))
-  AND EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_paid')
+SELECT 'the Package call closed as Package started; journey Package call actual = paid time; all five stages done',
+  (SELECT status = 'closed' AND outcome = 'package_started' FROM public.calls WHERE id = (SELECT c1 FROM c))
+  AND EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_started')
   AND (SELECT done_at = now() FROM public.purchase_stages WHERE purchase_id = (SELECT p1 FROM p) AND stage = 'package_call')
   AND (SELECT bool_and(status = 'done') FROM public.purchase_stages WHERE purchase_id = (SELECT p1 FROM p));
 SELECT 'no offer any more; confirming the same payment again changes nothing',
@@ -131,10 +133,10 @@ SELECT 'paid twice: the second payment makes no package and is flagged Refund ne
   (SELECT result = 'duplicate' FROM twice)
   AND (SELECT refund_status = 'needed' AND package_purchase_id IS NULL FROM public.package_payments WHERE id = '5eed0000-0000-4000-8000-0000000f0a03')
   AND (SELECT count(*) = 1 FROM public.purchases WHERE parent_purchase_id = (SELECT p1 FROM p))
-  AND EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_refund_needed');
+  AND NOT EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_refund_needed');
 SELECT 'a manual package payment for an already paid purchase is refused',
   pg_temp.fails_with(format('SELECT public.package_payment_manual(gen_random_uuid(), %L, %L, ''upi'', ''X'', null, now(), ''f'', ''https://drive.example/f'')',
-                            (SELECT p1 FROM p), (SELECT admin FROM t)), 'A package is already paid for this purchase.');
+                            (SELECT p1 FROM p), (SELECT admin FROM t)), 'This package is already paid in full.');
 
 -- 4. Manual package payment (second client).
 SELECT 'only this client''s coordinator or a super admin; a counsellor never',
@@ -144,7 +146,7 @@ SELECT 'only this client''s coordinator or a super admin; a counsellor never',
                      'Only this client''s coordinator can add their package payment.')
   AND pg_temp.fails_with(format('SELECT public.package_payment_manual(gen_random_uuid(), %L, %L, ''upi'', ''UTR1'', null, now(), ''f'', ''https://drive.example/f'')',
                                 (SELECT p2 FROM p), (SELECT counsellor FROM t)),
-                         'Only coordinators and super admins can add a package payment.');
+                         'Only coordinators, CRM and super admins can add a package payment.');
 SELECT 'reference and proof are required',
   pg_temp.fails_with(format('SELECT public.package_payment_manual(gen_random_uuid(), %L, %L, ''upi'', ''  '', null, now(), ''f'', ''https://drive.example/f'')',
                             (SELECT p2 FROM p), (SELECT admin FROM t)), 'Enter the reference ID (UPI transaction ID, bank UTR or other).')
@@ -158,9 +160,9 @@ SELECT 'saved with the fixed amount ₹31,500, reference, proof, who recorded it
   (SELECT amount_paise = 3150000 AND provider = 'offline' AND status = 'paid' AND reference = 'UTR 778899' AND method = 'bank_transfer'
           AND proof_url IS NOT NULL AND recorded_by_name IS NOT NULL AND accounts_check = 'pending' AND package_purchase_id IS NOT NULL
    FROM public.package_payments WHERE id = '5eed0000-0000-4000-8000-0000000f0b01');
-SELECT 'the Package purchase (source manual) exists and the Package call closed as Package paid',
+SELECT 'the Package purchase (source manual) exists and the Package call closed as Package started',
   (SELECT count(*) = 1 AND bool_and(source = 'manual' AND status = 'paid') FROM public.purchases WHERE parent_purchase_id = (SELECT p2 FROM p))
-  AND (SELECT status = 'closed' AND outcome = 'package_paid' FROM public.calls WHERE id = (SELECT c2 FROM c));
+  AND (SELECT status = 'closed' AND outcome = 'package_started' FROM public.calls WHERE id = (SELECT c2 FROM c));
 SELECT 'package payments are never deleted',
   pg_temp.fails_with('DELETE FROM public.package_payments WHERE id = ''5eed0000-0000-4000-8000-0000000f0b01''', 'Package payments are never removed.');
 
