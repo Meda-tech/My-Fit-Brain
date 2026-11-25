@@ -989,11 +989,10 @@ existing migrations, `.env*` files.
   `step-assessment-payment-button`, merged into `main`): `20261123400000_call_choices.sql` on production, check 36 all
   true; run by Claude with the owner's permission for that go-live only, after a backup
   (`D:TechMedaackupsprod-2026-11-23-1658`). From then on the owner runs production SQL again.
-- **On staging, not on production yet (2026-11-25): package part payments, handover to CRM, CRM role and page**
-  (branch `step-package-part-payments-crm`, not merged): `20261124000000_package_part_payments_crm.sql` is under "To
-  paste later, in order" in `docs/deploy/production-log.md`. After it runs on production, add the CRM staff in
-  Admin → Team.
-- **On staging, not on production yet (2026-11-25): the Pending payment call and the start amount in 2 payments**
-  (branch `step-package-pending-payment-call`, started from `step-package-part-payments-crm`, not merged):
-  `20261125000000_package_pending_payment_call.sql`, pasted right after 20261124000000.
+- **Done: package part payments, handover to CRM, CRM role and page, the Pending payment call and the start amount in
+  2 payments, 2026-11-25, 12:10 pm IST** (branches `step-package-part-payments-crm` + `step-package-pending-payment-call`,
+  merged into `main`): `20261124000000_package_part_payments_crm.sql` and `20261125000000_package_pending_payment_call.sql`
+  on production, run by Claude with the owner's permission for that go-live only, after a backup
+  (`D:\Tech\Meda\backups\prod-2026-11-25-1209`); no checks on production (owner's decision). CRM staff: Anushka. From
+  then on the owner runs production SQL again.
 - Next: Task 07 — polish.
