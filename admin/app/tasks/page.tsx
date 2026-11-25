@@ -116,7 +116,7 @@ export default async function TasksPage({
                       {t.kind === 'payment' && (
                         <OfflinePaymentDialog purchase={{ id: t.purchase_id, testCode: t.test_code, testName: t.test_name }} staffName={profile.full_name} />
                       )}
-                      {t.kind === 'package' && <PackagePaymentDialog purchaseId={t.purchase_id} clientLabel={t.client_name ?? t.phone} />}
+                      {(t.kind === 'package' || t.kind === 'pending_payment') && <PackagePaymentDialog purchaseId={t.purchase_id} clientLabel={t.client_name ?? t.phone} />}
                       <CallDoneButton callId={t.call_id} kind={t.kind} priorCalls={t.prior_calls} adminOnlyNotInterested={t.package_part_paid && !superAdmin} />
                     </div>
                   </div>

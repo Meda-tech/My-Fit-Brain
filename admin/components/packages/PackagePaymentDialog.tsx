@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 import { FileText, Upload, X } from 'lucide-react';
 import { packageBalanceAction, packageReferenceUsedAction, recordPackagePaymentAction } from '../../app/purchases/package-actions';
 import { Button, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
@@ -15,14 +15,27 @@ import {
   indiaToday,
   type OfflineMethod,
 } from '../../lib/offline-payments';
-import { minPaymentPaise, neededToStart, parsePackageAmount, rupees, type PackageBalance } from '../../lib/package';
+import {
+  PENDING_FOLLOW_UP_MESSAGE,
+  minPaymentPaise,
+  neededToStart,
+  needsPendingFollowUp,
+  parsePackageAmount,
+  rupees,
+  type PackageBalance,
+} from '../../lib/package';
+import { PENDING_FOLLOW_UP_WORKING_HOURS } from '../../lib/calls';
+import { FollowUpPicker, type FollowUpState } from '../calls/FollowUpPicker';
 
 // "Add package payment": the client paid a part (or all) of the package outside Razorpay. Coordinators for their own
 // clients until the package starts, then the client's CRM; super admins always. The same form and rules as the
 // ₹3,500 manual payment (method, date, reference, proof to the same Google Drive folder; the proof is uploaded first,
 // and if that fails nothing is saved; a reference used before only warns), plus the amount: the first payment at least
 // the first minimum, never more than the remaining balance. The top shows Package · Paid so far · Remaining and how
-// much is still needed to start the sessions. The database checks every amount again.
+// much is still needed to start the sessions. The start amount is paid in at most 2 payments (owner, 2026-11-25): the
+// second one makes up the rest of it. A first payment below the start amount books the follow-up call about the rest
+// (within 3 working days): the Package call is then done and the Pending payment call is due at that time. The
+// database checks every amount again.
 
 const PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
@@ -50,6 +63,8 @@ export function PackagePaymentDialog({
   const [error, setError] = useState<string | null>(null);
   const [usedCount, setUsedCount] = useState(0);
   const [today, setToday] = useState('');
+  const [follow, setFollow] = useState<FollowUpState>({ value: '', ok: false, maxText: '' });
+  const onFollow = useCallback((s: FollowUpState) => setFollow(s), []);
 
   useEffect(() => {
     if (!open) return;
@@ -77,6 +92,7 @@ export function PackagePaymentDialog({
   const b = balance && balance !== 'loading' ? balance : null;
   const typed = b ? parsePackageAmount(amount, b) : null;
   const afterPaid = b && typed?.ok ? b.paid_paise + typed.paise : null;
+  const needFollow = !!b && !!typed?.ok && needsPendingFollowUp(b, typed.paise);
 
   const checkReference = (value: string) => {
     if (!value.trim()) return setUsedCount(0);
@@ -96,6 +112,7 @@ export function PackagePaymentDialog({
     if (!b) return;
     const checked = parsePackageAmount(form.get('amount'), b);
     if (!checked.ok) return setError(checked.error);
+    if (needsPendingFollowUp(b, checked.paise) && !follow.ok) return setError(`${PENDING_FOLLOW_UP_MESSAGE} (by ${follow.maxText})`);
     setError(null);
     startTransition(async () => {
       try {
@@ -212,7 +229,11 @@ export function PackagePaymentDialog({
                       className={cn(inputClasses, 'font-semibold text-teal')}
                     />
                     <p id="pp-amount-help" className={helpTextClasses}>
-                      {b.paid_paise === 0 ? `First payment: at least ${rupees(minPaymentPaise(b))}. ` : ''}
+                      {b.paid_paise === 0
+                        ? `First payment: at least ${rupees(minPaymentPaise(b))}. `
+                        : !b.started && b.paid_paise < b.start_paise
+                          ? `Second payment: at least ${rupees(minPaymentPaise(b))} (${rupees(b.start_paise)} in total to start). `
+                          : ''}
                       Up to {rupees(b.remaining_paise)}.
                       {afterPaid !== null && !b.started && (
                         <span className="block font-medium text-teal">
@@ -230,6 +251,21 @@ export function PackagePaymentDialog({
                     </label>
                     <input id="pp-date" name="paidOn" type="date" required defaultValue={today} max={today} className={inputClasses} />
                   </div>
+
+                  {needFollow && (
+                    <div className="rounded-card border border-sand p-3 sm:col-span-2">
+                      <FollowUpPicker
+                        id="pp-follow-up"
+                        hours={PENDING_FOLLOW_UP_WORKING_HOURS}
+                        limitText="within 3 working days"
+                        label="When will the client pay the rest? Next call"
+                        defaultMode="tomorrow"
+                        note="The Package call is then done, and a Pending payment call is due at this time."
+                        onChange={onFollow}
+                      />
+                      <input type="hidden" name="followUp" value={follow.value} />
+                    </div>
+                  )}
 
                   <fieldset className="sm:col-span-2">
                     <legend className={labelClasses}>Method</legend>

@@ -8,8 +8,10 @@
 // client did it before anyone called (the call closed by itself with no call attempt), or the call was never made
 // because it was not needed (e.g. paid directly: no Payment call).
 //
-// The package can be paid in parts (owner, 2026-11-24): each package payment is a line under task 5; the task stays
-// open until the amount paid in total reaches the start amount, then it is done ("Package started – with CRM").
+// The package can be paid in parts (owner, 2026-11-24): each package payment is a line under its task. A part payment
+// below the start amount closes task 5 ("Done · Part payment received", owner 2026-11-25) and adds task
+// 6. Pending payment call (ask the client when they will pay the rest); it is done when the start amount is reached
+// ("Package started – with CRM"). Paid at once up to the start amount: task 5 is done that way, with no task 6.
 //
 // A purchase from before the system (paid more than 7 days before go-live; owner, 2026-11-21): tasks 1–3 show
 // "Before the system" (no automatic calls, never late). It can still be booked into a slot by hand (then task 3 is
@@ -21,7 +23,7 @@ import { twelveHourText } from './availability';
 import { paymentMethodLabel } from '../components/payments/format';
 import { CALL_EVENT_LABELS, CALL_REASON_LABELS, choiceLabel, type CallChoice, type CallEvent, type CallKind, type CallOutcome, type CallReason } from './calls';
 
-export type JourneyTaskKey = 'payment' | 'assessment' | 'booking' | 'presentation' | 'package';
+export type JourneyTaskKey = 'payment' | 'assessment' | 'booking' | 'presentation' | 'package' | 'pending';
 export type JourneyStatus = 'done' | 'open' | 'upcoming' | 'not_interested' | 'not_needed' | 'before_system';
 
 export const JOURNEY_TASK_TITLES: Record<JourneyTaskKey, string> = {
@@ -30,6 +32,16 @@ export const JOURNEY_TASK_TITLES: Record<JourneyTaskKey, string> = {
   booking: 'Booking call',
   presentation: 'Report presentation',
   package: 'Package call',
+  pending: 'Pending payment call',
+};
+
+/** The call kind behind a task (the presentation is the counsellor's, with no call). */
+export const JOURNEY_TASK_CALL: Record<Exclude<JourneyTaskKey, 'presentation'>, CallKind> = {
+  payment: 'payment',
+  assessment: 'assessment',
+  booking: 'booking',
+  package: 'package',
+  pending: 'pending_payment',
 };
 
 export const JOURNEY_STATUS_LABELS: Record<JourneyStatus, string> = {
@@ -411,6 +423,7 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
   // (from the history). Below the start amount each payment shows how far the client is: "paid ₹4,000 of ₹10,000 to
   // start".
   const pkCall = call('package');
+  const pendCall = call('pending_payment');
   const pkPays = [...input.packagePayments].sort((a, b) => a.paid_at.localeCompare(b.paid_at));
   const startPaise = input.packageStartPaise ?? null;
   let running = 0;
@@ -440,16 +453,32 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
       followUp: null,
     };
   });
+  // With a Pending payment call, the first counted payment (the part payment) stays under task 5 and every later
+  // payment goes under task 6.
+  const firstCounted = pkPays.findIndex((p) => !p.refund_needed);
+  const underPending = (i: number) => !!pendCall && firstCounted >= 0 && i > firstCounted;
+  const pkOwn = pkItems.filter((_, i) => !underPending(i));
+  const pendOwn = pkItems.filter((_, i) => underPending(i));
   const counted = pkPays.filter((p) => !p.refund_needed);
   const fromApp = counted.length > 0 && counted.every((p) => p.provider === 'razorpay');
   const pkState: Pick<JourneyTask, 'status' | 'actual' | 'notNeeded'> = pkCall
     ? fromCall(pkCall, fromApp ? { what: 'client bought the package in the app', at: counted.at(-1)!.paid_at } : null, counted.some((p) => p.provider === 'offline'))
     : { status: 'upcoming', actual: null, notNeeded: null };
   const pack = task('package', 'Coordinator', input.coordinatorName, pkCall, pkState, [
-    ...pkItems,
+    ...pkOwn,
     ...(pkCall ? [...callItems('package', pkCall.logs), ...systemItems(pkCall.logs)] : []),
   ]);
   if (pkCall?.outcome === 'package_started' && pkState.status === 'done') pack.statusNote = 'Package started – with CRM';
+  if (pkCall?.outcome === 'part_paid') pack.statusNote = 'Part payment received';
 
-  return [payment, assessment, booking, presentation, pack];
+  if (!pendCall) return [payment, assessment, booking, presentation, pack];
+
+  // 6. Pending payment call: from the part payment until the start amount is reached.
+  const pending = task('pending', 'Coordinator', input.coordinatorName, pendCall, fromCall(pendCall, null, true), [
+    ...pendOwn,
+    ...callItems('pending_payment', pendCall.logs),
+    ...systemItems(pendCall.logs),
+  ]);
+  if (pendCall.outcome === 'package_started') pending.statusNote = 'Package started – with CRM';
+  return [payment, assessment, booking, presentation, pack, pending];
 }

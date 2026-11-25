@@ -8,6 +8,8 @@ import {
   assessmentContext,
   bookingContext,
   packageContext,
+  pendingPaymentContext,
+  followUpLimit,
   fromIstInput,
   needsFollowUp,
   paymentContext,
@@ -37,7 +39,7 @@ export interface TaskRow {
   prior_calls: number;
   /** A Booking call whose presentation can be booked now. */
   can_book: boolean;
-  /** A Package call with a package amount already paid: Not interested is for super admins only. */
+  /** A Package or Pending payment call with a package amount already paid: Not interested is for super admins only. */
   package_part_paid: boolean;
 }
 
@@ -114,12 +116,14 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
     let context: string;
     // An open Package call: what is paid so far for the package (every payment is before the handover here).
-    const pkg = t.kind === 'package' ? packageState(p.package_payments ?? [], p, null, amounts, true) : null;
+    const pkg = t.kind === 'package' || t.kind === 'pending_payment' ? packageState(p.package_payments ?? [], p, null, amounts, true) : null;
     if (t.kind === 'payment') {
       const last = tries.at(-1);
       context = paymentContext(tries.length, last?.created_at ?? t.due_at, last?.status === 'failed', now);
     } else if (t.kind === 'booking') {
       context = bookingContext((p.purchase_stages ?? []).find((s) => s.stage === 'assessment')?.done_at ?? null);
+    } else if (t.kind === 'pending_payment') {
+      context = pkg && pkg.start_paise !== null ? pendingPaymentContext(pkg.paid_paise, pkg.start_paise) : 'Part payment received';
     } else if (t.kind === 'package') {
       const done = (p.purchase_stages ?? []).find((s) => s.stage === 'report_presentation')?.done_at ?? null;
       const booked = (p.presentation_bookings ?? []).find((b) => b.status === 'booked');
@@ -187,6 +191,7 @@ const DB_MESSAGES = [
   'Choose what happened on the call.',
   'The note is too long (2,000 characters at most).',
   'Pick a follow-up date and time within 2 working days.',
+  'Pick a follow-up date and time within 3 working days.',
   'At least 2 calls are needed first.',
   'Choose a reason.',
   'A package payment is already received. Only an admin can mark Not interested.',
@@ -198,7 +203,7 @@ export async function markCall(input: MarkCallInput): Promise<{ success: boolean
   if (!canViewPurchases(profile.role)) return { success: false, error: 'Only coordinators and super admins can mark calls.' };
 
   const db = await createClient();
-  const { data: call } = await db.from('calls').select('id, status').eq('id', input.callId).maybeSingle();
+  const { data: call } = await db.from('calls').select('id, status, kind').eq('id', input.callId).maybeSingle();
   if (!call) return { success: false, error: 'This call was not found.' };
   if (call.status !== 'open') return { success: false, error: 'This call is already closed.' };
 
@@ -210,7 +215,7 @@ export async function markCall(input: MarkCallInput): Promise<{ success: boolean
   let followUp: Date | null = null;
   if (needsFollowUp(choice)) {
     followUp = input.followUp ? fromIstInput(input.followUp) : null;
-    if (!followUp) return { success: false, error: 'Pick a follow-up date and time within 2 working days.' };
+    if (!followUp) return { success: false, error: `Pick a follow-up date and time ${followUpLimit(call.kind as CallKind).text}.` };
   }
   let reason: CallReason | null = null;
   if (choice === 'not_interested') {

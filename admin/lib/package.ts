@@ -107,10 +107,25 @@ export function paidToStartText(paidPaise: number, startPaise: number): string {
   return `Paid ${rupees(paidPaise)} of ${rupees(startPaise)} to start`;
 }
 
-/** The smallest amount the next payment may be: the first minimum for the first payment, else ₹1. */
-export function minPaymentPaise(b: Pick<PackageBalance, 'paid_paise' | 'remaining_paise' | 'first_min_paise'>): number {
+type AmountRules = Pick<PackageBalance, 'paid_paise' | 'remaining_paise' | 'first_min_paise' | 'start_paise' | 'started'>;
+
+/**
+ * The smallest amount the next payment may be. The start amount is paid in at most 2 payments (owner, 2026-11-25):
+ * the first at least the first minimum, the second at least the rest of the start amount. After the start: ₹1.
+ */
+export function minPaymentPaise(b: AmountRules): number {
   if (b.remaining_paise <= 0) return 0;
-  return b.paid_paise === 0 ? Math.min(b.first_min_paise, b.remaining_paise) : Math.min(100, b.remaining_paise);
+  if (b.paid_paise === 0) return Math.min(b.first_min_paise, b.remaining_paise);
+  if (!b.started && b.paid_paise < b.start_paise) return Math.min(b.start_paise - b.paid_paise, b.remaining_paise);
+  return Math.min(100, b.remaining_paise);
+}
+
+/** The follow-up booked with a part payment below the start amount (the same words as the database). */
+export const PENDING_FOLLOW_UP_MESSAGE = 'Pick when to call the client about the rest: within 3 working days.';
+
+/** True when a payment of this amount leaves the package below the start amount: a follow-up call is booked with it. */
+export function needsPendingFollowUp(b: Pick<PackageBalance, 'paid_paise' | 'start_paise' | 'started'>, amountPaise: number): boolean {
+  return !b.started && b.paid_paise + amountPaise < b.start_paise;
 }
 
 const RUPEES = /^\d{1,7}$/;
@@ -118,11 +133,11 @@ const clean = (v: unknown) => (typeof v === 'string' ? v.replace(/[,\s₹]/g, ''
 
 /**
  * Checks the amount typed in "Add package payment" (whole rupees). The same rules as the database: the first payment
- * at least the first minimum, never more than the remaining balance.
+ * at least the first minimum, the second at least the rest of the start amount, never more than the remaining balance.
  */
 export function parsePackageAmount(
   raw: unknown,
-  b: Pick<PackageBalance, 'paid_paise' | 'remaining_paise' | 'first_min_paise'>
+  b: AmountRules
 ): { ok: true; paise: number } | { ok: false; error: string } {
   if (b.remaining_paise <= 0) return { ok: false, error: 'This package is already paid in full.' };
   const text = clean(raw);
@@ -130,7 +145,10 @@ export function parsePackageAmount(
   const paise = Number(text) * 100;
   if (paise > b.remaining_paise) return { ok: false, error: `The amount is more than the remaining balance (${rupees(b.remaining_paise)}).` };
   const min = minPaymentPaise(b);
-  if (b.paid_paise === 0 && paise < min) return { ok: false, error: `The first payment must be at least ${rupees(min)}.` };
+  if (paise < min) {
+    if (b.paid_paise === 0) return { ok: false, error: `The first payment must be at least ${rupees(min)}.` };
+    if (!b.started) return { ok: false, error: `The second payment must be at least ${rupees(min)} (${rupees(b.start_paise)} in total to start sessions).` };
+  }
   return { ok: true, paise };
 }
 

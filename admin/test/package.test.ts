@@ -4,6 +4,7 @@ import {
   milestoneLabel,
   minPaymentPaise,
   neededToStart,
+  needsPendingFollowUp,
   nextMilestone,
   packagePaymentState,
   paidToStartText,
@@ -23,15 +24,34 @@ const MILESTONES = [
 const TOTAL = 3_150_000;
 
 describe('package part payments', () => {
-  const fresh = { paid_paise: 0, remaining_paise: TOTAL, first_min_paise: 100_000 };
-  const partPaid = { paid_paise: 400_000, remaining_paise: 2_750_000, first_min_paise: 100_000 };
+  const rules = { first_min_paise: 100_000, start_paise: 1_000_000, started: false };
+  const fresh = { ...rules, paid_paise: 0, remaining_paise: TOTAL };
+  const partPaid = { ...rules, paid_paise: 400_000, remaining_paise: 2_750_000 };
+  const started = { ...rules, paid_paise: 1_000_000, remaining_paise: 2_150_000, started: true };
 
-  it('the first payment is at least ₹1,000; later payments can be any amount', () => {
+  it('the first payment is at least ₹1,000', () => {
     expect(parsePackageAmount('999', fresh)).toEqual({ ok: false, error: 'The first payment must be at least ₹1,000.' });
     expect(parsePackageAmount('1,000', fresh)).toEqual({ ok: true, paise: 100_000 });
-    expect(parsePackageAmount('500', partPaid)).toEqual({ ok: true, paise: 50_000 });
     expect(minPaymentPaise(fresh)).toBe(100_000);
-    expect(minPaymentPaise(partPaid)).toBe(100);
+  });
+
+  it('the start amount in at most 2 payments: the second one makes up the rest of ₹10,000 (owner, 2026-11-25)', () => {
+    expect(parsePackageAmount('3,000', partPaid)).toEqual({ ok: false, error: 'The second payment must be at least ₹6,000 (₹10,000 in total to start sessions).' });
+    expect(parsePackageAmount('6000', partPaid)).toEqual({ ok: true, paise: 600_000 });
+    expect(minPaymentPaise(partPaid)).toBe(600_000);
+    expect(minPaymentPaise({ ...rules, paid_paise: 100_000, remaining_paise: 3_050_000 })).toBe(900_000);
+  });
+
+  it('after the start (with CRM) any amount up to the remaining balance', () => {
+    expect(parsePackageAmount('500', started)).toEqual({ ok: true, paise: 50_000 });
+    expect(minPaymentPaise(started)).toBe(100);
+  });
+
+  it('a follow-up is booked only when the payment leaves the package below the start amount', () => {
+    expect(needsPendingFollowUp(fresh, 100_000)).toBe(true);
+    expect(needsPendingFollowUp(fresh, 1_000_000)).toBe(false);
+    expect(needsPendingFollowUp(partPaid, 600_000)).toBe(false);
+    expect(needsPendingFollowUp(started, 100)).toBe(false);
   });
 
   it('never more than the remaining balance; whole rupees only; nothing once paid in full', () => {
@@ -41,11 +61,11 @@ describe('package part payments', () => {
     expect(parsePackageAmount('100.50', partPaid).ok).toBe(false);
     expect(parsePackageAmount('', partPaid)).toEqual({ ok: false, error: 'Enter the amount in whole rupees.' });
     expect(parsePackageAmount('0', partPaid).ok).toBe(false);
-    expect(parsePackageAmount('100', { paid_paise: TOTAL, remaining_paise: 0, first_min_paise: 100_000 })).toEqual({ ok: false, error: 'This package is already paid in full.' });
+    expect(parsePackageAmount('100', { ...rules, paid_paise: TOTAL, remaining_paise: 0, started: true })).toEqual({ ok: false, error: 'This package is already paid in full.' });
   });
 
   it('a small balance left: the first minimum is never more than what remains', () => {
-    expect(parsePackageAmount('500', { paid_paise: 0, remaining_paise: 50_000, first_min_paise: 100_000 })).toEqual({ ok: true, paise: 50_000 });
+    expect(parsePackageAmount('500', { ...rules, paid_paise: 0, remaining_paise: 50_000 })).toEqual({ ok: true, paise: 50_000 });
   });
 
   it('"₹X more needed to start sessions" and the Package call line', () => {

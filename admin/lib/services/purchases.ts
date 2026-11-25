@@ -320,7 +320,9 @@ async function withNames(db: Db, raw: RawPurchase[], fullView: boolean): Promise
   const [names, progress, amounts] = await Promise.all([nameLookup(db, raw, counsellorIds), assessmentProgress(raw), packageAmounts()]);
   return raw.map(({ purchase_stages, purchase_payments, calls, presentation_bookings, package_payments, client_id, coordinator_id, closed_reason, ...r }) => {
     const packageCall = (calls ?? []).find((c) => c.kind === 'package') ?? null;
-    const pkg = packageState(package_payments ?? [], r, packageCall, amounts, fullView);
+    // The call that closed when the package started: the Pending payment call after a part payment, else the Package call.
+    const startCall = (calls ?? []).find((c) => c.kind === 'pending_payment') ?? packageCall;
+    const pkg = packageState(package_payments ?? [], r, startCall, amounts, fullView);
     const booked = (presentation_bookings ?? []).find((b) => b.status === 'booked');
     const stages = [...(purchase_stages ?? [])].sort((a, b) => a.position - b.position);
     const tries = (purchase_payments ?? [])

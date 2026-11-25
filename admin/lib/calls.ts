@@ -1,7 +1,9 @@
 // Calls (step 2): the words and the small rules the screens show. No database access; the database makes,
 // closes and checks calls (migration 20261120120000_calls.sql, call_mark()).
 
-export type CallKind = 'payment' | 'assessment' | 'booking' | 'package';
+/** pending_payment (owner, 2026-11-25): after a package part payment below the start amount, ask the client when they
+ * will pay the rest (migration 20261125000000_package_pending_payment_call.sql). */
+export type CallKind = 'payment' | 'assessment' | 'booking' | 'package' | 'pending_payment';
 /**
  * Mark as call done (owner, 2026-11-23, migration 20261123400000_call_choices.sql): talked · not_picked ·
  * not_interested. done, call_later and agreed ("Client agreed – will pay") are no longer choices; they stay in older
@@ -36,13 +38,15 @@ export type CallOutcome =
   | 'booked'
   | 'package_paid'
   | 'not_needed'
-  | 'package_started';
+  | 'package_started'
+  | 'part_paid';
 
 export const CALL_KIND_LABELS: Record<CallKind, string> = {
   payment: 'Payment call',
   assessment: 'Assessment call',
   booking: 'Booking call',
   package: 'Package call',
+  pending_payment: 'Pending payment call',
 };
 
 /**
@@ -102,11 +106,21 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   package_paid: 'Package paid',
   not_needed: 'Not needed: client already paid',
   package_started: 'Package started – with CRM',
+  part_paid: 'Part payment received',
 };
 
 export const CALL_NOTE_MAX = 2000;
 /** "Within 2 working days" = 18 working hours (9:00–18:00). */
 export const FOLLOW_UP_WORKING_HOURS = 18;
+/** The Pending payment call (and the follow-up booked with a part payment): within 3 working days = 27 working hours. */
+export const PENDING_FOLLOW_UP_WORKING_HOURS = 27;
+
+/** How far ahead a follow-up may be booked on this call, in working hours, and the same in words. */
+export function followUpLimit(kind: CallKind): { hours: number; text: string } {
+  return kind === 'pending_payment'
+    ? { hours: PENDING_FOLLOW_UP_WORKING_HOURS, text: 'within 3 working days' }
+    : { hours: FOLLOW_UP_WORKING_HOURS, text: 'within 2 working days' };
+}
 export const NEEDS_EARLIER_CALL = 'At least 2 calls are needed first.';
 /** Once any package amount is paid, only a super admin can mark the Package call Not interested (owner, 2026-11-24). */
 export const PACKAGE_PAID_ADMIN_ONLY = 'A package payment is already received. Only an admin can mark Not interested.';
@@ -268,4 +282,10 @@ export function packageContext(doneAt: string | null, counsellorName: string | n
     return `Paid ${r(paid.paid_paise)} of ${r(paid.start_paise)} to start`;
   }
   return `Presentation done${doneAt ? ` ${day(doneAt)}` : ''}${counsellorName ? ` by ${counsellorName}` : ''}`;
+}
+
+/** The Pending payment call's context line: "Paid ₹1,000 of ₹10,000 · ₹9,000 pending". */
+export function pendingPaymentContext(paidPaise: number, startPaise: number): string {
+  const r = (paise: number) => `₹${Math.round(paise / 100).toLocaleString('en-IN')}`;
+  return `Paid ${r(paidPaise)} of ${r(startPaise)} · ${r(Math.max(startPaise - paidPaise, 0))} pending`;
 }

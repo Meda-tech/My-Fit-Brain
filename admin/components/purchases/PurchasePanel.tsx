@@ -14,7 +14,7 @@ import { PresentationDoneButton } from '../presentations/PresentationDoneButton'
 import { AdminPresentationDoneButton } from '../presentations/AdminPresentationDoneButton';
 import { presentationLabel } from '../../lib/booking';
 import { PURCHASE_KIND_LABELS } from '../../lib/purchases';
-import { buildJourney, type JourneyTask, type JourneyTaskKey } from '../../lib/journey';
+import { JOURNEY_TASK_CALL, buildJourney, type JourneyTaskKey } from '../../lib/journey';
 import type { PurchaseDetail, PurchasePayment } from '../../lib/services/purchases';
 import { PACKAGE_STARTED_LABEL, neededToStart, rupees, type PackagePayment, type PackageState } from '../../lib/package';
 
@@ -166,18 +166,18 @@ export function PurchasePanel({
     },
     now
   );
-  const task = (key: JourneyTaskKey) => tasks.find((t) => t.key === key) as JourneyTask;
+  const task = (key: JourneyTaskKey) => tasks.find((t) => t.key === key);
   // The one main button: the first open task's first action.
   const firstOpen = tasks.find((t) => t.status === 'open')?.key;
   const main = (key: JourneyTaskKey) => (firstOpen === key ? 'primary' : 'secondary');
   const markDone = (key: JourneyTaskKey, variant: 'primary' | 'secondary' = main(key)) => {
     const t = task(key);
-    return t.callId ? (
+    return t?.callId && key !== 'presentation' ? (
       <CallDoneButton
         callId={t.callId}
-        kind={key === 'presentation' ? 'booking' : key}
+        kind={JOURNEY_TASK_CALL[key]}
         priorCalls={t.priorCalls}
-        adminOnlyNotInterested={key === 'package' && p.pkg.paid_paise > 0 && !canCancelBooking}
+        adminOnlyNotInterested={(key === 'package' || key === 'pending') && p.pkg.paid_paise > 0 && !canCancelBooking}
         variant={variant}
       />
     ) : null;
@@ -194,7 +194,7 @@ export function PurchasePanel({
       ) : null,
     assessment: markDone('assessment'),
     booking:
-      p.can_book || task('booking').callId ? (
+      p.can_book || task('booking')?.callId ? (
         <>
           {p.can_book && (
             // An old purchase has no Booking call: booking by hand is its main button.
@@ -218,12 +218,19 @@ export function PurchasePanel({
         // without a slot. (Booking a slot is the main button, on the Booking call row.)
         <AdminPresentationDoneButton purchaseId={p.id} clientLabel={clientLabel} testName={p.test_name} variant="secondary" />
       ) : null,
+    // Add package payment sits on the Package call, or on the Pending payment call once a part is paid.
     package: (
       <>
         {markDone('package')}
-        {p.can_add_package_payment && <PackagePaymentDialog purchaseId={p.id} clientLabel={clientLabel} />}
+        {p.can_add_package_payment && !task('pending') && <PackagePaymentDialog purchaseId={p.id} clientLabel={clientLabel} />}
       </>
     ),
+    pending: task('pending') ? (
+      <>
+        {markDone('pending')}
+        {p.can_add_package_payment && <PackagePaymentDialog purchaseId={p.id} clientLabel={clientLabel} />}
+      </>
+    ) : null,
   };
 
   const showPackage = p.pkg.payments.length > 0 || p.pkg.started || p.can_add_package_payment;

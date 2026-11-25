@@ -6,6 +6,8 @@ import { requireStaff } from '../auth';
 import { ProofStorageNotConfiguredError, isProofStorageConfigured, uploadProof } from '../google/drive';
 import { ASSESSMENT_PRICE_PAISE, cleanReference, parseOfflinePayment, proofProblem } from '../offline-payments';
 import {
+  PENDING_FOLLOW_UP_MESSAGE,
+  needsPendingFollowUp,
   parsePackageAmount,
   parsePackageAmounts,
   parsePackageSettings,
@@ -15,6 +17,7 @@ import {
 } from '../package';
 import { PROOF_UPLOAD_FAILED, STORAGE_NOT_SET_UP } from './offline-payments';
 import { canViewPurchases, nameLookup } from './purchases';
+import { PENDING_FOLLOW_UP_WORKING_HOURS, addWorkingHours, fromIstInput } from '../calls';
 
 // Package (step 6; part payments and CRM since 2026-11-24): settings (super admins), the manual package payment and
 // the lists. A package can be paid in parts: coordinators add payments for their own clients until the package
@@ -153,9 +156,11 @@ const MANUAL_MESSAGES = [
   'The note can be at most 500 characters.',
   'The payment date cannot be in the future.',
   'Add the payment proof (screenshot or PDF).',
+  PENDING_FOLLOW_UP_MESSAGE,
 ];
 /** Database messages that carry an amount: shown as they are. */
-const AMOUNT_REFUSALS = /(The amount is more than the remaining balance \(₹[\d,]+\)\.|The first payment must be at least ₹[\d,]+\.)/;
+const AMOUNT_REFUSALS =
+  /(The amount is more than the remaining balance \(₹[\d,]+\)\.|The first payment must be at least ₹[\d,]+\.|The second payment must be at least ₹[\d,]+ \(₹[\d,]+ in total to start sessions\)\.)/;
 
 /** Other payments (assessment or package) with the same reference. For a warning only. */
 export async function packageReferenceUses(raw: string): Promise<number> {
@@ -211,6 +216,16 @@ export async function recordPackagePayment(purchaseId: string, form: FormData): 
   }
   const amount = parsePackageAmount(form.get('amount'), balance);
   if (!amount.ok) return amount;
+  // Below the start amount after this payment: the follow-up call about the rest, within 3 working days.
+  let followUp: Date | null = null;
+  if (needsPendingFollowUp(balance, amount.paise)) {
+    const raw = form.get('followUp');
+    followUp = typeof raw === 'string' ? fromIstInput(raw) : null;
+    const now = new Date();
+    if (!followUp || followUp <= now || followUp > addWorkingHours(now, PENDING_FOLLOW_UP_WORKING_HOURS)) {
+      return { ok: false, error: PENDING_FOLLOW_UP_MESSAGE };
+    }
+  }
 
   if (!isProofStorageConfigured()) {
     console.error('Package payment blocked: proof storage env missing or invalid.');
@@ -240,6 +255,7 @@ export async function recordPackagePayment(purchaseId: string, form: FormData): 
     p_paid_at: input.paidAt,
     p_proof_file_id: uploaded.fileId,
     p_proof_url: uploaded.webViewLink,
+    p_follow_up: followUp ? followUp.toISOString() : null,
   });
   if (error) {
     const known = MANUAL_MESSAGES.find((m) => error.message.includes(m)) ?? error.message.match(AMOUNT_REFUSALS)?.[1];

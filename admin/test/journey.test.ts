@@ -125,31 +125,63 @@ describe('journey: in progress', () => {
     expect(j[4].items[0]).toMatchObject({ title: 'Package payment · manual payment', detail: 'Bank transfer · ₹31,500', by: 'Test Coordinator' });
   });
 
-  it('part payments: below the start amount the Package call stays open, each payment shows how far the client is', () => {
+  it('a part payment: the Package call is done ("Part payment received") and task 6, the Pending payment call, is open (owner, 2026-11-25)', () => {
     const j = buildJourney(
       {
         ...base,
         status: 'paid',
         payments: [],
-        calls: [{ id: 'k', kind: 'package', status: 'open', outcome: null, due_at: '2026-11-26T07:00:00Z', closed_at: null, closed_note: null, prior_calls: 1,
-          logs: [
-            log({ at: '2026-11-24T06:10:00Z', entry: 'event', event: 'package_part_paid', note: '₹4,000 · paid ₹4,000 of ₹10,000 to start' }),
-            log({ at: '2026-11-24T07:00:00Z', choice: 'talked', follow_up_at: '2026-11-26T07:00:00Z' }),
-          ] }],
+        calls: [
+          { id: 'k', kind: 'package', status: 'closed', outcome: 'part_paid', due_at: '2026-11-24T08:00:00Z', closed_at: '2026-11-24T06:00:00Z', closed_note: null, prior_calls: 1,
+            logs: [
+              log({ at: '2026-11-24T05:00:00Z', choice: 'talked', follow_up_at: '2026-11-24T08:00:00Z' }),
+              log({ at: '2026-11-24T06:00:00Z', entry: 'event', event: 'package_part_paid', note: '₹1,000 · paid ₹1,000 of ₹10,000 to start' }),
+            ] },
+          { id: 'q', kind: 'pending_payment', status: 'open', outcome: null, due_at: '2026-11-26T07:00:00Z', closed_at: null, closed_note: null, prior_calls: 1,
+            logs: [
+              log({ at: '2026-11-24T06:00:00Z', entry: 'event', event: 'created', note: 'Paid ₹1,000 of ₹10,000 · ₹9,000 pending' }),
+              log({ at: '2026-11-25T07:00:00Z', choice: 'not_picked', follow_up_at: '2026-11-26T07:00:00Z' }),
+            ] },
+        ],
+        presentation: null,
+        packagePayments: [{ amount_paise: 100000, paid_at: '2026-11-24T06:00:00Z', provider: 'offline', method: 'upi', recorded_by_name: 'Test Coordinator' }],
+        packageStartPaise: 1000000,
+      },
+      NOW
+    );
+    expect(j).toHaveLength(6);
+    expect(j[4]).toMatchObject({ status: 'done', statusNote: 'Part payment received', actual: '2026-11-24T06:00:00Z', callId: null });
+    // The history event of a part payment is not shown twice: the payment line carries it.
+    expect(j[4].items.map((i) => i.title)).toEqual(['Talked to client', 'Package payment · manual payment']);
+    expect(j[4].items[1].detail).toBe('UPI · ₹1,000 · paid ₹1,000 of ₹10,000 to start');
+    expect(j[5]).toMatchObject({ key: 'pending', title: 'Pending payment call', status: 'open', callId: 'q', planned: '2026-11-26T07:00:00Z', priorCalls: 1 });
+    expect(j[5].items.map((i) => i.title)).toEqual(['Not picked / Call later']);
+  });
+
+  it('the second payment reaches the start amount: the Pending payment call is done, "Package started – with CRM"', () => {
+    const j = buildJourney(
+      {
+        ...base,
+        status: 'paid',
+        payments: [],
+        calls: [
+          { id: 'k', kind: 'package', status: 'closed', outcome: 'part_paid', due_at: '2026-11-24T08:00:00Z', closed_at: '2026-11-24T06:00:00Z', closed_note: null, prior_calls: 0, logs: [] },
+          { id: 'q', kind: 'pending_payment', status: 'closed', outcome: 'package_started', due_at: '2026-11-26T07:00:00Z', closed_at: '2026-11-25T09:00:00Z', closed_note: null, prior_calls: 0,
+            logs: [log({ at: '2026-11-25T09:00:00Z', entry: 'event', event: 'package_started', note: 'Paid ₹10,000 of ₹31,500 · with CRM' })] },
+        ],
         presentation: null,
         packagePayments: [
-          { amount_paise: 400000, paid_at: '2026-11-24T06:00:00Z', provider: 'offline', method: 'upi', recorded_by_name: 'Test Coordinator' },
-          { amount_paise: 50000, paid_at: '2026-11-24T08:00:00Z', provider: 'offline', method: 'upi', recorded_by_name: 'Test Coordinator' },
+          { amount_paise: 100000, paid_at: '2026-11-24T06:00:00Z', provider: 'offline', method: 'upi', recorded_by_name: 'Test Coordinator' },
+          { amount_paise: 900000, paid_at: '2026-11-25T09:00:00Z', provider: 'offline', method: 'bank_transfer', recorded_by_name: 'Test Coordinator' },
         ],
         packageStartPaise: 1000000,
       },
       NOW
     );
-    expect(j[4]).toMatchObject({ status: 'open', actual: null, callId: 'k' });
-    // The history event of a part payment is not shown twice: the payment line carries it.
-    expect(j[4].items.map((i) => i.title)).toEqual(['Package payment · manual payment', 'Talked to client', 'Package payment · manual payment']);
-    expect(j[4].items[0].detail).toBe('UPI · ₹4,000 · paid ₹4,000 of ₹10,000 to start');
-    expect(j[4].items[2].detail).toBe('UPI · ₹500 · paid ₹4,500 of ₹10,000 to start');
+    expect(j[4].items.map((i) => i.title)).toEqual(['Package payment · manual payment']);
+    expect(j[5]).toMatchObject({ status: 'done', statusNote: 'Package started – with CRM', actual: '2026-11-25T09:00:00Z' });
+    expect(j[5].items.map((i) => i.title)).toEqual(['Package payment · manual payment', 'Package started – with CRM']);
+    expect(j[5].items[0].detail).toBe('Bank transfer · ₹9,000');
   });
 
   it('at the start amount the Package call is done: "Package started – with CRM"; a payment over the balance shows as refund needed', () => {

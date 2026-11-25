@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  followUpLimit,
+  pendingPaymentContext,
   CALL_CHOICES,
   CALL_CHOICE_LABELS,
   CALL_KIND_LABELS,
@@ -40,11 +42,26 @@ describe('working hours (same cases as the database check)', () => {
     expect(addWorkingHours(ist('2026-11-23T09:00:00'), 10)).toEqual(ist('2026-11-24T10:00:00'));
     expect(addWorkingHours(ist('2026-11-20T16:49:00'), 18)).toEqual(ist('2026-11-23T16:49:00'));
   });
+
+  it('the Pending payment call: a follow-up within 3 working days (27 working hours), the others 2 (owner, 2026-11-25)', () => {
+    expect(followUpLimit('pending_payment')).toEqual({ hours: 27, text: 'within 3 working days' });
+    expect(followUpLimit('package')).toEqual({ hours: 18, text: 'within 2 working days' });
+    // Wed 11:00 → Sat 11:00; Thu 11:00 → Mon 11:00 (Sunday off). The same cases as the verify file.
+    expect(addWorkingHours(ist('2026-11-25T11:00:00'), 27)).toEqual(ist('2026-11-28T11:00:00'));
+    expect(addWorkingHours(ist('2026-11-26T11:00:00'), 27)).toEqual(ist('2026-11-30T11:00:00'));
+    expect(pendingPaymentContext(100_000, 1_000_000)).toBe('Paid ₹1,000 of ₹10,000 · ₹9,000 pending');
+  });
 });
 
 describe('calls', () => {
   it('uses the team words', () => {
-    expect(CALL_KIND_LABELS).toEqual({ payment: 'Payment call', assessment: 'Assessment call', booking: 'Booking call', package: 'Package call' });
+    expect(CALL_KIND_LABELS).toEqual({
+      payment: 'Payment call',
+      assessment: 'Assessment call',
+      booking: 'Booking call',
+      package: 'Package call',
+      pending_payment: 'Pending payment call',
+    });
     // One set of choices for every call (owner, 2026-11-23); no Done, no Client agreed.
     expect(CALL_CHOICES.map((c) => CALL_CHOICE_LABELS[c])).toEqual(['Talked to client', 'Not picked / Call later', 'Not interested']);
     expect(needsFollowUp('talked') && needsFollowUp('not_picked') && !needsFollowUp('not_interested')).toBe(true);
