@@ -21,6 +21,7 @@ import {
 } from '../../lib/calls';
 import { markCallAction } from '../../app/tasks/actions';
 import { FollowUpPicker, type FollowUpState } from './FollowUpPicker';
+import { Portal } from '../Portal';
 
 const OPTION =
   'flex min-h-11 cursor-pointer items-center gap-3 rounded-input border px-3.5 text-[15px] text-ink has-[:checked]:border-teal has-[:checked]:bg-mist';
@@ -98,121 +99,123 @@ export function CallDoneButton({
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-60 flex items-end justify-center bg-night/40 p-0 sm:items-center sm:p-4">
-          <Card
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={`call-done-${callId}`}
-            className="max-h-[92dvh] w-full max-w-120 overflow-y-auto rounded-b-none p-5 sm:rounded-b-card sm:p-6"
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 id={`call-done-${callId}`} className="m-0 text-[22px] font-semibold leading-[1.3] text-teal">
-                  Mark as call done
-                </h2>
-                <p className="m-0 text-[14px] text-ink-muted">{CALL_KIND_LABELS[kind]}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-mist hover:text-teal"
-              >
-                <X size={18} strokeWidth={2} aria-hidden />
-              </button>
-            </div>
-
-            {error && (
-              <Notice variant="error" role="alert" icon={<AlertCircle size={18} strokeWidth={2} className="text-coral-deep" />} className="mb-4">
-                {error}
-              </Notice>
-            )}
-
-            <form onSubmit={save} className="space-y-4">
-              <fieldset>
-                <legend className={labelClasses}>What happened?</legend>
-                <div className="grid gap-2">
-                  {CALL_CHOICES.map((c) => (
-                    <label key={c} className={cn(OPTION, 'border-sand')}>
-                      <input
-                        type="radio"
-                        name="choice"
-                        value={c}
-                        checked={choice === c}
-                        onChange={() => setChoice(c)}
-                        className="h-4 w-4 accent-teal"
-                        required
-                      />
-                      {CALL_CHOICE_LABELS[c]}
-                    </label>
-                  ))}
+        <Portal>
+          <div className="fixed inset-0 z-60 flex items-end justify-center bg-night/40 p-0 sm:items-center sm:p-4">
+            <Card
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`call-done-${callId}`}
+              className="max-h-[92dvh] w-full max-w-120 overflow-y-auto rounded-b-none p-5 sm:rounded-b-card sm:p-6"
+            >
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 id={`call-done-${callId}`} className="m-0 text-[22px] font-semibold leading-[1.3] text-teal">
+                    Mark as call done
+                  </h2>
+                  <p className="m-0 text-[14px] text-ink-muted">{CALL_KIND_LABELS[kind]}</p>
                 </div>
-              </fieldset>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-mist hover:text-teal"
+                >
+                  <X size={18} strokeWidth={2} aria-hidden />
+                </button>
+              </div>
 
-              {choice && needsFollowUp(choice) && (
-                // A new picker for each choice: the default is In 2 hours again (owner, 2026-11-23).
-                <FollowUpPicker
-                  key={choice}
-                  id={`follow-up-${callId}`}
-                  hours={limit.hours}
-                  limitText={limit.text}
-                  note={kind === 'pending_payment' ? 'The call stays open until the rest is paid.' : 'The call stays open until the client does the step.'}
-                  onChange={onFollow}
-                />
+              {error && (
+                <Notice variant="error" role="alert" icon={<AlertCircle size={18} strokeWidth={2} className="text-coral-deep" />} className="mb-4">
+                  {error}
+                </Notice>
               )}
 
-              {choice === 'not_interested' &&
-                (blocked ? (
-                  <Notice variant="info" role="status">
-                    {adminOnly ? PACKAGE_PAID_ADMIN_ONLY : NEEDS_EARLIER_CALL}
-                  </Notice>
-                ) : (
-                  <fieldset>
-                    <legend className={labelClasses}>Reason</legend>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {CALL_REASONS.map((r) => (
-                        <label key={r} className={cn(OPTION, 'border-sand')}>
-                          <input
-                            type="radio"
-                            name="reason"
-                            value={r}
-                            checked={reason === r}
-                            onChange={() => setReason(r)}
-                            className="h-4 w-4 accent-teal"
-                            required
-                          />
-                          {CALL_REASON_LABELS[r]}
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-                ))}
+              <form onSubmit={save} className="space-y-4">
+                <fieldset>
+                  <legend className={labelClasses}>What happened?</legend>
+                  <div className="grid gap-2">
+                    {CALL_CHOICES.map((c) => (
+                      <label key={c} className={cn(OPTION, 'border-sand')}>
+                        <input
+                          type="radio"
+                          name="choice"
+                          value={c}
+                          checked={choice === c}
+                          onChange={() => setChoice(c)}
+                          className="h-4 w-4 accent-teal"
+                          required
+                        />
+                        {CALL_CHOICE_LABELS[c]}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
 
-              <div>
-                <label htmlFor={`note-${callId}`} className={labelClasses}>
-                  Note (optional)
-                </label>
-                <textarea
-                  id={`note-${callId}`}
-                  rows={3}
-                  maxLength={CALL_NOTE_MAX}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className={cn(inputClasses, 'py-2.5')}
-                />
-              </div>
+                {choice && needsFollowUp(choice) && (
+                  // A new picker for each choice: the default is In 2 hours again (owner, 2026-11-23).
+                  <FollowUpPicker
+                    key={choice}
+                    id={`follow-up-${callId}`}
+                    hours={limit.hours}
+                    limitText={limit.text}
+                    note={kind === 'pending_payment' ? 'The call stays open until the rest is paid.' : 'The call stays open until the client does the step.'}
+                    onChange={onFollow}
+                  />
+                )}
 
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
-                <Button variant="secondary" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" loading={saving} loadingText="Saving..." disabled={!choice || blocked}>
-                  Save
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
+                {choice === 'not_interested' &&
+                  (blocked ? (
+                    <Notice variant="info" role="status">
+                      {adminOnly ? PACKAGE_PAID_ADMIN_ONLY : NEEDS_EARLIER_CALL}
+                    </Notice>
+                  ) : (
+                    <fieldset>
+                      <legend className={labelClasses}>Reason</legend>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {CALL_REASONS.map((r) => (
+                          <label key={r} className={cn(OPTION, 'border-sand')}>
+                            <input
+                              type="radio"
+                              name="reason"
+                              value={r}
+                              checked={reason === r}
+                              onChange={() => setReason(r)}
+                              className="h-4 w-4 accent-teal"
+                              required
+                            />
+                            {CALL_REASON_LABELS[r]}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ))}
+
+                <div>
+                  <label htmlFor={`note-${callId}`} className={labelClasses}>
+                    Note (optional)
+                  </label>
+                  <textarea
+                    id={`note-${callId}`}
+                    rows={3}
+                    maxLength={CALL_NOTE_MAX}
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    className={cn(inputClasses, 'py-2.5')}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+                  <Button variant="secondary" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" loading={saving} loadingText="Saving..." disabled={!choice || blocked}>
+                    Save
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        </Portal>
       )}
     </>
   );
