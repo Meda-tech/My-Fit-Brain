@@ -1,5 +1,6 @@
 -- STAGING ONLY. Behaviour test for package part payments, the handover to CRM and the CRM role
--- (migration 20261124000000_package_part_payments_crm.sql).
+-- (migration 20261124000000_package_part_payments_crm.sql), with the Pending payment call and the start amount in at most
+-- 2 payments (migration 20261125000000_package_pending_payment_call.sql).
 -- One transaction, ROLLED BACK at the end: nothing is kept. Every row must end with t.
 -- Run: powershell -File supabase/staging-migrate.ps1 -Run supabase/staging/staging-test-package-part-payments.sql
 
@@ -53,14 +54,16 @@ BEGIN
 END;
 $$;
 
--- Adds a manual package payment; returns the result ('paid' / 'duplicate').
+-- Adds a manual package payment with a follow-up in 1 hour (used only when it stays below the start amount); returns
+-- the result ('paid' / 'duplicate').
 CREATE FUNCTION pg_temp.add(p_id text, p_purchase uuid, p_by uuid, p_rupees int) RETURNS text LANGUAGE sql AS $$
   SELECT public.package_payment_add(('5eed0000-0000-4000-8000-0000000e0f' || p_id)::uuid, p_purchase, p_by, p_rupees * 100, 'upi',
-                                    'UTR-' || p_id, null, now(), 'fake-proof-' || p_id, 'https://drive.example/fake-proof-' || p_id);
+                                    'UTR-' || p_id, null, now(), 'fake-proof-' || p_id, 'https://drive.example/fake-proof-' || p_id,
+                                    now() + interval '1 hour');
 $$;
-CREATE FUNCTION pg_temp.add_sql(p_purchase uuid, p_by uuid, p_rupees numeric) RETURNS text LANGUAGE sql AS $$
-  SELECT format('SELECT public.package_payment_add(gen_random_uuid(), %L, %L, %s, ''upi'', ''UTR-X'', null, now(), ''f'', ''https://drive.example/f'')',
-                p_purchase, p_by, (p_rupees * 100)::int);
+CREATE FUNCTION pg_temp.add_sql(p_purchase uuid, p_by uuid, p_rupees numeric, p_follow_up text DEFAULT 'now() + interval ''1 hour''') RETURNS text LANGUAGE sql AS $$
+  SELECT format('SELECT public.package_payment_add(gen_random_uuid(), %L, %L, %s, ''upi'', ''UTR-X'', null, now(), ''f'', ''https://drive.example/f'', %s)',
+                p_purchase, p_by, (p_rupees * 100)::int, p_follow_up);
 $$;
 
 -- Staging's own CRM logins step aside for this test (rolled back), so the round robin below is known.
@@ -122,13 +125,25 @@ SELECT 'a counsellor, another coordinator, and a CRM before the package started 
                                             AND id IS DISTINCT FROM (SELECT co1 FROM co) LIMIT 1), 1000),
                          'Only this client''s coordinator can add their package payment.')
   AND pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT crm_a FROM t), 1000), 'Only this client''s CRM can add their package payment.');
+SELECT 'a part payment below ₹10,000 needs the follow-up about the rest, within 3 working days (27 working hours)',
+  pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT co1 FROM co), 4000, 'null'), 'Pick when to call the client about the rest: within 3 working days.')
+  AND pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT co1 FROM co), 4000, 'now() - interval ''1 minute'''),
+                         'Pick when to call the client about the rest: within 3 working days.')
+  AND pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT co1 FROM co), 4000, 'public.add_working_hours(now(), 27) + interval ''1 minute'''),
+                         'Pick when to call the client about the rest: within 3 working days.');
 SELECT '₹4,000 by the coordinator: paid', pg_temp.add('01', (SELECT p1 FROM p), (SELECT co1 FROM co), 4000) = 'paid';
-SELECT 'below ₹10,000: no Package purchase, the Package call stays open with a history line, the purchase is still open',
+CREATE TEMP TABLE pc ON COMMIT DROP AS
+SELECT (SELECT id FROM public.calls WHERE purchase_id = (SELECT p1 FROM p) AND kind = 'pending_payment') AS pc1;
+SELECT 'below ₹10,000: no Package purchase; the Package call is done ("Part payment received", with a history line); the purchase is still open',
   NOT EXISTS (SELECT 1 FROM public.purchases WHERE parent_purchase_id = (SELECT p1 FROM p))
-  AND (SELECT status = 'open' FROM public.calls WHERE id = (SELECT c1 FROM c))
+  AND (SELECT status = 'closed' AND outcome = 'part_paid' FROM public.calls WHERE id = (SELECT c1 FROM c))
   AND (SELECT count(*) = 1 AND bool_and(note = '₹4,000 · paid ₹4,000 of ₹10,000 to start') FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_part_paid')
   AND (SELECT done_at IS NULL FROM public.purchase_stages WHERE purchase_id = (SELECT p1 FROM p) AND stage = 'package_call')
   AND (SELECT public.purchase_is_open(pu) FROM public.purchases pu WHERE pu.id = (SELECT p1 FROM p));
+SELECT 'the Pending payment call is open, due at the follow-up booked with the payment',
+  (SELECT calls.status = 'open' AND calls.due_at = f.follow_up_at FROM public.calls, public.package_payments f
+   WHERE calls.id = (SELECT pc1 FROM pc) AND f.id = '5eed0000-0000-4000-8000-0000000e0f01')
+  AND (SELECT count(*) = 1 AND bool_and(note = 'Paid ₹4,000 of ₹10,000 · ₹6,000 pending') FROM public.call_logs WHERE call_id = (SELECT pc1 FROM pc) AND event = 'created');
 SELECT 'balance: paid ₹4,000, remaining ₹27,500; the payment keeps the package amount and waits for the package',
   (SELECT paid_paise = 400000 AND remaining_paise = 2750000 AND NOT started FROM public.package_balance((SELECT p1 FROM p)))
   AND (SELECT amount_paise = 400000 AND price_paise = 3500000 AND advance_paise = 350000 AND counted_at IS NOT NULL AND NOT after_handover
@@ -139,27 +154,36 @@ SELECT 'once a part is paid the client app has no offer (it can only take the fu
   AND pg_temp.fails_with(format('SELECT public.package_payment_start(gen_random_uuid(), %L, %L, ''order_PART_X'', 3150000)',
                                 (SELECT p1 FROM p), '5eed0000-0000-4000-8000-0000000e00c1'), 'This offer is not available.');
 
--- Not interested with money received: only an admin.
-SELECT public.call_mark((SELECT c1 FROM c), (SELECT co1 FROM co), 'talked', null, null, now() + interval '1 hour')::text = '' AS call_1;
-SELECT public.call_mark((SELECT c1 FROM c), (SELECT co1 FROM co), 'not_picked', null, null, now() + interval '1 hour')::text = '' AS call_2;
-SELECT 'a coordinator cannot mark the Package call Not interested once a package amount is paid',
-  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''not_interested'', ''not_now'', null, null)', (SELECT c1 FROM c), (SELECT co1 FROM co)),
-                     'A package payment is already received. Only an admin can mark Not interested.');
+-- The Pending payment call: follow-ups within 3 working days; Not interested with money received: only an admin.
+SELECT 'the Pending payment call takes a follow-up up to 3 working days (other calls 2), not later',
+  pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''talked'', null, null, %L)', (SELECT pc1 FROM pc), (SELECT co1 FROM co),
+                            public.add_working_hours(now(), 27) + interval '1 minute'), 'Pick a follow-up date and time within 3 working days.');
+SELECT public.call_mark((SELECT pc1 FROM pc), (SELECT co1 FROM co), 'talked', null, null, public.add_working_hours(now(), 26))::text = '' AS call_1;
+SELECT public.call_mark((SELECT pc1 FROM pc), (SELECT co1 FROM co), 'not_picked', null, null, now() + interval '1 hour')::text = '' AS call_2;
+SELECT 'the follow-up moved the due time; a coordinator cannot mark Not interested once a package amount is paid',
+  (SELECT status = 'open' AND due_at = (SELECT max(follow_up_at) FILTER (WHERE choice = 'not_picked') FROM public.call_logs WHERE call_id = (SELECT pc1 FROM pc))
+   FROM public.calls WHERE id = (SELECT pc1 FROM pc))
+  AND pg_temp.fails_with(format('SELECT public.call_mark(%L, %L, ''not_interested'', ''not_now'', null, null)', (SELECT pc1 FROM pc), (SELECT co1 FROM co)),
+                         'A package payment is already received. Only an admin can mark Not interested.');
 
-SELECT 'a later payment may be small: ₹500', pg_temp.add('02', (SELECT p1 FROM p), (SELECT co1 FROM co), 500) = 'paid';
-SELECT 'more than the remaining balance (₹27,000) is refused',
-  pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT co1 FROM co), 27001), 'The amount is more than the remaining balance (₹27,000).');
-SELECT '₹5,500 more: paid in total ₹10,000', pg_temp.add('03', (SELECT p1 FROM p), (SELECT co1 FROM co), 5500) = 'paid';
+SELECT 'the start amount in at most 2 payments: the second must make up the rest of ₹10,000',
+  pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT co1 FROM co), 500), 'The second payment must be at least ₹6,000 (₹10,000 in total to start sessions).')
+  AND pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT co1 FROM co), 5999), 'The second payment must be at least ₹6,000 (₹10,000 in total to start sessions).');
+SELECT 'more than the remaining balance (₹27,500) is refused',
+  pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT co1 FROM co), 27501), 'The amount is more than the remaining balance (₹27,500).');
+SELECT '₹6,000 more: paid in total ₹10,000', pg_temp.add('03', (SELECT p1 FROM p), (SELECT co1 FROM co), 6000) = 'paid';
 SELECT 'at ₹10,000: Package purchase "Started – with CRM" (package amount ₹31,500, same client and coordinator), next CRM in turn',
   (SELECT count(*) = 1 AND bool_and(x.kind = 'package' AND x.status = 'paid' AND x.amount_paise = 3150000 AND x.source = 'manual'
                                     AND x.client_id = pu.client_id AND x.coordinator_id = pu.coordinator_id AND x.crm_id = (SELECT crm_b FROM t))
    FROM public.purchases x JOIN public.purchases pu ON pu.id = x.parent_purchase_id WHERE x.parent_purchase_id = (SELECT p1 FROM p))
   AND (SELECT crm_id = (SELECT crm_b FROM t) FROM public.client_crms WHERE phone = '+919999900051');
-SELECT 'the Package call closed as Package started; journey Package call done; all three payments belong to the package; purchase finished',
-  (SELECT status = 'closed' AND outcome = 'package_started' FROM public.calls WHERE id = (SELECT c1 FROM c))
-  AND (SELECT count(*) = 1 AND bool_and(note = 'Paid ₹10,000 of ₹31,500 · with CRM') FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_started')
+SELECT 'the Pending payment call closed as Package started (the Package call stays "Part payment received"); journey Package call done; both payments belong to the package; purchase finished',
+  (SELECT status = 'closed' AND outcome = 'package_started' FROM public.calls WHERE id = (SELECT pc1 FROM pc))
+  AND (SELECT outcome = 'part_paid' FROM public.calls WHERE id = (SELECT c1 FROM c))
+  AND (SELECT count(*) = 1 AND bool_and(note = 'Paid ₹10,000 of ₹31,500 · with CRM') FROM public.call_logs WHERE call_id = (SELECT pc1 FROM pc) AND event = 'package_started')
+  AND NOT EXISTS (SELECT 1 FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_started')
   AND (SELECT done_at IS NOT NULL FROM public.purchase_stages WHERE purchase_id = (SELECT p1 FROM p) AND stage = 'package_call')
-  AND (SELECT count(*) = 3 AND bool_and(package_purchase_id = (SELECT id FROM public.purchases WHERE parent_purchase_id = (SELECT p1 FROM p)) AND NOT after_handover)
+  AND (SELECT count(*) = 2 AND bool_and(package_purchase_id = (SELECT id FROM public.purchases WHERE parent_purchase_id = (SELECT p1 FROM p)) AND NOT after_handover)
        FROM public.package_payments WHERE purchase_id = (SELECT p1 FROM p))
   AND NOT (SELECT public.purchase_is_open(pu) FROM public.purchases pu WHERE pu.id = (SELECT p1 FROM p));
 
@@ -170,7 +194,7 @@ SELECT 'after the handover the coordinator cannot add payments; another CRM cann
 SELECT 'the client''s CRM adds ₹5,000', pg_temp.add('04', (SELECT p1 FROM p), (SELECT crm_b FROM t), 5000) = 'paid';
 SELECT 'it is marked as paid after the handover and belongs to the package; the coordinator''s call history gets no new line',
   (SELECT after_handover AND package_purchase_id IS NOT NULL AND counted_at IS NOT NULL FROM public.package_payments WHERE id = '5eed0000-0000-4000-8000-0000000e0f04')
-  AND (SELECT count(*) = 2 FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_part_paid');
+  AND (SELECT count(*) = 1 FROM public.call_logs WHERE call_id = (SELECT c1 FROM c) AND event = 'package_part_paid');
 SELECT 'overpayment refused: remaining is ₹16,500',
   pg_temp.fails_with(pg_temp.add_sql((SELECT p1 FROM p), (SELECT admin FROM t), 16501), 'The amount is more than the remaining balance (₹16,500).');
 SELECT 'a super admin adds the last ₹16,500', pg_temp.add('05', (SELECT p1 FROM p), (SELECT admin FROM t), 16500) = 'paid';
@@ -215,10 +239,11 @@ SELECT public.package_amounts_save((SELECT admin FROM t), 50000, 200000, '[{"ses
 SELECT 'saved; a package already paid up to the new, lower start amount (p3, ₹2,000) starts now and gets a CRM',
   (SELECT first_min_paise = 50000 AND start_paise = 200000 AND jsonb_array_length(milestones) = 2 FROM public.packages WHERE is_active)
   AND (SELECT count(*) = 1 AND bool_and(crm_id IN ((SELECT crm_a FROM t), (SELECT crm_b FROM t))) FROM public.purchases WHERE parent_purchase_id = (SELECT p3 FROM p))
-  AND (SELECT status = 'closed' AND outcome = 'package_started' FROM public.calls WHERE id = (SELECT c3 FROM c));
+  AND (SELECT status = 'closed' AND outcome = 'part_paid' FROM public.calls WHERE id = (SELECT c3 FROM c))
+  AND (SELECT status = 'closed' AND outcome = 'package_started' FROM public.calls WHERE purchase_id = (SELECT p3 FROM p) AND kind = 'pending_payment');
 
 -- 7. Who sees what (database rules).
-GRANT SELECT ON t, p, c, co TO authenticated;
+GRANT SELECT ON t, p, c, co, pc TO authenticated;
 SELECT 'as CRM B', set_config('request.jwt.claims', json_build_object('sub', '5eed0000-0000-4000-8000-0000000e0d02', 'role', 'authenticated')::text, true) IS NOT NULL;
 SET LOCAL ROLE authenticated;
 SELECT 'CRM: the dashboard lists only their own clients'' packages: name, phone, started, paid, remaining, fully paid',
@@ -227,8 +252,8 @@ SELECT 'CRM: the dashboard lists only their own clients'' packages: name, phone,
    FROM public.crm_packages() WHERE parent_purchase_id = (SELECT p1 FROM p))
   AND (SELECT bool_and(crm_id = (SELECT crm_b FROM t) AND crm_name = 'Test CRM B') FROM public.crm_packages())
   AND NOT EXISTS (SELECT 1 FROM public.crm_packages() WHERE parent_purchase_id = (SELECT p4 FROM p));
-SELECT 'CRM: reads the five package payments of that package (with proof links), and only payments of their own clients'' packages',
-  (SELECT count(*) = 5 AND bool_and(proof_url IS NOT NULL) FROM public.package_payments WHERE purchase_id = (SELECT p1 FROM p))
+SELECT 'CRM: reads the four package payments of that package (with proof links), and only payments of their own clients'' packages',
+  (SELECT count(*) = 4 AND bool_and(proof_url IS NOT NULL) FROM public.package_payments WHERE purchase_id = (SELECT p1 FROM p))
   AND NOT EXISTS (SELECT 1 FROM public.package_payments WHERE purchase_id = (SELECT p4 FROM p))
   AND (SELECT bool_and(package_purchase_id IN (SELECT id FROM public.crm_packages())) FROM public.package_payments);
 SELECT 'CRM: no clients, assessments, answers, results, client details, conclusions, safety alerts, questionnaire versions, purchases, assessment payments, calls or package settings',
@@ -245,11 +270,11 @@ SELECT 'as the coordinator of client 1', set_config('request.jwt.claims',
 SET LOCAL ROLE authenticated;
 SELECT 'coordinator: still sees the assessment purchase and its closed Package call; no Package purchase row; nothing from the CRM dashboard',
   (SELECT count(*) = 1 FROM public.purchases WHERE id = (SELECT p1 FROM p))
-  AND (SELECT count(*) = 1 FROM public.calls WHERE id = (SELECT c1 FROM c) AND outcome = 'package_started')
+  AND (SELECT count(*) = 1 FROM public.calls WHERE id = (SELECT pc1 FROM pc) AND outcome = 'package_started')
   AND (SELECT count(*) = 0 FROM public.purchases WHERE kind = 'package')
   AND (SELECT count(*) = 0 FROM public.crm_packages());
-SELECT 'coordinator: sees only the three payments collected before the handover (₹10,000), not the two made after it',
-  (SELECT count(*) = 3 AND sum(amount_paise) = 1000000 AND bool_and(NOT after_handover) FROM public.package_payments WHERE purchase_id = (SELECT p1 FROM p));
+SELECT 'coordinator: sees only the two payments collected before the handover (₹10,000), not the two made after it',
+  (SELECT count(*) = 2 AND sum(amount_paise) = 1000000 AND bool_and(NOT after_handover) FROM public.package_payments WHERE purchase_id = (SELECT p1 FROM p));
 RESET ROLE;
 
 SELECT 'as super admin', set_config('request.jwt.claims',
@@ -257,7 +282,7 @@ SELECT 'as super admin', set_config('request.jwt.claims',
 SET LOCAL ROLE authenticated;
 SELECT 'super admin: every package on the CRM dashboard, every package payment',
   (SELECT count(*) FILTER (WHERE parent_purchase_id IN ((SELECT p1 FROM p), (SELECT p3 FROM p), (SELECT p4 FROM p))) = 3 FROM public.crm_packages())
-  AND (SELECT count(*) = 5 FROM public.package_payments WHERE purchase_id = (SELECT p1 FROM p))
+  AND (SELECT count(*) = 4 FROM public.package_payments WHERE purchase_id = (SELECT p1 FROM p))
   AND (SELECT next_session = 3 AND next_paid_paise = 3150000 AND remaining_paise = 2950000 FROM public.crm_packages() WHERE parent_purchase_id = (SELECT p3 FROM p));
 RESET ROLE;
 SELECT 'back to the server role', set_config('request.jwt.claims', '', true) IS NOT NULL;
