@@ -44,18 +44,19 @@ const PNG = Uint8Array.from(
 );
 
 describe.skipIf(!RUN)('staging: manual package payment with proof', () => {
-  it('records it with the fixed amount, a real proof in Drive, the Package purchase and the closed Package call', async () => {
+  it('records the full amount with a real proof in Drive, the Package purchase (with CRM) and the closed Package call', async () => {
     const { createAdminClient } = await import('../lib/supabase/admin');
-    const { recordPackagePayment, packageOfferFor } = await import('../lib/services/packages');
+    const { recordPackagePayment, packageBalanceFor } = await import('../lib/services/packages');
     const db = createAdminClient();
     const { data: purchase } = await db.from('purchases').select('id, coordinator_id').eq('client_id', KIRAN).eq('kind', 'assessment').single();
     const purchaseId = purchase!.id as string;
 
-    const offer = await packageOfferFor(purchaseId);
-    expect(offer, 'Kiran Test needs an open offer: run staging-e2e-package-setup.sql (once per database)').not.toBeNull();
-    expect(offer!.amount_paise).toBe(3_150_000);
+    const balance = await packageBalanceFor(purchaseId);
+    expect(balance, 'Kiran Test needs an open package: run staging-e2e-package-setup.sql (once per database)').not.toBeNull();
+    expect(balance!.remaining_paise).toBe(3_150_000);
 
     const form = new FormData();
+    form.set('amount', '31500');
     form.set('method', 'bank_transfer');
     form.set('paidOn', new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }));
     form.set('reference', `E2E-UTR-${Date.now()}`);
@@ -82,12 +83,12 @@ describe.skipIf(!RUN)('staging: manual package payment with proof', () => {
     expect(pay!.recorded_by).toBe(purchase!.coordinator_id);
     expect(pkg).toHaveLength(1);
     expect(pkg![0]).toMatchObject({ kind: 'package', status: 'paid', amount_paise: 3_150_000, source: 'manual', coordinator_id: purchase!.coordinator_id });
-    expect(call).toEqual({ status: 'closed', outcome: 'package_paid' });
+    expect(call).toEqual({ status: 'closed', outcome: 'package_started' });
     expect(stage!.status).toBe('done');
     expect(new Date(stage!.done_at).getTime()).toBe(new Date(pay!.paid_at).getTime());
 
-    // A second package payment for the same purchase is refused, before any upload.
-    expect(await packageOfferFor(purchaseId)).toBeNull();
+    // The package has started: the coordinator can add nothing more (refused before any upload).
+    expect(await packageBalanceFor(purchaseId)).toBeNull();
     const second = await recordPackagePayment(purchaseId, form);
     expect(second.ok).toBe(false);
 

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { requireStaff } from '../../../lib/auth';
+import { CRM_HOME, isCrm } from '../../../lib/roles';
 import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
 import { CreateClientForm } from './CreateClientForm';
@@ -11,6 +12,7 @@ export default async function NewClientPage() {
   const { profile } = staff;
   // Counsellors add no clients (they see only their own; the database refuses it too).
   if (profile.role === 'counsellor') redirect('/clients');
+  if (isCrm(profile.role)) redirect(CRM_HOME);
 
   return (
     <AdminShell fullName={profile.full_name} role={profile.role}>

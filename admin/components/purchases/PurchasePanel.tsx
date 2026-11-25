@@ -16,7 +16,7 @@ import { presentationLabel } from '../../lib/booking';
 import { PURCHASE_KIND_LABELS } from '../../lib/purchases';
 import { buildJourney, type JourneyTask, type JourneyTaskKey } from '../../lib/journey';
 import type { PurchaseDetail, PurchasePayment } from '../../lib/services/purchases';
-import type { PackagePaid } from '../../lib/package';
+import { PACKAGE_STARTED_LABEL, neededToStart, rupees, type PackagePayment, type PackageState } from '../../lib/package';
 
 const PAYMENT_STATUS: Record<string, string> = {
   created: 'Not completed',
@@ -71,7 +71,7 @@ function PaymentItem({ p }: { p: PurchasePayment }) {
   );
 }
 
-function PackagePaymentItem({ p }: { p: PackagePaid }) {
+function PackagePaymentItem({ p }: { p: PackagePayment }) {
   const manual = p.provider === 'offline';
   return (
     <li className="rounded-card border border-sand p-4">
@@ -79,7 +79,7 @@ function PackagePaymentItem({ p }: { p: PackagePaid }) {
         Package · {manual ? 'manual payment' : 'in the app'} · {formatAmount(p.amount_paise)}
       </p>
       <dl className="grid gap-1.5">
-        <Row label="Status">Paid</Row>
+        <Row label="Status">{p.refund_needed ? 'Refund needed · not counted' : 'Paid'}</Row>
         <Row label="Method">{paymentMethodLabel(p)}</Row>
         <Row label="Paid">{formatDateTime(p.paid_at)}</Row>
         {manual && (
@@ -87,13 +87,51 @@ function PackagePaymentItem({ p }: { p: PackagePaid }) {
             <Row label="Reference">
               <span className="font-mono text-[12px]">{p.reference ?? '—'}</span>
             </Row>
-            <Row label="Verified by coordinator">{p.recorded_by_name ?? '—'}</Row>
-            <Row label="Accounts check">Pending</Row>
+            <Row label={p.after_handover ? 'Recorded by' : 'Verified by coordinator'}>{p.recorded_by_name ?? '—'}</Row>
+            <Row label="Accounts check">{p.accounts_check === 'checked' ? 'Checked' : 'Pending'}</Row>
             <Proof url={p.proof_url} />
           </>
         )}
       </dl>
     </li>
+  );
+}
+
+/**
+ * The package at a glance, once anything is paid for it (or it can be paid): Package · Paid so far · Remaining and
+ * how much is still needed to start the sessions. Once started it is read-only for the coordinator ("Package started
+ * – with CRM"): they see what they collected, not what came after the handover.
+ */
+function PackageSummary({ pkg, canOpenCrm }: { pkg: PackageState; canOpenCrm: boolean }) {
+  if (pkg.total_paise === null) return null;
+  const needed = pkg.start_paise !== null ? neededToStart(pkg.paid_paise, pkg.start_paise) : 0;
+  return (
+    <section aria-labelledby="package-summary" className="mb-6 rounded-card border border-sand bg-cream p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="package-summary" className="m-0 text-[16px] font-semibold text-teal">
+          Package
+        </h3>
+        {pkg.started && <span className="rounded-full bg-teal px-3 py-0.5 text-[12px] font-semibold leading-5 text-white">{PACKAGE_STARTED_LABEL}</span>}
+      </div>
+      <dl className="m-0 mt-2 grid gap-1.5">
+        <Row label="Package">{formatAmount(pkg.total_paise)}</Row>
+        <Row label={pkg.complete ? 'Paid so far' : 'Collected before the handover'}>
+          <span className="font-semibold text-teal">{formatAmount(pkg.paid_paise)}</span>
+        </Row>
+        {pkg.complete && <Row label="Remaining">{formatAmount(Math.max(pkg.total_paise - pkg.paid_paise, 0))}</Row>}
+      </dl>
+      {!pkg.started && pkg.start_paise !== null && (
+        <p className="m-0 mt-2 text-[14px] font-medium text-teal">
+          {needed > 0 ? `${rupees(needed)} more needed to start sessions` : 'Enough is paid to start sessions.'}
+        </p>
+      )}
+      {pkg.started && !pkg.complete && <p className="m-0 mt-2 text-[13px] text-ink-muted">The CRM team takes it from here. This purchase is read-only now.</p>}
+      {pkg.started && canOpenCrm && (
+        <a href="/crm" className="mt-2 inline-flex min-h-11 items-center text-[14px] font-semibold text-teal hover:underline">
+          Open in CRM
+        </a>
+      )}
+    </section>
   );
 }
 
@@ -122,7 +160,8 @@ export function PurchasePanel({
       payments: p.payments,
       blockedTries: p.blocked_tries,
       presentation: p.presentation,
-      packagePaid: p.package_paid,
+      packagePayments: p.pkg.payments,
+      packageStartPaise: p.pkg.start_paise,
       slotLabel: presentationLabel,
     },
     now
@@ -133,7 +172,15 @@ export function PurchasePanel({
   const main = (key: JourneyTaskKey) => (firstOpen === key ? 'primary' : 'secondary');
   const markDone = (key: JourneyTaskKey, variant: 'primary' | 'secondary' = main(key)) => {
     const t = task(key);
-    return t.callId ? <CallDoneButton callId={t.callId} kind={key === 'presentation' ? 'booking' : key} priorCalls={t.priorCalls} variant={variant} /> : null;
+    return t.callId ? (
+      <CallDoneButton
+        callId={t.callId}
+        kind={key === 'presentation' ? 'booking' : key}
+        priorCalls={t.priorCalls}
+        adminOnlyNotInterested={key === 'package' && p.pkg.paid_paise > 0 && !canCancelBooking}
+        variant={variant}
+      />
+    ) : null;
   };
 
   const actions: Partial<Record<JourneyTaskKey, React.ReactNode>> = {
@@ -179,7 +226,8 @@ export function PurchasePanel({
     ),
   };
 
-  const paymentCount = p.payments.length + (p.package_paid ? 1 : 0);
+  const showPackage = p.pkg.payments.length > 0 || p.pkg.started || p.can_add_package_payment;
+  const paymentCount = p.payments.length + p.pkg.payments.length;
   return (
     <SidePanel title={p.client_name ?? 'Not registered yet'} closeHref={closeHref}>
       <div className="mb-5 grid gap-1">
@@ -200,6 +248,8 @@ export function PurchasePanel({
         </p>
       </div>
 
+      {showPackage && <PackageSummary pkg={p.pkg} canOpenCrm={canCancelBooking} />}
+
       <JourneyView tasks={tasks} actions={actions} />
 
       <details className="group border-t border-sand pt-3">
@@ -213,7 +263,9 @@ export function PurchasePanel({
           {p.payments.map((pay) => (
             <PaymentItem key={pay.id} p={pay} />
           ))}
-          {p.package_paid && <PackagePaymentItem p={p.package_paid} />}
+          {p.pkg.payments.map((pay) => (
+            <PackagePaymentItem key={pay.id} p={pay} />
+          ))}
         </ul>
       </details>
     </SidePanel>

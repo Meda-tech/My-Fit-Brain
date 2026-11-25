@@ -13,6 +13,7 @@ import {
   CALLS_BEFORE_NOT_INTERESTED,
   FOLLOW_UP_WORKING_HOURS,
   NEEDS_EARLIER_CALL,
+  PACKAGE_PAID_ADMIN_ONLY,
   addWorkingHours,
   dueLabel,
   followUpIn2Hours,
@@ -50,12 +51,15 @@ export function CallDoneButton({
   callId,
   kind,
   priorCalls,
+  adminOnlyNotInterested = false,
   variant = 'secondary',
   className,
 }: {
   callId: string;
   kind: CallKind;
   priorCalls: number;
+  /** A Package call with a package amount already paid, opened by someone who is not a super admin. */
+  adminOnlyNotInterested?: boolean;
   variant?: 'primary' | 'secondary';
   className?: string;
 }) {
@@ -97,7 +101,8 @@ export function CallDoneButton({
     if (needsFollowUp(c) && choice !== c) setMode('in2h');
   };
 
-  const blocked = choice === 'not_interested' && priorCalls < CALLS_BEFORE_NOT_INTERESTED;
+  const adminOnly = choice === 'not_interested' && adminOnlyNotInterested;
+  const blocked = adminOnly || (choice === 'not_interested' && priorCalls < CALLS_BEFORE_NOT_INTERESTED);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,7 +245,7 @@ export function CallDoneButton({
               {choice === 'not_interested' &&
                 (blocked ? (
                   <Notice variant="info" role="status">
-                    {NEEDS_EARLIER_CALL}
+                    {adminOnly ? PACKAGE_PAID_ADMIN_ONLY : NEEDS_EARLIER_CALL}
                   </Notice>
                 ) : (
                   <fieldset>

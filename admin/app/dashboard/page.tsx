@@ -11,7 +11,9 @@ import {
   ClipboardCheck,
   ClipboardList,
 } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { requireStaff } from '../../lib/auth';
+import { CRM_HOME, isCrm } from '../../lib/roles';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { ClientStatusPill } from '../../components/ClientStatusPill';
@@ -54,6 +56,7 @@ function MetricCard({
 export default async function DashboardPage() {
   const staff = await requireStaff();
   const { profile, isSuperAdmin } = staff;
+  if (isCrm(profile.role)) redirect(CRM_HOME);
 
   const [clients, team, assessments] = await Promise.all([
     listClients(),

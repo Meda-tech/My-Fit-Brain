@@ -8,7 +8,7 @@ export const RELATIONSHIP_STATUSES = [
 ] as const;
 export type RelationshipStatus = (typeof RELATIONSHIP_STATUSES)[number];
 
-export const STAFF_ROLES = ['super_admin', 'coordinator', 'counsellor'] as const;
+export const STAFF_ROLES = ['super_admin', 'coordinator', 'counsellor', 'crm'] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export const MIN_AGE = 18;

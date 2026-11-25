@@ -71,7 +71,7 @@ export function PackageSettingsForm({ settings, assessmentPrice }: { settings: P
       </div>
       <div className="rounded-card border border-sand bg-cream p-4 text-[14px] text-ink-soft">
         <p className="m-0">Already paid for the assessment (advance): ₹{assessmentPrice.toLocaleString('en-IN')}</p>
-        <p className="m-0 mt-1 font-semibold text-teal">The client pays now: {toPay === null ? '—' : `₹${toPay.toLocaleString('en-IN')}`}</p>
+        <p className="m-0 mt-1 font-semibold text-teal">Package amount to pay: {toPay === null ? '—' : `₹${toPay.toLocaleString('en-IN')}`}</p>
       </div>
       <div className="flex justify-end sm:col-span-2">
         <Button type="submit" loading={saving} loadingText="Saving...">

@@ -16,7 +16,7 @@ const log = (over: Partial<JourneyInput['calls'][number]['logs'][number]>) => ({
   ...over,
 });
 
-const base: Omit<JourneyInput, 'calls' | 'payments' | 'presentation' | 'packagePaid' | 'status'> = { coordinatorName: 'Test Coordinator', slotLabel };
+const base: Omit<JourneyInput, 'calls' | 'payments' | 'presentation' | 'packagePayments' | 'status'> = { coordinatorName: 'Test Coordinator', slotLabel };
 
 describe('journey: a finished journey', () => {
   const input: JourneyInput = {
@@ -41,7 +41,7 @@ describe('journey: a finished journey', () => {
         logs: [log({ at: '2026-11-24T06:00:00Z', choice: 'agreed', follow_up_at: '2026-11-24T09:00:00Z' })] },
     ],
     presentation: { counsellor_name: 'Test Counsellor', on_date: '2026-11-23', start_time: '10:00:00', end_time: '10:30:00', booked_at: '2026-11-20T10:00:00Z', booked_by_name: 'Test Coordinator', done_at: '2026-11-23T05:00:00Z', done_by_name: 'Test Counsellor' },
-    packagePaid: { amount_paise: 3150000, paid_at: '2026-11-24T10:00:00Z', provider: 'razorpay', method: 'netbanking', recorded_by_name: null },
+    packagePayments: [{ amount_paise: 3150000, paid_at: '2026-11-24T10:00:00Z', provider: 'razorpay', method: 'netbanking', recorded_by_name: null }],
   };
   const j = buildJourney(input, NOW);
 
@@ -68,7 +68,7 @@ describe('journey: a finished journey', () => {
     expect(j[1].items.map((i) => i.title)).toEqual(['Assessment started', 'Assessment completed']);
     expect(j[2].items[0]).toMatchObject({ title: 'Presentation booked', detail: 'Test Counsellor · 2026-11-23 10:00', by: 'Test Coordinator' });
     expect(j[3].items[0]).toMatchObject({ title: 'Marked done', by: 'Test Counsellor' });
-    expect(j[4].items.map((i) => i.title)).toEqual(['Client agreed – will pay', 'Package paid in the app']);
+    expect(j[4].items.map((i) => i.title)).toEqual(['Client agreed – will pay', 'Package payment in the app']);
   });
 });
 
@@ -81,7 +81,7 @@ describe('journey: in progress', () => {
         payments: [{ status: 'paid', provider: 'razorpay', method: 'card', amount_paise: 350000, currency: 'INR', paid_at: '2026-11-24T05:00:00Z', created_at: '2026-11-24T04:55:00Z', refund_status: null, recorded_by_name: null, attempt: { started_at: '2026-11-24T06:00:00Z', completed_at: null } }],
         calls: [{ id: 'a', kind: 'assessment', status: 'open', outcome: null, due_at: '2026-11-24T07:00:00Z', closed_at: null, closed_note: null, prior_calls: 0, logs: [] }],
         presentation: null,
-        packagePaid: null,
+        packagePayments: [],
       },
       NOW
     );
@@ -100,7 +100,7 @@ describe('journey: in progress', () => {
         calls: [{ id: 'p', kind: 'payment', status: 'closed', outcome: 'not_interested', due_at: '2026-11-24T07:00:00Z', closed_at: '2026-11-24T08:00:00Z', closed_note: null, prior_calls: 2,
           logs: [log({ at: '2026-11-24T06:00:00Z', choice: 'not_picked', follow_up_at: '2026-11-24T07:00:00Z' }), log({ at: '2026-11-24T08:00:00Z', choice: 'not_interested', reason: 'too_costly', note: 'Maybe next month' })] }],
         presentation: null,
-        packagePaid: null,
+        packagePayments: [],
       },
       NOW
     );
@@ -117,12 +117,83 @@ describe('journey: in progress', () => {
         payments: [],
         calls: [{ id: 'k', kind: 'package', status: 'closed', outcome: 'package_paid', due_at: '2026-11-24T07:00:00Z', closed_at: '2026-11-24T06:00:00Z', closed_note: null, prior_calls: 0, logs: [] }],
         presentation: null,
-        packagePaid: { amount_paise: 3150000, paid_at: '2026-11-24T06:00:00Z', provider: 'offline', method: 'bank_transfer', recorded_by_name: 'Test Coordinator' },
+        packagePayments: [{ amount_paise: 3150000, paid_at: '2026-11-24T06:00:00Z', provider: 'offline', method: 'bank_transfer', recorded_by_name: 'Test Coordinator' }],
       },
       NOW
     );
     expect(j[4]).toMatchObject({ status: 'done', actual: '2026-11-24T06:00:00Z', actualLate: false });
-    expect(j[4].items[0]).toMatchObject({ title: 'Package paid · manual payment', detail: 'Bank transfer · ₹31,500', by: 'Test Coordinator' });
+    expect(j[4].items[0]).toMatchObject({ title: 'Package payment · manual payment', detail: 'Bank transfer · ₹31,500', by: 'Test Coordinator' });
+  });
+
+  it('part payments: below the start amount the Package call stays open, each payment shows how far the client is', () => {
+    const j = buildJourney(
+      {
+        ...base,
+        status: 'paid',
+        payments: [],
+        calls: [{ id: 'k', kind: 'package', status: 'open', outcome: null, due_at: '2026-11-26T07:00:00Z', closed_at: null, closed_note: null, prior_calls: 1,
+          logs: [
+            log({ at: '2026-11-24T06:10:00Z', entry: 'event', event: 'package_part_paid', note: '₹4,000 · paid ₹4,000 of ₹10,000 to start' }),
+            log({ at: '2026-11-24T07:00:00Z', choice: 'talked', follow_up_at: '2026-11-26T07:00:00Z' }),
+          ] }],
+        presentation: null,
+        packagePayments: [
+          { amount_paise: 400000, paid_at: '2026-11-24T06:00:00Z', provider: 'offline', method: 'upi', recorded_by_name: 'Test Coordinator' },
+          { amount_paise: 50000, paid_at: '2026-11-24T08:00:00Z', provider: 'offline', method: 'upi', recorded_by_name: 'Test Coordinator' },
+        ],
+        packageStartPaise: 1000000,
+      },
+      NOW
+    );
+    expect(j[4]).toMatchObject({ status: 'open', actual: null, callId: 'k' });
+    // The history event of a part payment is not shown twice: the payment line carries it.
+    expect(j[4].items.map((i) => i.title)).toEqual(['Package payment · manual payment', 'Talked to client', 'Package payment · manual payment']);
+    expect(j[4].items[0].detail).toBe('UPI · ₹4,000 · paid ₹4,000 of ₹10,000 to start');
+    expect(j[4].items[2].detail).toBe('UPI · ₹500 · paid ₹4,500 of ₹10,000 to start');
+  });
+
+  it('at the start amount the Package call is done: "Package started – with CRM"; a payment over the balance shows as refund needed', () => {
+    const j = buildJourney(
+      {
+        ...base,
+        status: 'paid',
+        payments: [],
+        calls: [{ id: 'k', kind: 'package', status: 'closed', outcome: 'package_started', due_at: '2026-11-26T07:00:00Z', closed_at: '2026-11-24T09:00:00Z', closed_note: null, prior_calls: 0,
+          logs: [log({ at: '2026-11-24T09:00:00Z', entry: 'event', event: 'package_started', note: 'Paid ₹10,000 of ₹31,500 · with CRM' })] }],
+        presentation: null,
+        packagePayments: [
+          { amount_paise: 400000, paid_at: '2026-11-24T06:00:00Z', provider: 'offline', method: 'upi', recorded_by_name: 'Test Coordinator' },
+          { amount_paise: 600000, paid_at: '2026-11-24T09:00:00Z', provider: 'offline', method: 'bank_transfer', recorded_by_name: 'Test Coordinator' },
+          { amount_paise: 3150000, paid_at: '2026-11-24T09:30:00Z', provider: 'razorpay', method: 'card', recorded_by_name: null, refund_needed: true },
+        ],
+        packageStartPaise: 1000000,
+      },
+      NOW
+    );
+    expect(j[4]).toMatchObject({ status: 'done', actual: '2026-11-24T09:00:00Z', statusNote: 'Package started – with CRM', callId: null });
+    expect(j[4].items.map((i) => i.title)).toEqual([
+      'Package payment · manual payment', 'Package payment · manual payment', 'Package started – with CRM', 'Package payment – refund needed',
+    ]);
+    // The payment that reaches the start amount carries no "to start" text.
+    expect(j[4].items[1].detail).toBe('Bank transfer · ₹6,000');
+    expect(j[4].items[2].detail).toBe('Paid ₹10,000 of ₹31,500 · with CRM');
+    expect(j[4].items[3].detail).toBe('Razorpay · Card · ₹31,500 · more than the remaining balance');
+  });
+
+  it('the full amount paid in the client app with no call made: not needed (the client bought it in the app)', () => {
+    const j = buildJourney(
+      {
+        ...base,
+        status: 'paid',
+        payments: [],
+        calls: [{ id: 'k', kind: 'package', status: 'closed', outcome: 'package_started', due_at: '2026-11-26T07:00:00Z', closed_at: '2026-11-24T09:00:00Z', closed_note: null, prior_calls: 0, logs: [] }],
+        presentation: null,
+        packagePayments: [{ amount_paise: 3150000, paid_at: '2026-11-24T09:00:00Z', provider: 'razorpay', method: 'upi', recorded_by_name: null }],
+        packageStartPaise: 1000000,
+      },
+      NOW
+    );
+    expect(j[4]).toMatchObject({ status: 'not_needed', notNeeded: { what: 'client bought the package in the app', at: '2026-11-24T09:00:00Z' } });
   });
 });
 
@@ -140,7 +211,7 @@ describe('journey: a purchase from before the system (owner, 2026-11-21)', () =>
     // The Assessment call the go-live rule closed.
     calls: [{ id: 'a', kind: 'assessment', status: 'closed', outcome: 'before_go_live', due_at: '2026-11-01T09:00:00Z', closed_at: '2026-11-20T13:00:00Z', closed_note: 'Before the system: no automatic call.', prior_calls: 0, logs: [] }],
     presentation: null,
-    packagePaid: null,
+    packagePayments: [],
   };
 
   it('tasks 1–3 say "Before the system": nothing planned, nothing late, no call to mark; the presentation waits for the admin', () => {
@@ -211,7 +282,7 @@ describe('journey: tries after paying (owner, 2026-11-23)', () => {
       blockedTries: [{ at: '2026-11-23T05:00:00Z', signed_in: false }],
       calls: [],
       presentation: null,
-      packagePaid: null,
+      packagePayments: [],
     },
     NOW
   );
@@ -242,7 +313,7 @@ describe('journey: tries after paying (owner, 2026-11-23)', () => {
         calls: [{ id: 'x', kind: 'payment', status: 'closed', outcome: 'not_needed', due_at: '2026-11-23T05:00:00Z', closed_at: '2026-11-23T06:00:00Z',
           closed_note: 'Not needed – client already paid on 17 Nov 2026.', prior_calls: 0, logs: [] }],
         presentation: null,
-        packagePaid: null,
+        packagePayments: [],
       },
       NOW
     );

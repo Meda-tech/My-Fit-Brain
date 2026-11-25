@@ -4,13 +4,28 @@ import { createClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
 import { ProofStorageNotConfiguredError, isProofStorageConfigured, uploadProof } from '../google/drive';
-import { cleanReference, parseOfflinePayment, proofProblem } from '../offline-payments';
-import { parsePackageSettings, type PackageOffer, type PackageSettings } from '../package';
+import { ASSESSMENT_PRICE_PAISE, cleanReference, parseOfflinePayment, proofProblem } from '../offline-payments';
+import {
+  parsePackageAmount,
+  parsePackageAmounts,
+  parsePackageSettings,
+  readMilestones,
+  type PackageBalance,
+  type PackageSettings,
+} from '../package';
 import { PROOF_UPLOAD_FAILED, STORAGE_NOT_SET_UP } from './offline-payments';
 import { canViewPurchases, nameLookup } from './purchases';
 
-// Package (step 6): settings (super admins), the manual package payment (coordinators for their own clients, super
-// admins for anyone) and the lists. The database calculates the amount and checks every rule again.
+// Package (step 6; part payments and CRM since 2026-11-24): settings (super admins), the manual package payment and
+// the lists. A package can be paid in parts: coordinators add payments for their own clients until the package
+// starts (paid in total reaches the start amount); after that the client's CRM does; super admins always. The
+// database fixes the package amount, checks every amount and every rule again, and decides when a package starts.
+
+/** Who may add a package payment at all (the database decides for which client and when). */
+export const PACKAGE_PAYMENT_ROLES = ['super_admin', 'coordinator', 'crm'] as const;
+export function canAddPackagePayments(role: string): boolean {
+  return (PACKAGE_PAYMENT_ROLES as readonly string[]).includes(role);
+}
 
 // --- Settings ----------------------------------------------------------------------------------------------
 
@@ -18,8 +33,14 @@ export async function getPackage(): Promise<PackageSettings | null> {
   const { profile } = await requireStaff();
   if (profile.role !== 'super_admin') return null;
   const db = await createClient();
-  const { data } = await db.from('packages').select('name, sessions, frequency, price_paise, updated_at').eq('is_active', true).maybeSingle();
-  return (data as PackageSettings | null) ?? null;
+  const { data } = await db
+    .from('packages')
+    .select('name, sessions, frequency, price_paise, first_min_paise, start_paise, milestones, updated_at')
+    .eq('is_active', true)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as Omit<PackageSettings, 'milestones'> & { milestones: unknown };
+  return { ...row, milestones: readMilestones(row.milestones) };
 }
 
 export async function savePackage(fields: { name: unknown; sessions: unknown; frequency: unknown; price: unknown }): Promise<{ success: boolean; error?: string }> {
@@ -41,39 +62,105 @@ export async function savePackage(fields: { name: unknown; sessions: unknown; fr
   return { success: true };
 }
 
-// --- The offer of one assessment purchase (for "Add package payment") ---------------------------------------
+const AMOUNT_MESSAGES = [
+  'Only super admins can change the package.',
+  'The package is not set up yet.',
+  'Enter the first payment minimum in whole rupees.',
+  'The start amount must be between the first payment minimum and the package amount.',
+  'Enter the milestones.',
+  'Each milestone needs a session number and an amount in whole rupees.',
+  'Milestone sessions must go up, from 1 to the number of sessions.',
+  'Milestone amounts must go up and never be more than the package amount.',
+];
 
-/** The package offer of a purchase the staff member may see, or null (not visible, not ready, or already paid). */
-export async function packageOfferFor(purchaseId: string): Promise<PackageOffer | null> {
+/** Package amounts (super admins): first payment minimum, start amount, milestones. Typed in rupees. */
+export async function savePackageAmounts(fields: {
+  firstMin: unknown;
+  start: unknown;
+  milestones: { session: unknown; amount: unknown }[];
+}): Promise<{ success: boolean; error?: string }> {
   const { profile } = await requireStaff();
-  if (!canViewPurchases(profile.role)) return null;
-  const db = await createClient();
-  const { data: visible } = await db.from('purchases').select('id').eq('id', purchaseId).maybeSingle();
-  if (!visible) return null;
-  const { data } = await createAdminClient().rpc('package_offer', { p_purchase: purchaseId });
-  const row = ((data ?? []) as PackageOffer[])[0];
-  return row ?? null;
+  if (profile.role !== 'super_admin') return { success: false, error: AMOUNT_MESSAGES[0] };
+  const current = await getPackage();
+  if (!current) return { success: false, error: AMOUNT_MESSAGES[1] };
+  const parsed = parsePackageAmounts(fields, { totalPaise: current.price_paise - ASSESSMENT_PRICE_PAISE, sessions: current.sessions });
+  if (!parsed.ok) return { success: false, error: parsed.error };
+  const { error } = await createAdminClient().rpc('package_amounts_save', {
+    p_by: profile.id,
+    p_first_min_paise: parsed.value.first_min_paise,
+    p_start_paise: parsed.value.start_paise,
+    p_milestones: parsed.value.milestones,
+  });
+  if (error) {
+    const known = AMOUNT_MESSAGES.find((m) => error.message.includes(m));
+    if (!known) console.error('package_amounts_save failed:', error.message);
+    return { success: false, error: known ?? 'The package amounts could not be saved. Please try again.' };
+  }
+  return { success: true };
+}
+
+// --- The balance of one assessment purchase (for "Add package payment") --------------------------------------
+
+/**
+ * The package balance of a purchase, or null when this staff member cannot add a payment for it now: not visible,
+ * the report presentation is not done yet, or (for a coordinator) the package has started and is with CRM.
+ * A CRM gets it only for a started package of their own client.
+ */
+export async function packageBalanceFor(purchaseId: string): Promise<PackageBalance | null> {
+  const { profile } = await requireStaff();
+  if (!canAddPackagePayments(profile.role)) return null;
+  const admin = createAdminClient();
+  if (profile.role === 'crm') {
+    const { data: own } = await admin
+      .from('purchases')
+      .select('id')
+      .eq('parent_purchase_id', purchaseId)
+      .eq('kind', 'package')
+      .eq('status', 'paid')
+      .eq('crm_id', profile.id)
+      .maybeSingle();
+    if (!own) return null;
+  } else {
+    // RLS: a coordinator reads only the purchases of their own clients.
+    const db = await createClient();
+    const { data: visible } = await db.from('purchases').select('id').eq('id', purchaseId).eq('kind', 'assessment').maybeSingle();
+    if (!visible) return null;
+  }
+  const { data, error } = await admin.rpc('package_balance', { p_purchase: purchaseId });
+  if (error) {
+    console.error('package_balance failed:', error.message);
+    return null;
+  }
+  const row = ((data ?? []) as PackageBalance[])[0] ?? null;
+  if (!row) return null;
+  if (profile.role === 'coordinator' && row.started) return null;
+  return row;
 }
 
 // --- Manual package payment --------------------------------------------------------------------------------
 
 const MANUAL_MESSAGES = [
-  'Only coordinators and super admins can add a package payment.',
+  'Only coordinators, CRM and super admins can add a package payment.',
   'This purchase was not found.',
   "Only this client's coordinator can add their package payment.",
-  'A package is already paid for this purchase.',
+  "Only this client's CRM can add their package payment.",
   'A package payment can be added after the report presentation is done.',
+  'This package has started and is with CRM now.',
+  'This package is already paid in full.',
+  'Enter the amount in whole rupees.',
   'Choose how the client paid.',
   'Enter the reference ID (UPI transaction ID, bank UTR or other).',
   'The note can be at most 500 characters.',
   'The payment date cannot be in the future.',
   'Add the payment proof (screenshot or PDF).',
 ];
+/** Database messages that carry an amount: shown as they are. */
+const AMOUNT_REFUSALS = /(The amount is more than the remaining balance \(₹[\d,]+\)\.|The first payment must be at least ₹[\d,]+\.)/;
 
 /** Other payments (assessment or package) with the same reference. For a warning only. */
 export async function packageReferenceUses(raw: string): Promise<number> {
   const { profile } = await requireStaff();
-  if (!canViewPurchases(profile.role)) return 0;
+  if (!canAddPackagePayments(profile.role)) return 0;
   const reference = cleanReference(raw);
   if (!reference) return 0;
   const admin = createAdminClient();
@@ -87,16 +174,20 @@ export async function packageReferenceUses(raw: string): Promise<number> {
   return (a.count ?? 0) + (b.count ?? 0);
 }
 
-export type RecordPackageResult = { ok: true; paymentId: string; duplicateReference: boolean; refundNeeded: boolean } | { ok: false; error: string };
+export type RecordPackageResult =
+  | { ok: true; paymentId: string; duplicateReference: boolean; refundNeeded: boolean }
+  | { ok: false; error: string };
 
 /**
- * "Add package payment": the same form and order as the ₹3,500 manual payment. 1. role, fields and the offer;
- * 2. the proof goes to the SAME Google Drive folder first (if that fails nothing is saved); 3. the database saves
- * the paid payment with the amount it calculates, makes the Package purchase and closes the Package call.
+ * "Add package payment": the same form and order as the ₹3,500 manual payment, with an amount (a part payment is
+ * allowed). 1. role, fields, the balance and the amount (first payment at least the first minimum, never more than
+ * the remaining balance); 2. the proof goes to the SAME Google Drive folder first (if that fails nothing is saved);
+ * 3. the database checks everything again, saves the paid payment and counts it: below the start amount the Package
+ * call stays open; at the start amount the Package purchase is made and handed over to CRM.
  */
 export async function recordPackagePayment(purchaseId: string, form: FormData): Promise<RecordPackageResult> {
   const { profile } = await requireStaff();
-  if (!canViewPurchases(profile.role)) return { ok: false, error: MANUAL_MESSAGES[0] };
+  if (!canAddPackagePayments(profile.role)) return { ok: false, error: MANUAL_MESSAGES[0] };
 
   // The assessment field of the shared check is not used here (the purchase fixes it).
   const parsed = parseOfflinePayment({
@@ -114,9 +205,13 @@ export async function recordPackagePayment(purchaseId: string, form: FormData): 
   const problem = proofProblem(bytes);
   if (problem) return { ok: false, error: problem };
 
-  if (!(await packageOfferFor(purchaseId))) {
-    return { ok: false, error: 'A package payment cannot be added for this purchase now (not ready, or already paid).' };
+  const balance = await packageBalanceFor(purchaseId);
+  if (!balance) {
+    return { ok: false, error: 'A package payment cannot be added for this purchase now (not ready, or it is with CRM).' };
   }
+  const amount = parsePackageAmount(form.get('amount'), balance);
+  if (!amount.ok) return amount;
+
   if (!isProofStorageConfigured()) {
     console.error('Package payment blocked: proof storage env missing or invalid.');
     return { ok: false, error: STORAGE_NOT_SET_UP };
@@ -133,11 +228,12 @@ export async function recordPackagePayment(purchaseId: string, form: FormData): 
     return { ok: false, error: err instanceof ProofStorageNotConfiguredError ? STORAGE_NOT_SET_UP : PROOF_UPLOAD_FAILED };
   }
 
-  // 3. The paid package payment (the database fixes the amount).
-  const { data, error } = await createAdminClient().rpc('package_payment_manual', {
+  // 3. The paid package payment (the database checks the amount again and counts it).
+  const { data, error } = await createAdminClient().rpc('package_payment_add', {
     p_id: paymentId,
     p_purchase: purchaseId,
     p_by: profile.id,
+    p_amount: amount.paise,
     p_method: input.method,
     p_reference: input.reference,
     p_note: input.note,
@@ -146,7 +242,7 @@ export async function recordPackagePayment(purchaseId: string, form: FormData): 
     p_proof_url: uploaded.webViewLink,
   });
   if (error) {
-    const known = MANUAL_MESSAGES.find((m) => error.message.includes(m));
+    const known = MANUAL_MESSAGES.find((m) => error.message.includes(m)) ?? error.message.match(AMOUNT_REFUSALS)?.[1];
     console.error(`Package payment ${paymentId} not saved (proof kept in Drive, file ${uploaded.fileId}):`, error.message);
     return { ok: false, error: known ?? 'The payment could not be saved. Please try again.' };
   }
@@ -183,8 +279,8 @@ type One<T> = T | T[] | null;
 const one = <T>(v: One<T>): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 
 /**
- * Package payments, newest first. RLS decides: super admins see all, a coordinator only those of their own
- * clients, counsellors none.
+ * Package payments, newest first. RLS decides: super admins see all; a coordinator only those of their own clients
+ * made up to the handover to CRM; counsellors none.
  */
 export async function listPackagePayments(page: number): Promise<{ rows: PackagePaymentRow[]; total: number }> {
   const { profile } = await requireStaff();
@@ -222,15 +318,19 @@ export interface PackagePurchaseRow {
   client_name: string | null;
   phone: string;
   coordinator_name: string | null;
+  /** The whole package amount. */
   amount_paise: number;
+  /** Paid so far (the payments that count). */
+  paid_paise: number;
   status: string;
   source: 'pay_page' | 'manual';
+  /** When the package started (paid in total reached the start amount). */
   paid_at: string | null;
   package_name: string | null;
   sessions: number | null;
 }
 
-/** Package purchases (super admins only: they belong to the future CRM role, not to the coordinators' screen). */
+/** Package purchases (super admins only here; the CRM page is where they are worked on). */
 export async function listPackagePurchases(): Promise<PackagePurchaseRow[]> {
   const { profile } = await requireStaff();
   if (profile.role !== 'super_admin') return [];
@@ -242,20 +342,30 @@ export async function listPackagePurchases(): Promise<PackagePurchaseRow[]> {
     .order('paid_at', { ascending: false })
     .limit(500);
   if (error) throw new Error(`Could not read package purchases: ${error.message}`);
-  type Raw = Omit<PackagePurchaseRow, 'client_name' | 'coordinator_name' | 'package_name' | 'sessions'> & { client_id: string | null; coordinator_id: string | null };
+  type Raw = Omit<PackagePurchaseRow, 'client_name' | 'coordinator_name' | 'package_name' | 'sessions' | 'paid_paise'> & { client_id: string | null; coordinator_id: string | null };
   const raw = (data ?? []) as unknown as Raw[];
   const [names, { data: pays }] = await Promise.all([
     nameLookup(db, raw),
     raw.length
-      ? db.from('package_payments').select('package_purchase_id, package_name, sessions').in('package_purchase_id', raw.map((r) => r.id))
+      ? db
+          .from('package_payments')
+          .select('package_purchase_id, package_name, sessions, amount_paise, status, refund_status')
+          .in('package_purchase_id', raw.map((r) => r.id))
       : Promise.resolve({ data: [] }),
   ]);
-  const pkg = new Map(((pays ?? []) as { package_purchase_id: string; package_name: string; sessions: number }[]).map((p) => [p.package_purchase_id, p]));
+  type Pay = { package_purchase_id: string; package_name: string; sessions: number; amount_paise: number; status: string; refund_status: string | null };
+  const pkg = new Map<string, { package_name: string; sessions: number; paid: number }>();
+  for (const p of (pays ?? []) as Pay[]) {
+    const seen = pkg.get(p.package_purchase_id) ?? { package_name: p.package_name, sessions: p.sessions, paid: 0 };
+    if (p.status === 'paid' && !p.refund_status) seen.paid += p.amount_paise;
+    pkg.set(p.package_purchase_id, seen);
+  }
   return raw.map(({ client_id, coordinator_id, ...r }) => ({
     ...r,
     client_name: names.client({ client_id, phone: r.phone }),
     coordinator_name: names.coordinator(coordinator_id),
     package_name: pkg.get(r.id)?.package_name ?? null,
     sessions: pkg.get(r.id)?.sessions ?? null,
+    paid_paise: pkg.get(r.id)?.paid ?? 0,
   }));
 }

@@ -16,7 +16,7 @@ import {
   type CallKind,
   type CallReason,
 } from '../calls';
-import { canViewPurchases, nameLookup } from './purchases';
+import { canViewPurchases, nameLookup, packageAmounts, packageState, type RawPackagePayment } from './purchases';
 
 // Calls (step 2): My tasks and Mark as call done. Reads use the staff session (RLS: super admins all calls, a
 // coordinator the calls of their own clients). The one write goes through call_mark() in the database, which
@@ -37,6 +37,8 @@ export interface TaskRow {
   prior_calls: number;
   /** A Booking call whose presentation can be booked now. */
   can_book: boolean;
+  /** A Package call with a package amount already paid: Not interested is for super admins only. */
+  package_part_paid: boolean;
 }
 
 type One<T> = T | T[] | null;
@@ -52,6 +54,8 @@ interface TaskPurchase {
   status: string;
   purchase_stages: { stage: string; done_at: string | null }[] | null;
   presentation_bookings: { status: string; done_at: string | null; counsellor_id: string }[] | null;
+  amount_paise: number;
+  package_payments: RawPackagePayment[] | null;
 }
 
 interface RawTask {
@@ -73,8 +77,9 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
     .from('calls')
     .select(
       'id, kind, due_at, purchase_id, call_logs(entry), ' +
-        'purchases!inner(test_code, phone, client_id, coordinator_id, paid_at, status, purchase_payments(payments(created_at, status, attempt_id)), ' +
-        'purchase_stages(stage, done_at), presentation_bookings(status, done_at, counsellor_id))'
+        'purchases!inner(test_code, phone, client_id, coordinator_id, paid_at, status, amount_paise, purchase_payments(payments(created_at, status, attempt_id)), ' +
+        'purchase_stages(stage, done_at), presentation_bookings(status, done_at, counsellor_id), ' +
+        'package_payments!package_payments_purchase_id_fkey(id, amount_paise, paid_at, provider, method, status, refund_status, counted_at, after_handover, package_purchase_id, reference, proof_url, recorded_by_name, accounts_check, price_paise, advance_paise))'
     )
     .eq('status', 'open');
   if (profile.role === 'super_admin' && opts.coordinatorId) q = q.eq('purchases.coordinator_id', opts.coordinatorId);
@@ -95,9 +100,10 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
       raw.flatMap(({ p }) => (p.purchase_payments ?? []).map((l) => one(l.payments)?.attempt_id).filter((v): v is string => !!v))
     ),
   ];
-  const [names, { data: attempts }] = await Promise.all([
+  const [names, { data: attempts }, amounts] = await Promise.all([
     nameLookup(db, raw.map(({ p }) => p), counsellorIds),
     attemptIds.length ? createAdminClient().from('attempts').select('id, status').in('id', attemptIds) : Promise.resolve({ data: [] }),
+    packageAmounts(),
   ]);
   const attemptStatus = new Map(((attempts ?? []) as { id: string; status: string }[]).map((a) => [a.id, a.status]));
 
@@ -107,6 +113,8 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
       .filter((x): x is { created_at: string; status: string; attempt_id: string | null } => !!x)
       .sort((a, b) => a.created_at.localeCompare(b.created_at));
     let context: string;
+    // An open Package call: what is paid so far for the package (every payment is before the handover here).
+    const pkg = t.kind === 'package' ? packageState(p.package_payments ?? [], p, null, amounts, true) : null;
     if (t.kind === 'payment') {
       const last = tries.at(-1);
       context = paymentContext(tries.length, last?.created_at ?? t.due_at, last?.status === 'failed', now);
@@ -115,7 +123,11 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
     } else if (t.kind === 'package') {
       const done = (p.purchase_stages ?? []).find((s) => s.stage === 'report_presentation')?.done_at ?? null;
       const booked = (p.presentation_bookings ?? []).find((b) => b.status === 'booked');
-      context = packageContext(done, booked ? names.coordinator(booked.counsellor_id) : null);
+      context = packageContext(
+        done,
+        booked ? names.coordinator(booked.counsellor_id) : null,
+        pkg && pkg.start_paise !== null ? { paid_paise: pkg.paid_paise, start_paise: pkg.start_paise } : null
+      );
     } else {
       const statuses = tries.map((x) => (x.attempt_id ? attemptStatus.get(x.attempt_id) : undefined));
       const progress: AssessmentProgress = statuses.includes('completed')
@@ -142,6 +154,7 @@ export async function listTasks(opts: { coordinatorId?: string | null }): Promis
         p.status === 'paid' &&
         !(p.presentation_bookings ?? []).some((b) => b.status === 'booked') &&
         (p.purchase_stages ?? []).some((s) => s.stage === 'assessment' && !!s.done_at),
+      package_part_paid: !!pkg && pkg.paid_paise > 0,
     };
   });
 }
@@ -176,6 +189,7 @@ const DB_MESSAGES = [
   'Pick a follow-up date and time within 2 working days.',
   'At least 2 calls are needed first.',
   'Choose a reason.',
+  'A package payment is already received. Only an admin can mark Not interested.',
 ];
 
 /** Mark as call done. Coordinators only on their own clients' calls (RLS read first), super admins on all. */

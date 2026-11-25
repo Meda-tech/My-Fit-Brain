@@ -61,7 +61,7 @@ export async function createTeamMember(
   const password = input.password;
 
   if (!isTeamRole(input.role)) {
-    return { success: false, error: 'Please choose Coordinator or Counsellor.' };
+    return { success: false, error: 'Please choose Coordinator, Counsellor or CRM.' };
   }
   const role = input.role;
 
@@ -218,6 +218,49 @@ export async function counsellorClientCounts(counsellorIds: string[]): Promise<R
   return Object.fromEntries(counts);
 }
 
+/**
+ * How many clients (phones) each CRM has (client_crms). Super Admin only. One counted query per CRM.
+ */
+export async function crmClientCounts(crmIds: string[]): Promise<Record<string, number>> {
+  const staff = await getCurrentStaff();
+  if (!staff || !staff.isSuperAdmin || crmIds.length === 0) return {};
+  const adminClient = createAdminClient();
+  const counts = await Promise.all(
+    crmIds.map(async (id) => {
+      const { count, error } = await adminClient.from('client_crms').select('phone', { count: 'exact', head: true }).eq('crm_id', id);
+      // Before the migration 20261124000000 the table does not exist: no counts.
+      if (error) return [id, 0] as const;
+      return [id, count ?? 0] as const;
+    })
+  );
+  return Object.fromEntries(counts);
+}
+
+/**
+ * Move every client (phone) of one CRM, with their Package purchases, to another active CRM. Super Admin only.
+ * Logged in crm_client_moves.
+ */
+export async function moveCrmClients(fromId: string, toId: string): Promise<TeamServiceResult<{ moved: number; toName: string }>> {
+  const staff = await getCurrentStaff();
+  if (!staff || !staff.isSuperAdmin) {
+    return { success: false, error: 'Unauthorized: Only Super Admin can move clients.' };
+  }
+  if (!fromId || !toId || fromId === toId) {
+    return { success: false, error: 'Choose another CRM.' };
+  }
+  const adminClient = createAdminClient();
+  const { data: to } = await adminClient.from('profiles').select('full_name, role, is_active').eq('id', toId).maybeSingle();
+  if (!to || to.role !== 'crm' || !to.is_active) {
+    return { success: false, error: 'Choose an active CRM.' };
+  }
+  const { data, error } = await adminClient.rpc('move_crm_clients', { p_from: fromId, p_to: toId, p_by: staff.profile.id });
+  if (error) {
+    console.error('Failed to move CRM clients:', error);
+    return { success: false, error: 'The clients could not be moved. Please try again.' };
+  }
+  return { success: true, data: { moved: Number(data ?? 0), toName: to.full_name as string } };
+}
+
 /** Shown when the new counsellor is not free at one of the upcoming presentations' times. */
 export const MOVE_CLASH = 'The new counsellor is not free at some of these times. Pick another counsellor.';
 
@@ -284,8 +327,8 @@ export async function moveCounsellorClients(
 }
 
 /**
- * Toggle active status of a coordinator or counsellor.
- * A coordinator or counsellor who still has clients cannot be made inactive: move their clients first. (The database
+ * Toggle active status of a coordinator, counsellor or CRM.
+ * A coordinator, counsellor or CRM who still has clients cannot be made inactive: move their clients first. (The database
  * refuses it too, also for a counsellor with upcoming presentations.)
  */
 export async function toggleTeamMemberStatus(
@@ -301,15 +344,16 @@ export async function toggleTeamMemberStatus(
     const adminClient = createAdminClient();
 
     if (!isActive) {
-      const [asCoordinator, asCounsellor] = await Promise.all([
+      const [asCoordinator, asCounsellor, asCrm] = await Promise.all([
         adminClient.from('client_coordinators').select('phone', { count: 'exact', head: true }).eq('coordinator_id', profileId),
         adminClient
           .from('client_counsellors')
           .select('id', { count: 'exact', head: true })
           .eq('counsellor_id', profileId)
           .is('ended_at', null),
+        adminClient.from('client_crms').select('phone', { count: 'exact', head: true }).eq('crm_id', profileId),
       ]);
-      if ((asCoordinator.count ?? 0) + (asCounsellor.count ?? 0) > 0) {
+      if ((asCoordinator.count ?? 0) + (asCounsellor.count ?? 0) + (asCrm.count ?? 0) > 0) {
         return { success: false, error: MOVE_CLIENTS_FIRST };
       }
     }

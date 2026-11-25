@@ -4,6 +4,7 @@ import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/brand';
 import { PackageSettingsForm } from '../../components/packages/PackageSettingsForm';
+import { PackageAmountsForm } from '../../components/packages/PackageAmountsForm';
 import { formatDateTime } from '../../components/payments/format';
 import { ASSESSMENT_PRICE_PAISE } from '../../lib/offline-payments';
 import { getPackage } from '../../lib/services/packages';
@@ -23,13 +24,22 @@ export default async function SettingsPage() {
         <h2 className="m-0 mb-1 text-[20px] font-semibold text-teal">Package</h2>
         {settings ? (
           <>
-            <p className="m-0 mb-5 text-[13px] text-ink-muted">Last changed {formatDateTime(settings.updated_at)}. Full payment only, no expiry.</p>
+            <p className="m-0 mb-5 text-[13px] text-ink-muted">Last changed {formatDateTime(settings.updated_at)}. No expiry.</p>
             <PackageSettingsForm settings={settings} assessmentPrice={ASSESSMENT_PRICE_PAISE / 100} />
           </>
         ) : (
           <p className="m-0 text-ink-muted">The package is not set up in the database yet.</p>
         )}
       </Card>
+      {settings && (
+        <Card className="mt-6 max-w-180 p-5 sm:p-6">
+          <h2 className="m-0 mb-1 text-[20px] font-semibold text-teal">Package payments in parts</h2>
+          <p className="m-0 mb-5 text-[13px] text-ink-muted">
+            The first payment, the amount that starts the package (it then goes to the CRM team), and the milestones.
+          </p>
+          <PackageAmountsForm settings={settings} assessmentPrice={ASSESSMENT_PRICE_PAISE / 100} />
+        </Card>
+      )}
     </AdminShell>
   );
 }

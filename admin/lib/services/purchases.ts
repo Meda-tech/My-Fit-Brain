@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createClient } from '../supabase/server';
 import { createAdminClient } from '../supabase/admin';
 import { requireStaff } from '../auth';
@@ -11,7 +12,7 @@ import {
 } from '../purchases';
 import type { AssessmentProgress, CallChoice, CallEvent, CallKind, CallOutcome, CallReason } from '../calls';
 import type { Presentation } from '../booking';
-import type { PackagePaid } from '../package';
+import type { PackagePayment, PackageState } from '../package';
 import type { PaymentProvider, PaymentStatus, RefundStatus } from './payments';
 
 // Purchases (step 1) and their calls (step 2). Reads use the staff session, so RLS decides: super admins see every
@@ -70,9 +71,12 @@ export interface PurchaseRow {
   can_mark_presentation_admin: boolean;
   /** The Package call (step 5), open or closed, if there is one. */
   package_call: { status: 'open' | 'closed'; outcome: CallOutcome | null; due_at: string } | null;
-  /** The paid package of this assessment purchase (step 6), if any. */
-  package_paid: PackagePaid | null;
-  /** Report presentation done and no package paid yet: Add package payment is possible. */
+  /**
+   * The package of this assessment purchase: the payments this staff member sees (a coordinator: only those made up
+   * to the handover to CRM), paid so far, the package amount, the start amount and whether it has started.
+   */
+  pkg: PackageState;
+  /** Report presentation done, the package not started yet and not paid in full: Add package payment is possible. */
   can_add_package_payment: boolean;
   stages: StageRow[];
   current_stage: JourneyStage | null;
@@ -140,9 +144,9 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 const COLUMNS =
   'id, kind, test_code, phone, client_id, amount_paise, status, closed_reason, source, coordinator_id, paid_at, created_at, before_system, ' +
   'purchase_stages(stage, position, planned_at, done_at, status), purchase_payments(payments(created_at, status, attempt_id)), ' +
-  'calls(id, kind, status, outcome, due_at), ' +
+  'calls(id, kind, status, outcome, due_at, closed_at), ' +
   'presentation_bookings(id, counsellor_id, on_date, start_time, end_time, marked_by_admin, status, booked_at, booked_by_name, done_at, done_by_name), ' +
-  'package_payments!package_payments_purchase_id_fkey(amount_paise, paid_at, provider, method, status, package_purchase_id, reference, proof_url, recorded_by_name)';
+  'package_payments!package_payments_purchase_id_fkey(id, amount_paise, paid_at, provider, method, status, refund_status, counted_at, after_handover, package_purchase_id, reference, proof_url, recorded_by_name, accounts_check, price_paise, advance_paise)';
 
 /** Rows shown on the screen: purchases, open attempts and attempts closed as Not interested. */
 const SHOWN = 'status.neq.not_paid,closed_at.is.null,closed_reason.eq.not_interested';
@@ -168,9 +172,94 @@ interface RawPurchase {
   created_at: string;
   purchase_stages: StageRow[] | null;
   purchase_payments: { payments: One<{ created_at: string; status: string; attempt_id: string | null }> }[] | null;
-  calls: { id: string; kind: CallKind; status: string; outcome: CallOutcome | null; due_at: string }[] | null;
+  calls: { id: string; kind: CallKind; status: string; outcome: CallOutcome | null; due_at: string; closed_at: string | null }[] | null;
   presentation_bookings: (Omit<Presentation, 'counsellor_name'> & { status: string })[] | null;
-  package_payments: (PackagePaid & { status: string; package_purchase_id: string | null })[] | null;
+  package_payments: RawPackagePayment[] | null;
+}
+
+export interface RawPackagePayment {
+  id: string;
+  amount_paise: number;
+  paid_at: string | null;
+  provider: 'razorpay' | 'offline';
+  method: string | null;
+  status: string;
+  refund_status: string | null;
+  counted_at: string | null;
+  after_handover: boolean;
+  package_purchase_id: string | null;
+  reference: string | null;
+  proof_url: string | null;
+  recorded_by_name: string | null;
+  accounts_check: 'pending' | 'checked' | null;
+  price_paise: number;
+  advance_paise: number;
+}
+
+export interface PackageAmounts {
+  price_paise: number;
+  first_min_paise: number;
+  start_paise: number;
+}
+
+/**
+ * The amounts of the active package, for the screens of staff who work with purchases (super admins and
+ * coordinators; read with the service role after the role check, once per request). Null for everyone else.
+ */
+export const packageAmounts = cache(async (): Promise<PackageAmounts | null> => {
+  const { profile } = await requireStaff();
+  if (!canViewPurchases(profile.role)) return null;
+  const { data, error } = await createAdminClient().from('packages').select('price_paise, first_min_paise, start_paise').eq('is_active', true).maybeSingle();
+  // Before the migration 20261124000000 the two new columns do not exist: no amounts.
+  if (error || !data) return null;
+  return data as PackageAmounts;
+});
+
+/**
+ * The package of an assessment purchase from the package payments this staff member read (RLS: a coordinator reads
+ * only those made up to the handover). `fullView`: super admins see every payment, so the remaining amount is known.
+ */
+export function packageState(
+  payments: RawPackagePayment[],
+  purchase: { amount_paise: number },
+  packageCall: { status: string; outcome: CallOutcome | null; closed_at: string | null } | null,
+  amounts: PackageAmounts | null,
+  fullView: boolean
+): PackageState {
+  const paid = payments.filter((p): p is RawPackagePayment & { paid_at: string } => p.status === 'paid' && !!p.paid_at);
+  const counted = paid.filter((p) => !p.refund_status && p.counted_at).sort((a, b) => a.counted_at!.localeCompare(b.counted_at!));
+  const callStarted = packageCall?.status === 'closed' && (packageCall.outcome === 'package_started' || packageCall.outcome === 'package_paid');
+  const started = callStarted || counted.some((p) => p.package_purchase_id);
+  // The package amount is fixed by the first payment that counted; before that it follows the settings.
+  const first = counted[0];
+  const total = first
+    ? first.price_paise - first.advance_paise
+    : amounts && amounts.price_paise > purchase.amount_paise
+      ? amounts.price_paise - purchase.amount_paise
+      : null;
+  return {
+    payments: paid
+      .sort((a, b) => a.paid_at.localeCompare(b.paid_at))
+      .map((p): PackagePayment => ({
+        id: p.id,
+        amount_paise: p.amount_paise,
+        paid_at: p.paid_at,
+        provider: p.provider,
+        method: p.method,
+        reference: p.reference,
+        proof_url: p.proof_url,
+        recorded_by_name: p.recorded_by_name,
+        accounts_check: p.accounts_check,
+        refund_needed: !!p.refund_status,
+        after_handover: p.after_handover,
+      })),
+    paid_paise: counted.reduce((sum, p) => sum + p.amount_paise, 0),
+    total_paise: total,
+    start_paise: total === null ? null : Math.min(amounts?.start_paise ?? total, total),
+    started,
+    started_at: started ? (callStarted ? packageCall!.closed_at : null) : null,
+    complete: fullView || !started,
+  };
 }
 
 export interface NameLookup {
@@ -226,11 +315,12 @@ async function assessmentProgress(raw: RawPurchase[]): Promise<Map<string, Asses
   );
 }
 
-async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
+async function withNames(db: Db, raw: RawPurchase[], fullView: boolean): Promise<PurchaseRow[]> {
   const counsellorIds = raw.flatMap((r) => (r.presentation_bookings ?? []).filter((b) => b.status === 'booked').map((b) => b.counsellor_id));
-  const [names, progress] = await Promise.all([nameLookup(db, raw, counsellorIds), assessmentProgress(raw)]);
+  const [names, progress, amounts] = await Promise.all([nameLookup(db, raw, counsellorIds), assessmentProgress(raw), packageAmounts()]);
   return raw.map(({ purchase_stages, purchase_payments, calls, presentation_bookings, package_payments, client_id, coordinator_id, closed_reason, ...r }) => {
-    const packagePaid = (package_payments ?? []).find((p) => p.status === 'paid' && p.package_purchase_id);
+    const packageCall = (calls ?? []).find((c) => c.kind === 'package') ?? null;
+    const pkg = packageState(package_payments ?? [], r, packageCall, amounts, fullView);
     const booked = (presentation_bookings ?? []).find((b) => b.status === 'booked');
     const stages = [...(purchase_stages ?? [])].sort((a, b) => a.position - b.position);
     const tries = (purchase_payments ?? [])
@@ -256,22 +346,10 @@ async function withNames(db: Db, raw: RawPurchase[]): Promise<PurchaseRow[]> {
       can_book: r.status === 'paid' && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
       can_mark_presentation_admin:
         r.status === 'paid' && r.before_system && !booked && stages.some((s) => s.stage === 'assessment' && s.status === 'done'),
-      package_call: (() => {
-        const pc = (calls ?? []).find((c) => c.kind === 'package');
-        return pc ? { status: pc.status as 'open' | 'closed', outcome: pc.outcome, due_at: pc.due_at } : null;
-      })(),
-      package_paid: packagePaid
-        ? {
-            amount_paise: packagePaid.amount_paise,
-            paid_at: packagePaid.paid_at,
-            provider: packagePaid.provider,
-            method: packagePaid.method,
-            reference: packagePaid.reference,
-            proof_url: packagePaid.proof_url,
-            recorded_by_name: packagePaid.recorded_by_name,
-          }
-        : null,
-      can_add_package_payment: r.status === 'paid' && !packagePaid && !!booked?.done_at,
+      package_call: packageCall ? { status: packageCall.status as 'open' | 'closed', outcome: packageCall.outcome, due_at: packageCall.due_at } : null,
+      pkg,
+      can_add_package_payment:
+        r.status === 'paid' && !!booked?.done_at && !pkg.started && pkg.total_paise !== null && pkg.paid_paise < pkg.total_paise,
       stages,
       current_stage: currentStage(stages),
     };
@@ -326,7 +404,7 @@ export async function listPurchases(tab: PurchaseTab, page: number): Promise<{ r
     if (error.code === '42P01') return { rows: [], total: 0 };
     throw new Error(`Could not read purchases: ${error.message}`);
   }
-  return { rows: await withNames(db, (data ?? []) as unknown as RawPurchase[]), total: count ?? 0 };
+  return { rows: await withNames(db, (data ?? []) as unknown as RawPurchase[], profile.role === 'super_admin'), total: count ?? 0 };
 }
 
 /**
@@ -368,7 +446,7 @@ export async function getPurchase(id: string): Promise<PurchaseDetail | null> {
   // The row's names and the staff names of its payments, at the same time.
   const staffIds = [...new Set(raw.map((l) => l.p.recorded_by).filter((v): v is string => !!v))];
   const [[row], { data: staff }] = await Promise.all([
-    withNames(db, [data as unknown as RawPurchase]),
+    withNames(db, [data as unknown as RawPurchase], profile.role === 'super_admin'),
     staffIds.length ? createAdminClient().from('profiles').select('id, full_name').in('id', staffIds) : Promise.resolve({ data: [] }),
   ]);
   const staffName = new Map(((staff ?? []) as { id: string; full_name: string }[]).map((s) => [s.id, s.full_name]));

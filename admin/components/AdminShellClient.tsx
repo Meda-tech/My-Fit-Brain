@@ -21,6 +21,7 @@ import {
   ShoppingBag,
   PhoneCall,
   UserX,
+  Package,
 } from 'lucide-react';
 import { StaffRole } from '../lib/types';
 import { ROLE_LABELS } from '../lib/roles';
@@ -101,7 +102,12 @@ export function AdminShellClient({
     };
   }, [mobileOpen]);
 
-  const navItems = [
+  // CRM staff have one page: the packages of their own clients (owner, 2026-11-24). No clients, assessments or
+  // reports for them, in the menu, on the pages and in the database.
+  const isCrmRole = role === 'crm';
+  const navItems = isCrmRole
+    ? [{ href: '/crm', label: 'CRM', icon: Package }]
+    : [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/clients', label: 'Clients', icon: Users },
     { href: '/assessments', label: 'Assessments', icon: ClipboardList },
@@ -118,6 +124,8 @@ export function AdminShellClient({
           { href: '/under-18', label: 'Under 18', icon: UserX },
         ]
       : []),
+    // CRM: the packages that have started (super admins see all).
+    ...(isSuperAdmin ? [{ href: '/crm', label: 'CRM', icon: Package }] : []),
     // Counsellor availability and Team: super admins only.
     ...(isSuperAdmin
       ? [

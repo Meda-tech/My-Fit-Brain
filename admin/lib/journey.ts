@@ -8,6 +8,9 @@
 // client did it before anyone called (the call closed by itself with no call attempt), or the call was never made
 // because it was not needed (e.g. paid directly: no Payment call).
 //
+// The package can be paid in parts (owner, 2026-11-24): each package payment is a line under task 5; the task stays
+// open until the amount paid in total reaches the start amount, then it is done ("Package started – with CRM").
+//
 // A purchase from before the system (paid more than 7 days before go-live; owner, 2026-11-21): tasks 1–3 show
 // "Before the system" (no automatic calls, never late). It can still be booked into a slot by hand (then task 3 is
 // done as usual), or a super admin marks a presentation that happened outside the system done ("Marked by admin",
@@ -134,7 +137,18 @@ export interface JourneyInput {
     done_at: string | null;
     done_by_name: string | null;
   } | null;
-  packagePaid: { amount_paise: number; paid_at: string; provider: 'razorpay' | 'offline'; method: string | null; recorded_by_name: string | null } | null;
+  /** The package payments this staff member sees (a coordinator: up to the handover), paid ones only. */
+  packagePayments: {
+    amount_paise: number;
+    paid_at: string;
+    provider: 'razorpay' | 'offline';
+    method: string | null;
+    recorded_by_name: string | null;
+    /** More than the remaining balance: counts for nothing, waits for a refund. */
+    refund_needed?: boolean;
+  }[];
+  /** Paid in total to start the package (for "paid ₹4,000 of ₹10,000 to start"); null when unknown. */
+  packageStartPaise?: number | null;
   /** "Mon, 23 Nov 2026, 10:00–10:30 am" for a slot (the screens' own formatter). */
   slotLabel: (date: string, start: string | null, end: string | null) => string;
 }
@@ -166,7 +180,8 @@ function callItems(kind: CallKind, logs: LogIn[]): JourneyItem[] {
 }
 
 /** System lines worth showing under a task (reopened, cancelled booking, package tries, refund needed). */
-const SYSTEM_EVENTS: CallEvent[] = ['reopened', 'booking_cancelled', 'package_payment_failed', 'package_payment_not_completed', 'package_refund_needed'];
+// (A part payment and a refund-needed payment show as their own payment lines, so their history events are left out.)
+const SYSTEM_EVENTS: CallEvent[] = ['reopened', 'booking_cancelled', 'package_payment_failed', 'package_payment_not_completed', 'package_started'];
 function systemItems(logs: LogIn[]): JourneyItem[] {
   return logs
     .filter((l) => l.entry === 'event' && l.event && SYSTEM_EVENTS.includes(l.event))
@@ -199,6 +214,7 @@ function fromCall(
     case 'paid':
     case 'assessment_completed':
     case 'package_paid':
+    case 'package_started':
       if (!teamDid && !attempts && clientDid) return { status: 'not_needed', actual: null, notNeeded: clientDid };
       return { status: 'done', actual: call.closed_at, notNeeded: null };
     default:
@@ -215,7 +231,6 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
   const attempt = paidPayment?.attempt ?? null;
   const completedAt = attempt?.completed_at ?? null;
   const pres = input.presentation;
-  const pkg = input.packagePaid;
   const nowIso = now.toISOString();
   const byAdmin = !!pres?.marked_by_admin;
   /** Tasks 1–3 of a purchase from before the system: no call, nothing planned, never late. */
@@ -392,26 +407,49 @@ export function buildJourney(input: JourneyInput, now: Date): JourneyTask[] {
   presentation.actualLate = false;
   if (pres?.start_time) presentation.plannedLabel = input.slotLabel(pres.on_date, pres.start_time, pres.end_time);
 
-  // 5. Package call. Steps: package paid (app or manual), failed tries (from the history).
+  // 5. Package call. Steps: every package payment (app or manual, in parts), failed tries and "Package started"
+  // (from the history). Below the start amount each payment shows how far the client is: "paid ₹4,000 of ₹10,000 to
+  // start".
   const pkCall = call('package');
-  const pkItems: JourneyItem[] = pkg
-    ? [{
-        at: pkg.paid_at,
-        kind: 'client',
-        title: pkg.provider === 'offline' ? 'Package paid · manual payment' : 'Package paid in the app',
-        detail: `${paymentMethodLabel(pkg)} · ${formatAmount(pkg.amount_paise)}`,
+  const pkPays = [...input.packagePayments].sort((a, b) => a.paid_at.localeCompare(b.paid_at));
+  const startPaise = input.packageStartPaise ?? null;
+  let running = 0;
+  const pkItems: JourneyItem[] = pkPays.map((p) => {
+    const manual = p.provider === 'offline';
+    if (p.refund_needed) {
+      return {
+        at: p.paid_at,
+        kind: 'client' as const,
+        title: 'Package payment – refund needed',
+        detail: `${paymentMethodLabel(p)} · ${formatAmount(p.amount_paise)} · more than the remaining balance`,
         note: null,
-        by: pkg.provider === 'offline' ? pkg.recorded_by_name : null,
+        by: manual ? p.recorded_by_name : null,
         followUp: null,
-      }]
-    : [];
+      };
+    }
+    const before = running;
+    running += p.amount_paise;
+    const toStart = startPaise !== null && before < startPaise && running < startPaise ? ` · paid ${formatAmount(running)} of ${formatAmount(startPaise)} to start` : '';
+    return {
+      at: p.paid_at,
+      kind: 'client' as const,
+      title: manual ? 'Package payment · manual payment' : 'Package payment in the app',
+      detail: `${paymentMethodLabel(p)} · ${formatAmount(p.amount_paise)}${toStart}`,
+      note: null,
+      by: manual ? p.recorded_by_name : null,
+      followUp: null,
+    };
+  });
+  const counted = pkPays.filter((p) => !p.refund_needed);
+  const fromApp = counted.length > 0 && counted.every((p) => p.provider === 'razorpay');
   const pkState: Pick<JourneyTask, 'status' | 'actual' | 'notNeeded'> = pkCall
-    ? fromCall(pkCall, pkg ? { what: 'client bought the package in the app', at: pkg.paid_at } : null, pkg?.provider === 'offline')
+    ? fromCall(pkCall, fromApp ? { what: 'client bought the package in the app', at: counted.at(-1)!.paid_at } : null, counted.some((p) => p.provider === 'offline'))
     : { status: 'upcoming', actual: null, notNeeded: null };
   const pack = task('package', 'Coordinator', input.coordinatorName, pkCall, pkState, [
     ...pkItems,
     ...(pkCall ? [...callItems('package', pkCall.logs), ...systemItems(pkCall.logs)] : []),
   ]);
+  if (pkCall?.outcome === 'package_started' && pkState.status === 'done') pack.statusNote = 'Package started – with CRM';
 
   return [payment, assessment, booking, presentation, pack];
 }

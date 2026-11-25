@@ -171,6 +171,9 @@ export async function createClientRecord(
   if (staff.profile.role === 'counsellor') {
     return { success: false, error: 'Counsellors cannot add clients.' };
   }
+  if (staff.profile.role === 'crm') {
+    return { success: false, error: 'CRM staff cannot add clients.' };
+  }
 
   const fullName = input.fullName.trim();
   if (!fullName || fullName.length < 2) {

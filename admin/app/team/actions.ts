@@ -6,6 +6,7 @@ import {
   resetTeamMemberPassword,
   moveCoordinatorClients,
   moveCounsellorClients,
+  moveCrmClients,
 } from '../../lib/services/team';
 import { ROLE_LABELS } from '../../lib/roles';
 import { revalidatePath } from 'next/cache';
@@ -57,8 +58,18 @@ export async function toggleStatusAction(
 export async function moveClientsAction(
   fromId: string,
   toId: string,
-  role: 'coordinator' | 'counsellor'
+  role: 'coordinator' | 'counsellor' | 'crm'
 ): Promise<TeamActionState> {
+  if (role === 'crm') {
+    const result = await moveCrmClients(fromId, toId);
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || 'The clients could not be moved.' };
+    }
+    revalidatePath('/team');
+    revalidatePath('/crm');
+    const { moved, toName } = result.data;
+    return { success: true, message: `${moved} ${moved === 1 ? 'client' : 'clients'} moved to ${toName}.` };
+  }
   if (role === 'counsellor') {
     const result = await moveCounsellorClients(fromId, toId);
     if (!result.success || !result.data) {

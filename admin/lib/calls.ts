@@ -23,7 +23,9 @@ export type CallEvent =
   | 'package_payment_failed'
   | 'package_payment_not_completed'
   | 'package_refund_needed'
-  | 'not_needed';
+  | 'not_needed'
+  | 'package_part_paid'
+  | 'package_started';
 export type CallOutcome =
   | 'done'
   | 'not_interested'
@@ -33,7 +35,8 @@ export type CallOutcome =
   | 'before_go_live'
   | 'booked'
   | 'package_paid'
-  | 'not_needed';
+  | 'not_needed'
+  | 'package_started';
 
 export const CALL_KIND_LABELS: Record<CallKind, string> = {
   payment: 'Payment call',
@@ -82,8 +85,10 @@ export const CALL_EVENT_LABELS: Record<CallEvent, string> = {
   package_paid: 'Package paid: call closed',
   package_payment_failed: 'Package payment failed',
   package_payment_not_completed: 'Package payment started, not completed',
-  package_refund_needed: 'Paid a second time: refund needed',
+  package_refund_needed: 'Paid more than the remaining balance: refund needed',
   not_needed: 'Not needed: client already paid',
+  package_part_paid: 'Package part payment received',
+  package_started: 'Package started – with CRM',
 };
 
 export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
@@ -96,12 +101,15 @@ export const CALL_OUTCOME_LABELS: Record<CallOutcome, string> = {
   booked: 'Closed: presentation booked',
   package_paid: 'Package paid',
   not_needed: 'Not needed: client already paid',
+  package_started: 'Package started – with CRM',
 };
 
 export const CALL_NOTE_MAX = 2000;
 /** "Within 2 working days" = 18 working hours (9:00–18:00). */
 export const FOLLOW_UP_WORKING_HOURS = 18;
 export const NEEDS_EARLIER_CALL = 'At least 2 calls are needed first.';
+/** Once any package amount is paid, only a super admin can mark the Package call Not interested (owner, 2026-11-24). */
+export const PACKAGE_PAID_ADMIN_ONLY = 'A package payment is already received. Only an admin can mark Not interested.';
 
 /** These choices keep the call open and need a follow-up date and time (older ones included, for the history). */
 export function needsFollowUp(choice: CallChoice): boolean {
@@ -250,7 +258,14 @@ export function outcomeLabel(kind: CallKind, outcome: CallOutcome): string {
   return kind === 'package' && outcome === 'done' ? 'Client agreed' : CALL_OUTCOME_LABELS[outcome];
 }
 
-/** "Presentation done 21 Nov by Test Counsellor" (the Package call's context line). */
-export function packageContext(doneAt: string | null, counsellorName: string | null): string {
+/**
+ * The Package call's context line: "Presentation done 21 Nov by Test Counsellor"; once a part of the package is paid,
+ * "Paid ₹4,000 of ₹10,000 to start" (owner, 2026-11-24).
+ */
+export function packageContext(doneAt: string | null, counsellorName: string | null, paid?: { paid_paise: number; start_paise: number } | null): string {
+  if (paid && paid.paid_paise > 0) {
+    const r = (paise: number) => `₹${Math.round(paise / 100).toLocaleString('en-IN')}`;
+    return `Paid ${r(paid.paid_paise)} of ${r(paid.start_paise)} to start`;
+  }
   return `Presentation done${doneAt ? ` ${day(doneAt)}` : ''}${counsellorName ? ` by ${counsellorName}` : ''}`;
 }

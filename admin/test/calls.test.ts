@@ -55,6 +55,9 @@ describe('calls', () => {
     expect(choiceLabel('booking', 'done')).toBe('Done');
     expect(choiceLabel('payment', 'call_later')).toBe('Call later');
     expect(packageContext('2026-11-21T06:00:00Z', 'Test Counsellor')).toBe('Presentation done 21 Nov by Test Counsellor');
+    // Once a part of the package is paid, the Package call's line shows how far the client is.
+    expect(packageContext('2026-11-21T06:00:00Z', 'Test Counsellor', { paid_paise: 0, start_paise: 1000000 })).toBe('Presentation done 21 Nov by Test Counsellor');
+    expect(packageContext('2026-11-21T06:00:00Z', 'Test Counsellor', { paid_paise: 400000, start_paise: 1000000 })).toBe('Paid ₹4,000 of ₹10,000 to start');
     expect(Object.values(CALL_REASON_LABELS)).toEqual(['Too costly', 'Not now', 'Wrong number', 'Other']);
     expect(!needsFollowUp('done')).toBe(true);
   });

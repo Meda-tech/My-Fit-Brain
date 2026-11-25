@@ -13,6 +13,7 @@ import { JOURNEY_STAGE_LABELS, PURCHASE_TABS, PURCHASE_TAB_LABELS, defaultPurcha
 import { CALL_KIND_LABELS, isCallLate, outcomeLabel } from '../../lib/calls';
 import { presentationLabel } from '../../lib/booking';
 import { listPackagePurchases, type PackagePurchaseRow } from '../../lib/services/packages';
+import { PACKAGE_STARTED_LABEL, paidToStartText } from '../../lib/package';
 import {
   PURCHASE_PAGE_SIZE,
   canViewPurchases,
@@ -35,6 +36,7 @@ function stageText(r: PurchaseRow): string {
   if (r.current_stage === 'assessment') {
     return r.assessment_progress === 'in_progress' ? 'Assessment started' : 'Assessment not started';
   }
+  if (r.pkg.started) return PACKAGE_STARTED_LABEL;
   return r.current_stage ? JOURNEY_STAGE_LABELS[r.current_stage] : 'All done';
 }
 
@@ -61,8 +63,11 @@ function PresentationLine({ r }: { r: PurchaseRow }) {
           ? `Presentation done ${formatDate(p.done_at)}${p.counsellor_name ? ` by ${p.counsellor_name}` : ''}`
           : `Presentation: ${p.counsellor_name ?? 'Counsellor'}, ${presentationLabel(p.on_date, p.start_time, p.end_time)}`}
       </span>
-      {r.package_call?.status === 'closed' && r.package_call.outcome && (
+      {r.package_call?.status === 'closed' && r.package_call.outcome && !r.pkg.started && (
         <span className="block text-[12px] font-medium text-ink">Package call: {outcomeLabel('package', r.package_call.outcome)}</span>
+      )}
+      {!r.pkg.started && r.pkg.paid_paise > 0 && r.pkg.start_paise !== null && (
+        <span className="block text-[12px] font-medium text-ink">Package: {paidToStartText(r.pkg.paid_paise, r.pkg.start_paise).toLowerCase()}</span>
       )}
     </>
   );
@@ -317,13 +322,14 @@ export default async function PurchasesPage({
   );
 }
 
-// Type "Package" (super admins): each paid package with its client, amount and the assessment purchase it belongs to.
+// Type "Package" (super admins): each started package with its client, the package amount, what is paid so far and
+// the assessment purchase it belongs to. The CRM page is where packages are worked on.
 function PackagePurchases({ rows }: { rows: PackagePurchaseRow[] }) {
   if (rows.length === 0) {
     return (
       <div className="p-10 text-center sm:p-12">
         <ShoppingBag size={40} strokeWidth={2} className="mx-auto mb-2 text-teal" aria-hidden />
-        <p className="text-[16px] font-medium text-ink">No packages paid yet.</p>
+        <p className="text-[16px] font-medium text-ink">No packages have started yet.</p>
       </div>
     );
   }
@@ -338,16 +344,19 @@ function PackagePurchases({ rows }: { rows: PackagePurchaseRow[] }) {
             </p>
             <p className="m-0 text-[14px] text-ink-soft">
               Package{r.package_name ? `: ${r.package_name}` : ''}
-              {r.sessions ? `, ${r.sessions} sessions` : ''} · {formatAmount(r.amount_paise)} · {r.source === 'manual' ? 'manual payment' : 'Razorpay'}
+              {r.sessions ? `, ${r.sessions} sessions` : ''} · {formatAmount(r.amount_paise)} · paid so far {formatAmount(r.paid_paise)}
             </p>
             <p className="m-0 text-[13px] text-ink-muted">
-              Paid {formatDateTime(r.paid_at)} · Coordinator: {r.coordinator_name ?? 'None yet'}
+              Started {formatDateTime(r.paid_at)} · Coordinator: {r.coordinator_name ?? 'None yet'}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <PurchaseStatusPill status={r.status === 'refunded' ? 'refunded' : r.status === 'cancelled' ? 'cancelled' : 'paid'} />
             <Link href={`/purchases?tab=paid&open=${r.parent_purchase_id}`} className="flex min-h-11 items-center text-[14px] font-semibold text-teal hover:underline">
               Assessment purchase
+            </Link>
+            <Link href={`/crm?open=${r.id}`} className="flex min-h-11 items-center text-[14px] font-semibold text-teal hover:underline">
+              Open in CRM
             </Link>
           </div>
         </li>

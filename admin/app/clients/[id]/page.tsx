@@ -1,6 +1,7 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { UserPlus, User } from 'lucide-react';
 import { requireStaff } from '../../../lib/auth';
+import { CRM_HOME, isCrm } from '../../../lib/roles';
 import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
 import { ClientStatusPill } from '../../../components/ClientStatusPill';
@@ -34,6 +35,7 @@ function formatIndiaDateTime(iso: string): string {
 export default async function ClientDetailPage({ params }: ClientDetailPageProps) {
   const staff = await requireStaff();
   const { profile } = staff;
+  if (isCrm(profile.role)) redirect(CRM_HOME);
   const { id } = await params;
 
   const client = await getClientById(id);

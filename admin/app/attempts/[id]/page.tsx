@@ -1,7 +1,8 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Lock } from 'lucide-react';
 import { counsellorView } from '@mfb/questionnaire';
 import { requireStaff } from '../../../lib/auth';
+import { CRM_HOME, isCrm } from '../../../lib/roles';
 import { AdminShell } from '../../../components/AdminShell';
 import { PageHeader } from '../../../components/PageHeader';
 import { AttemptStatusPill, formatDateTime } from '../../../components/attempts/AttemptStatusPill';
@@ -19,6 +20,7 @@ export const dynamic = 'force-dynamic';
 // counsellors). Coordinators see the alerts only. The client never sees any of this.
 export default async function AttemptPage({ params }: { params: Promise<{ id: string }> }) {
   const { profile } = await requireStaff();
+  if (isCrm(profile.role)) redirect(CRM_HOME);
   const { id } = await params;
   const detail = await getAttemptDetail(id);
   if (!detail) notFound();

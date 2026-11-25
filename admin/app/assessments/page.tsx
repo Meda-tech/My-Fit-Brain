@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { ChevronRight, Search, SearchX, ShieldAlert } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { requireStaff } from '../../lib/auth';
+import { CRM_HOME, isCrm } from '../../lib/roles';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { AttemptStatusPill, formatDateTime } from '../../components/attempts/AttemptStatusPill';
@@ -53,6 +55,7 @@ export default async function AssessmentsPage({
   searchParams: Promise<{ list?: string; test?: string; q?: string; page?: string }>;
 }) {
   const { profile } = await requireStaff();
+  if (isCrm(profile.role)) redirect(CRM_HOME);
   const withReport = canViewReports(profile.role);
   const lists = ATTEMPT_LISTS.filter((l) => withReport || l !== 'needs_conclusion');
 

@@ -38,7 +38,7 @@ function Details({ p }: { p: PackagePaymentRow }) {
       <span className="block font-mono text-[12px] text-ink-muted">{manual ? p.reference : p.provider_payment_id ?? '—'}</span>
       {manual && (
         <span className="block text-[12px] text-ink-muted">
-          Verified by coordinator: {p.recorded_by_name ?? '—'} · Accounts check: {p.accounts_check === 'checked' ? 'Checked' : 'Pending'}
+          Recorded by: {p.recorded_by_name ?? '—'} · Accounts check: {p.accounts_check === 'checked' ? 'Checked' : 'Pending'}
           {p.proof_url && (
             <>
               {' '}
@@ -54,8 +54,9 @@ function Details({ p }: { p: PackagePaymentRow }) {
   );
 }
 
-// Package payments (step 6): every package payment try and manual package payment, newest first. Super admins see
-// all; a coordinator sees only their own clients' (RLS). The amount is always package price − assessment amount paid.
+// Package payments (step 6): every package payment try and manual package payment, newest first. A package can be
+// paid in parts (2026-11-24). Super admins see all; a coordinator sees only their own clients', and only the payments
+// made up to the handover to CRM (RLS).
 export default async function PackagePaymentsPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { profile } = await requireStaff();
   if (!canViewPayments(profile.role)) redirect('/dashboard');

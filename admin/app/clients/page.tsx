@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { UserPlus, Search, SearchX, ChevronRight, MapPin } from 'lucide-react';
+import { redirect } from 'next/navigation';
 import { requireStaff } from '../../lib/auth';
+import { CRM_HOME, isCrm } from '../../lib/roles';
 import { AdminShell } from '../../components/AdminShell';
 import { PageHeader } from '../../components/PageHeader';
 import { ClientStatusPill } from '../../components/ClientStatusPill';
@@ -19,6 +21,7 @@ interface ClientsPageProps {
 export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   const staff = await requireStaff();
   const { profile } = staff;
+  if (isCrm(profile.role)) redirect(CRM_HOME);
   const resolvedSearchParams = await searchParams;
   const searchQuery = resolvedSearchParams?.search || '';
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { FileText, Upload, X } from 'lucide-react';
-import { packageOfferAction, packageReferenceUsedAction, recordPackagePaymentAction } from '../../app/purchases/package-actions';
+import { packageBalanceAction, packageReferenceUsedAction, recordPackagePaymentAction } from '../../app/purchases/package-actions';
 import { Button, Notice, cn, helpTextClasses, inputClasses, labelClasses } from '../brand';
 import { formatAmount } from '../payments/amount';
 import {
@@ -15,12 +15,14 @@ import {
   indiaToday,
   type OfflineMethod,
 } from '../../lib/offline-payments';
-import type { PackageOffer } from '../../lib/package';
+import { minPaymentPaise, neededToStart, parsePackageAmount, rupees, type PackageBalance } from '../../lib/package';
 
-// "Add package payment" (coordinators for their own clients, super admins): the client paid the package outside
-// Razorpay. The same form and rules as the ₹3,500 manual payment: the amount is fixed and read-only (the database
-// calculates package price − assessment amount paid), method, date, reference, proof to the same Google Drive
-// folder. The proof is uploaded first; if that fails nothing is saved. A reference used before only warns.
+// "Add package payment": the client paid a part (or all) of the package outside Razorpay. Coordinators for their own
+// clients until the package starts, then the client's CRM; super admins always. The same form and rules as the
+// ₹3,500 manual payment (method, date, reference, proof to the same Google Drive folder; the proof is uploaded first,
+// and if that fails nothing is saved; a reference used before only warns), plus the amount: the first payment at least
+// the first minimum, never more than the remaining balance. The top shows Package · Paid so far · Remaining and how
+// much is still needed to start the sessions. The database checks every amount again.
 
 const PROOF_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
@@ -40,7 +42,8 @@ export function PackagePaymentDialog({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [offer, setOffer] = useState<PackageOffer | null | 'loading'>('loading');
+  const [balance, setBalance] = useState<PackageBalance | null | 'loading'>('loading');
+  const [amount, setAmount] = useState('');
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<OfflineMethod>('upi');
   const [proof, setProof] = useState<{ name: string; size: number } | null>(null);
@@ -58,17 +61,22 @@ export function PackagePaymentDialog({
   }, [open, pending]);
 
   const start = () => {
-    setOffer('loading');
+    setBalance('loading');
+    setAmount('');
     setError(null);
     setUsedCount(0);
     setProof(null);
     setMethod('upi');
     setToday(indiaToday());
     setOpen(true);
-    packageOfferAction(purchaseId)
-      .then(setOffer)
-      .catch(() => setOffer(null));
+    packageBalanceAction(purchaseId)
+      .then(setBalance)
+      .catch(() => setBalance(null));
   };
+
+  const b = balance && balance !== 'loading' ? balance : null;
+  const typed = b ? parsePackageAmount(amount, b) : null;
+  const afterPaid = b && typed?.ok ? b.paid_paise + typed.paise : null;
 
   const checkReference = (value: string) => {
     if (!value.trim()) return setUsedCount(0);
@@ -85,6 +93,9 @@ export function PackagePaymentDialog({
     if (!(file instanceof File) || file.size === 0) return setError('Add the payment proof (screenshot or PDF).');
     if (file.size > PROOF_MAX_BYTES) return setError('The proof is larger than 4 MB. Please upload a smaller file.');
     if (file.type && !PROOF_TYPES.includes(file.type)) return setError('The proof must be a JPG, PNG, WebP image or a PDF.');
+    if (!b) return;
+    const checked = parsePackageAmount(form.get('amount'), b);
+    if (!checked.ok) return setError(checked.error);
     setError(null);
     startTransition(async () => {
       try {
@@ -118,17 +129,13 @@ export function PackagePaymentDialog({
                   <h2 id={`package-payment-${purchaseId}`} className="font-heading text-[22px] font-semibold text-teal">
                     Add package payment
                   </h2>
-                  {offer && offer !== 'loading' && (
-                    <span className="rounded-full bg-mist px-3 py-1 text-[14px] font-semibold text-teal">{formatAmount(offer.amount_paise)}</span>
-                  )}
                 </div>
                 <p className="mt-1 text-[14px] text-ink-muted">
                   {clientLabel}
-                  {offer && offer !== 'loading' && (
+                  {b && (
                     <>
                       {' '}
-                      · {offer.name}, {offer.sessions} sessions · {formatAmount(offer.price_paise)} − {formatAmount(offer.advance_paise)} already paid.
-                      Full payment only, no cash.
+                      · {b.name}, {b.sessions} sessions. Part payments are fine. No cash.
                     </>
                   )}
                 </p>
@@ -143,23 +150,78 @@ export function PackagePaymentDialog({
               </button>
             </div>
 
-            {offer === 'loading' ? (
+            {balance === 'loading' ? (
               <p className="m-0 px-5 py-8 text-ink-muted sm:px-6">Loading…</p>
-            ) : !offer ? (
+            ) : !b ? (
               <div className="px-5 py-6 sm:px-6">
                 <Notice variant="info" role="status">
-                  A package payment cannot be added for this purchase now: the report presentation is not marked done yet, or the package is
-                  already paid.
+                  A package payment cannot be added for this purchase now: the report presentation is not marked done yet, or the package has
+                  started and is with the CRM team.
+                </Notice>
+              </div>
+            ) : b.remaining_paise <= 0 ? (
+              <div className="px-5 py-6 sm:px-6">
+                <Notice variant="info" role="status">
+                  This package is paid in full ({formatAmount(b.total_paise)}). Nothing more can be added.
                 </Notice>
               </div>
             ) : (
               <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col" noValidate>
                 <div className="grid min-h-0 flex-1 gap-x-5 gap-y-4 overflow-y-auto px-5 py-5 sm:grid-cols-2 sm:px-6">
+                  <div className="rounded-card border border-sand bg-cream p-3 text-center sm:col-span-2">
+                   <dl className="m-0 grid grid-cols-3 gap-2">
+                    <div>
+                      <dt className="text-[12px] text-ink-muted">Package</dt>
+                      <dd className="m-0 text-[16px] font-semibold text-ink">{formatAmount(b.total_paise)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[12px] text-ink-muted">Paid so far</dt>
+                      <dd className="m-0 text-[16px] font-semibold text-teal">{formatAmount(b.paid_paise)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[12px] text-ink-muted">Remaining</dt>
+                      <dd className="m-0 text-[16px] font-semibold text-ink">{formatAmount(b.remaining_paise)}</dd>
+                    </div>
+                   </dl>
+                    <p className="m-0 mt-2 border-t border-sand pt-2 text-[14px] font-medium text-teal">
+                      {b.started
+                        ? 'The package has started.'
+                        : neededToStart(b.paid_paise, b.start_paise) > 0
+                          ? `${rupees(neededToStart(b.paid_paise, b.start_paise))} more needed to start sessions`
+                          : 'Enough is paid to start sessions.'}
+                    </p>
+                  </div>
+
                   <div>
                     <label htmlFor="pp-amount" className={labelClasses}>
-                      Amount
+                      Amount (₹)
                     </label>
-                    <input id="pp-amount" readOnly value={formatAmount(offer.amount_paise)} className={cn(inputClasses, 'bg-cream font-semibold text-teal')} />
+                    <input
+                      id="pp-amount"
+                      name="amount"
+                      required
+                      inputMode="numeric"
+                      autoComplete="off"
+                      maxLength={9}
+                      value={amount}
+                      onChange={(e) => {
+                        setAmount(e.target.value.replace(/[^\d,]/g, ''));
+                        setError(null);
+                      }}
+                      aria-describedby="pp-amount-help"
+                      className={cn(inputClasses, 'font-semibold text-teal')}
+                    />
+                    <p id="pp-amount-help" className={helpTextClasses}>
+                      {b.paid_paise === 0 ? `First payment: at least ${rupees(minPaymentPaise(b))}. ` : ''}
+                      Up to {rupees(b.remaining_paise)}.
+                      {afterPaid !== null && !b.started && (
+                        <span className="block font-medium text-teal">
+                          {afterPaid >= b.start_paise
+                            ? 'With this payment the package starts and goes to the CRM team.'
+                            : `After this: ${rupees(b.start_paise - afterPaid)} more needed to start sessions.`}
+                        </span>
+                      )}
+                    </p>
                   </div>
 
                   <div>

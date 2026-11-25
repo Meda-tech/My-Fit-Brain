@@ -32,7 +32,7 @@ import {
 
 interface TeamListClientProps {
   initialTeam: Profile[];
-  /** Coordinators only: how many clients (phones) each one has. */
+  /** How many clients each coordinator, counsellor and CRM has. */
   clientCounts: Record<string, number>;
 }
 
@@ -95,7 +95,8 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
     }
   };
 
-  const moveRoleWord = moveFrom?.role === 'counsellor' ? 'counsellor' : 'coordinator';
+  const moveRole = moveFrom?.role === 'counsellor' ? 'counsellor' : moveFrom?.role === 'crm' ? 'crm' : 'coordinator';
+  const moveRoleWord = moveRole === 'crm' ? 'CRM' : moveRole;
   // Who can take the clients: active, the same role, and not the one they come from.
   const moveTargets = moveFrom
     ? initialTeam.filter((m) => m.role === moveFrom.role && m.is_active && m.id !== moveFrom.id)
@@ -106,7 +107,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
     if (!moveFrom || !moveTo) return;
     try {
       setMoving(true);
-      const res = await moveClientsAction(moveFrom.id, moveTo, moveFrom.role === 'counsellor' ? 'counsellor' : 'coordinator');
+      const res = await moveClientsAction(moveFrom.id, moveTo, moveRole);
       if (!res.success && res.clashes?.length) {
         // Nothing moved: keep the dialog open with the clashing presentations, so another counsellor can be picked.
         setClashes(res.clashes);
@@ -148,7 +149,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
     new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
   const clientsOf = (member: Profile) =>
-    member.role === 'coordinator' || member.role === 'counsellor' ? clientCounts[member.id] ?? 0 : null;
+    member.role === 'coordinator' || member.role === 'counsellor' || member.role === 'crm' ? clientCounts[member.id] ?? 0 : null;
 
   const roleBadge = (member: Profile) => {
     const clients = clientsOf(member);
@@ -259,7 +260,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
 
       <PageHeader
         title="Team"
-        description="Create and manage coordinator and counsellor accounts and their access."
+        description="Create and manage coordinator, counsellor and CRM accounts and their access."
         actions={
           <Button variant="primary" onClick={() => setCreateModalOpen(true)}>
             <Plus size={18} strokeWidth={2} aria-hidden />
@@ -281,7 +282,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
             <UserX size={40} strokeWidth={2} className="text-teal mx-auto mb-2" aria-hidden />
             <p className="text-[16px] font-medium text-ink">No team members yet.</p>
             <p className="text-[14px] text-ink-muted mt-1 mb-4">
-              Add a coordinator or counsellor to share client intake and support.
+              Add a coordinator, counsellor or CRM to share client intake and support.
             </p>
             <Button variant="secondary" onClick={() => setCreateModalOpen(true)}>
               Add first team member
@@ -388,7 +389,7 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
                   ))}
                 </select>
                 <p className={helpTextClasses}>
-                  Coordinators and counsellors see the same client screens for now.
+                  Coordinators work on purchases and calls, counsellors on reports and presentations, CRM on started packages only.
                 </p>
               </div>
 
@@ -453,7 +454,9 @@ export function TeamListClient({ initialTeam, clientCounts }: TeamListClientProp
             <p className="text-[14px] text-ink-soft mb-4">
               {moveFrom.role === 'counsellor'
                 ? `All ${clientsOf(moveFrom)} clients of ${moveFrom.full_name} go to the counsellor you choose, with their upcoming presentations at the same date and time. ${moveFrom.full_name} no longer sees them. Past presentations stay with ${moveFrom.full_name}.`
-                : `All ${clientsOf(moveFrom)} clients of ${moveFrom.full_name}, with their purchases, go to the coordinator you choose.`}
+                : moveFrom.role === 'crm'
+                  ? `All ${clientsOf(moveFrom)} clients of ${moveFrom.full_name}, with their packages, go to the CRM you choose. ${moveFrom.full_name} no longer sees them.`
+                  : `All ${clientsOf(moveFrom)} clients of ${moveFrom.full_name}, with their purchases, go to the coordinator you choose.`}
             </p>
 
             {moveTargets.length === 0 ? (
